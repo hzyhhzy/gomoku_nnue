@@ -1,20 +1,27 @@
 #include "Eva_sum1.h"
 
-
-bool Eva_sum1::loadParam(std::ifstream& fs)
+bool Eva_sum1::loadParam(std::string filepath)
 {
+  using namespace std;
+  FILE* fp = fopen(filepath.c_str(), "r");
+  if (fp == NULL)cout << "Bad file:" << filepath << endl;
+
+
   Total_Eval_Num = 0;
   for (int i = 0; i < shapeNum; i++)
   {
-    for (int j = 0; j < 4; j++)weight[j][i]=Weight_No_Implement;
+    for (int j = 0; j < 4; j++)weight[j][i] = Weight_No_Implement;
   }
   int id;
-  double buf;
-  while (fs >> id)
+  float buf;
+  //cout << "1";
+  while (fscanf(fp, "%d", &id) != EOF)
   {
+    //cout << id<<" ";
     //std::cout << "a";
     for (int j = 0; j < 4; j++) {
-      fs >> buf;
+      fscanf(fp, "%f", &buf);
+      //cout << buf << " ";
       weight[j][id] = buf * quantFactor;
     }
     //std::cout << id << " "<< weight[0][id]<<std::endl;
@@ -22,8 +29,8 @@ bool Eva_sum1::loadParam(std::ifstream& fs)
   //已经有子的地方，policy设为MIN_POLICY
   for (int i = 0; i < shapeNum; i++)//
   {
-    if(((i/243)%3!=0)&& weight[0][i]!=Weight_No_Implement)//有子且合法的棋形
-      weight[0][i]=MIN_POLICY;
+    if (((i / 243) % 3 != 0) && weight[0][i] != Weight_No_Implement)//有子且合法的棋形
+      weight[0][i] = MIN_POLICY;
 
   }
   clear();

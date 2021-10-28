@@ -17,10 +17,5 @@ Evaluator::Evaluator(std::string type, std::string filepath)
 
 bool Evaluator::loadParam(std::string filepathB, std::string filepathW)
 {
-  std::ifstream weightfileB(filepathB,std::ios::in), weightfileW(filepathW, std::ios::in);
- // const int s = 131072;
-  //char *buf=new char[s];
-  //weightfileB.rdbuf()->pubsetbuf(buf, s);
- // weightfileW.rdbuf()->pubsetbuf(buf, s);
-  return blackEvaluator->loadParam(weightfileB) && whiteEvaluator->loadParam(weightfileW);
+  return blackEvaluator->loadParam(filepathB) && whiteEvaluator->loadParam(filepathW);
 }

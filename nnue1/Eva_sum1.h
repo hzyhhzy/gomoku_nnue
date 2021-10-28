@@ -33,7 +33,7 @@ public:
   static const int shapeNum = 708588;
   int32_t weight[4][shapeNum];//4分别是（policy，胜，负，和）
   static const uint32_t Weight_No_Implement = 114514;
-  virtual bool loadParam(std::ifstream& fs);
+  virtual bool loadParam(std::string filepath);
   virtual void clear();
   virtual void recalculate();//根据board完全重新计算棋形表
 
