@@ -94,7 +94,7 @@ expand_node:
                     continue;
 
                 // PRUNING: trivial policy pruning
-                if (1 - policySum >= trivialPolicyResidual(depth))
+                if (1 - policySum < trivialPolicyResidual(depth))
                     continue;
             }
 
@@ -192,7 +192,9 @@ void PVSsearch::normalizePolicy(const PolicyType *rawPolicy, float *normPolicy)
 {
     PolicyType maxRawPolicy = *std::max_element(rawPolicy, rawPolicy + BS * BS);
     std::transform(rawPolicy, rawPolicy + BS * BS, normPolicy, [=](auto &p) {
-        return (float)std::exp(p - maxRawPolicy);
+        const double invQ = 1.0 / quantFactor;
+        return (float)std::exp((p - maxRawPolicy) * invQ);
+        // return (float)std::max(p, PolicyType(0));
     });
     float policySum = std::reduce(normPolicy, normPolicy + BS * BS);
     float k         = 1 / policySum;

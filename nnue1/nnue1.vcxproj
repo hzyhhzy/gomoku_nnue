@@ -151,6 +151,7 @@
     <ClCompile Include="PVSsearch.cpp" />
     <ClCompile Include="Search.cpp" />
     <ClCompile Include="Eva_sum1.cpp" />
+    <ClCompile Include="TT.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ABsearch.h" />
@@ -160,6 +161,7 @@
     <ClInclude Include="Evaluator.h" />
     <ClInclude Include="EvaluatorOneSide.h" />
     <ClInclude Include="global.h" />
+    <ClInclude Include="TT.h" />
     <ClInclude Include="PVSsearch.h" />
     <ClInclude Include="Search.h" />
     <ClInclude Include="Eva_sum1.h" />
