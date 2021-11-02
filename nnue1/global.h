@@ -1,6 +1,7 @@
 #pragma once
 #include <iostream>
 #include <string>
+#include <sstream>
 #include <fstream>
 #include <cstdint>
 #include <numeric>
@@ -50,3 +51,19 @@ const double WIN_VALUE = 1;
 const double LOSE_VALUE = -1;
 
 const float quantFactor = 32;
+
+inline std::string dbg_board(const Color* board) {
+    std::ostringstream os;
+    for (int i = 0; i < BS; i++) {
+        for (int j = 0; j < BS; j++) {
+            switch (board[j + i * BS]) {
+            case C_BLACK: os << "X "; break;
+            case C_WHITE: os << "O "; break;
+            case C_EMPTY: os << ". "; break;
+            }
+        }
+        os << '\n';
+    }
+            
+    return os.str();
+}
