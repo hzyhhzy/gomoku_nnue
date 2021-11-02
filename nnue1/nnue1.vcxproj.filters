@@ -36,6 +36,9 @@
     <ClCompile Include="Engine.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="PVSsearch.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Evaluator.h">
@@ -63,6 +66,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="AllSearch.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="PVSsearch.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
