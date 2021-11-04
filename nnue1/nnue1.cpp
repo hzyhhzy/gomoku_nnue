@@ -20,7 +20,7 @@ Time now()
 using namespace std;
 int main()
 {
-    Evaluator *eva    = new Evaluator("sum1", "sum1.txt");
+    Evaluator *eva    = new Evaluator("mix6", "weights/t5.txt");
     PVSsearch *search = new PVSsearch(eva);
     /*
     const char boardstr[] = ""
@@ -45,13 +45,13 @@ int main()
                             ". . . . . . . . . . . . . . . "
                             ". . . . . . . . . . . . . . . "
                             ". . . . . . . . . . . . . . . "
+                            ". . . . . . . . . . . . . . . "
                             ". . . . . . . x . . . . . . . "
                             ". . . . . . . o . . . . . . . "
                             ". . . . . . o x o o x . . . . "
                             ". . . . . . . x x x o . . . . "
                             ". . . . . . . o x x . . . . . "
                             ". . . . . . . o . . o . . . . "
-                            ". . . . . . . . . . . . . . . "
                             ". . . . . . . . . . . . . . . "
                             ". . . . . . . . . . . . . . . "
                             ". . . . . . . . . . . . . . . "

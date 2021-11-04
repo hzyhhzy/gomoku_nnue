@@ -52,7 +52,6 @@ struct ValueType
   }
 };
 
-const float quantFactor = 32;
 
 inline std::string dbg_board(const Color* board) {
   std::ostringstream os;
