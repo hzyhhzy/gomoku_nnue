@@ -5,10 +5,12 @@
 #include <iostream>
 #include <numeric>
 #include <sstream>
-#include <vector>
 #include <string>
+#include <vector>
 
 const int BS = 15;
+
+typedef uint64_t Key;
 
 enum Color : int8_t { C_EMPTY = 0, C_BLACK = 1, C_WHITE = 2, C_MY = 1, C_OPP = 2 };
 constexpr Color operator~(Color c) { return Color(3 - c); }

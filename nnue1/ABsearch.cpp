@@ -37,7 +37,7 @@ float ABsearch::searchRec(Color color, int depth, float maxEval, float minEval, 
       evaluator->play(color, loc);
       Loc nextBestMove;
       value = -searchRec(~color, depth - 1, -std::max(bestValue,minEval), -maxEval, nextBestMove);
-      evaluator->undo(loc);
+      evaluator->undo(color, loc);
     }
     if (depth == 9)
     {

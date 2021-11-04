@@ -3,6 +3,7 @@
 
 #include "AllSearch.h"
 #include "Engine.h"
+#include "TT.h"
 
 #include <chrono>
 #include <iostream>
@@ -23,6 +24,7 @@ int main()
 {
   Evaluator *eva    = new Evaluator("mix6", "weights/t5.txt");
   PVSsearch *search = new PVSsearch(eva);
+  TT.resize(128);
   /*
   const char boardstr[] = ""
     ". . . . . . . . . . . . . . . "
@@ -79,6 +81,8 @@ int main()
     cout << "Depth = " << depth << " Value = " << valueText(value)
          << " Nodes = " << search->nodes << "(" << search->interiorNodes << ")"
          << " Time = " << toc - tic << " Nps = " << search->nodes * 1000.0 / (toc - tic)
+         << " TT = " << 100.0 * search->ttHits / search->interiorNodes << "("
+         << 100.0 * search->ttCuts / search->ttHits << ")"
          << " PV = " << search->rootPV() << endl;
   }
 }

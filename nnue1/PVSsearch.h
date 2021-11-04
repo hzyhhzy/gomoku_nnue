@@ -28,6 +28,20 @@ constexpr int valueFromWLR(float wlr, int ply = 0)
                       VALUE_MAX_EVAL);
 }
 
+constexpr int valueFromTT(int ttValue, int ply)
+{
+  return ttValue >= VALUE_MATE_IN_MAX_PLY    ? ttValue - ply
+         : ttValue <= -VALUE_MATE_IN_MAX_PLY ? ttValue + ply
+                                             : ttValue;
+}
+
+constexpr int valueToTT(int value, int ply)
+{
+  return value >= VALUE_MATE_IN_MAX_PLY    ? value + ply
+         : value <= -VALUE_MATE_IN_MAX_PLY ? value - ply
+                                           : value;
+}
+
 inline std::string valueText(int value)
 {
   if (value >= VALUE_MATE_IN_MAX_PLY)
@@ -42,6 +56,8 @@ inline std::string valueText(int value)
 
 constexpr int MARGIN_INFINITE       = INT16_MAX;
 constexpr int RAZOR_DEPTH_REDUCTION = 2;
+constexpr int IID_DEPTH             = 9;
+constexpr int IID_REDUCTION         = 7;
 constexpr int LMR_DEPTH             = 3;
 
 constexpr int razorMargin(int d)
@@ -68,7 +84,7 @@ constexpr int futilityMoveCount(int d)
 
 inline double trivialPolicyResidual(int depth)
 {
-  return double(0.3 * std::exp(-depth * 0.125));
+  return double(0.1 * std::exp(-depth * 0.125));
 }
 
 template <bool PV>
@@ -98,6 +114,7 @@ public:
   virtual float    fullsearch(Color color, double factor, Loc &bestmove);
   std::vector<Loc> rootPV() const;
   size_t           nodes, interiorNodes;
+  size_t           ttHits, ttCuts;
 
 private:
   template <bool PV>

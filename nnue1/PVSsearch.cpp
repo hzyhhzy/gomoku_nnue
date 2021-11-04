@@ -1,6 +1,14 @@
 #include "PVSsearch.h"
 
-PVSsearch::PVSsearch(Evaluator *e) : Search(e), nodes(0), interiorNodes(0) {}
+#include "TT.h"
+
+PVSsearch::PVSsearch(Evaluator *e)
+    : Search(e)
+    , nodes(0)
+    , interiorNodes(0)
+    , ttHits(0)
+    , ttCuts(0)
+{}
 
 float PVSsearch::fullsearch(Color color, double factor, Loc &bestmove)
 {
@@ -25,26 +33,36 @@ float PVSsearch::search(Color me,
   plyInfos[ply].pv[0] = bestmove = NULL_LOC;
   nodes++;
 
-  // Ò¶×ÓÌõ¼þ: Ë®Æ½Ïß »òÕß ¹ÀÖµÉ±
+  // Ò¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½: Ë®Æ½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ÖµÉ±
   if (depth <= 0 || ply >= MAX_PLY || std::abs(value) >= VALUE_MATE_IN_MAX_PLY) {
     return value;
   }
 
-  // TODO: ÂúÅÌºÍÆå
+  // TODO: ï¿½ï¿½ï¿½Ìºï¿½ï¿½ï¿½
 
-  // ¼ôÖ¦: Mate distance pruning
+  // ï¿½ï¿½Ö¦: Mate distance pruning
   alpha = std::max(-mateValue(ply), alpha);
   beta  = std::min(mateValue(ply + 1), beta);
   if (alpha >= beta)
     return alpha;
 
-  // TODO: ÖÃ»»±í²éÕÒ
+  // ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  auto [tte, ttHit] = TT.probe(evaluator->key);
+  int  ttValue      = ttHit ? valueFromTT(tte->value, ply) : 0;
+  Loc  ttMove       = ttHit ? tte->best : NULL_LOC;
+  bool ttPv         = ttHit ? tte->pv : false;
+  ttHits += ttHit;
+  if (!PV && ttHit && tte->depth >= depth
+      && (ttValue >= beta ? (tte->bound & BOUND_LOWER) : (tte->bound & BOUND_UPPER))) {
+    ttCuts++;
+    return ttValue;
+  }
 
-  // Static eval
+  // ï¿½ï¿½Ì¬ï¿½ï¿½Öµ
   int eval = plyInfos[ply].staticEval = value;
   int evalDelta = ply >= 2 ? plyInfos[ply].staticEval - plyInfos[ply - 2].staticEval : 0;
 
-  // ¼ôÖ¦: Razoring
+  // ï¿½ï¿½Ö¦: Razoring
   if (!PV && eval + razorMargin(depth) <= alpha) {
     // TODO: do some VCF search to verify!
     int lowAlpha = alpha - razorVerifyMargin(depth);
@@ -60,12 +78,12 @@ float PVSsearch::search(Color me,
       return value;
   }
 
-  // ¼ôÖ¦: Futility pruning
-  if (!PV && /*¶Ô·½ÎÞ³åËÄ*/ true && eval - futilityMargin(depth) >= beta)
+  // ï¿½ï¿½Ö¦: Futility pruning
+  if (!PV && /*ï¿½Ô·ï¿½ï¿½Þ³ï¿½ï¿½ï¿½*/ true && eval - futilityMargin(depth) >= beta)
     return eval;
 
-  // ¼ôÖ¦: Null move pruning
-  if (!PV && /*¶Ô·½ÎÞ³åËÄ*/ true && plyInfos[ply].nullMoveCount == 0
+  // ï¿½ï¿½Ö¦: Null move pruning
+  if (!PV && /*ï¿½Ô·ï¿½ï¿½Þ³ï¿½ï¿½ï¿½*/ true && plyInfos[ply].nullMoveCount == 0
       && eval - nullMoveMargin(depth) >= beta) {
     int r                           = nullMoveReduction(depth);
     plyInfos[ply].currentMove       = NULL_LOC;
@@ -89,25 +107,44 @@ float PVSsearch::search(Color me,
   }
 
 expand_node:
+  // IID
+  if (depth >= IID_DEPTH && ttMove == NULL_LOC) {
+    search<PV>(me, ply, depth - IID_REDUCTION, alpha, beta, isCut, ttMove);
+  }
+
   interiorNodes++;
   plyInfos[ply + 1].nullMoveCount = plyInfos[ply].nullMoveCount;
   PolicyType rawPolicy[BS * BS];
   float      policy[BS * BS];
   Loc        policyRank[BS * BS];
-  evaluator->evaluate(me, rawPolicy);
+  float      maxPolicy = 0;
+  float      policySum = 0;
 
-  normalizePolicy(rawPolicy, policy);
-  sortPolicy(policy, policyRank);
-  float maxPolicy = policy[policyRank[0]];
-  float policySum = 0;
+  auto calcPolicy = [&]() {
+    evaluator->evaluate(me, rawPolicy);
+
+    normalizePolicy(rawPolicy, policy);
+    sortPolicy(policy, policyRank);
+    maxPolicy = policy[policyRank[0]];
+  };
 
   bestmove      = NULL_LOC;
   int moveCount = 0;
   int bestValue = -VALUE_MATE;
-  for (int i = 0; i < BS * BS; i++) {
-    Loc move = policyRank[i];
-    if (boardPointer[move] != C_EMPTY)
-      continue;
+  for (int i = -1; i < BS * BS; i++) {
+    Loc move;
+    if (i == -1) {
+      if (ttMove == NULL_LOC)
+        continue;
+      move = ttMove;
+    }
+    else {
+      if (i == 0)
+        calcPolicy();
+      move = policyRank[i];
+      if (move == ttMove || boardPointer[move] != C_EMPTY)
+        continue;
+    }
 
     plyInfos[ply].currentMove      = move;
     plyInfos[ply].currentPolicySum = (policySum += policy[move]);
@@ -132,7 +169,7 @@ expand_node:
       int  newDepth        = depth - 1;
       bool fullDepthSearch = !PV || moveCount > 1;
 
-      // ÑÓÉì: ±¾·½¹ÀÖµÏÔÖøÔö¼Ó
+      // å»¶ä¼¸: ä¼°å€¼æ˜¾è‘—å¢žåŠ 
       newDepth += evalDelta >= 150;
 
       evaluator->play(me, move);
@@ -141,10 +178,9 @@ expand_node:
       if (depth >= LMR_DEPTH && moveCount > 1
           && (moveCount >= lateMoveCount<PV>(depth) || isCut)) {
         int r = lmrReduction(depth, moveCount) + 2 * isCut;
-        r += (plyInfos[ply].currentPolicySum > 0.9)
-             + (plyInfos[ply].currentPolicySum > 0.95);
+        r += (plyInfos[ply].currentPolicySum > 0.95);
         r -= (ply > 1 && policySum < 0.75 && plyInfos[ply - 1].currentPolicySum < 0.1);
-        r += (evalDelta < -90) + (evalDelta < -180);
+        r += (evalDelta < -120) + (evalDelta < -200);
 
         int d = std::clamp(newDepth - r, 1, newDepth);
         value =
@@ -167,7 +203,7 @@ expand_node:
         value =
             -search<true>(oppo, ply + 1, newDepth, -beta, -alpha, false, nextBestMove);
 
-      evaluator->undo(move);
+      evaluator->undo(me, move);
     }
 
     if (value > bestValue) {
@@ -183,6 +219,16 @@ expand_node:
       }
     }
   }
+
+  tte->save(evaluator->key,
+            valueToTT(bestValue, ply),
+            bestValue >= beta            ? BOUND_LOWER
+            : PV && bestmove != NULL_LOC ? BOUND_EXACT
+                                         : BOUND_UPPER,
+            depth,
+            PV,
+            bestmove);
+
   return bestValue;
 }
 
