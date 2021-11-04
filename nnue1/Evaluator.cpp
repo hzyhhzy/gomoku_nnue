@@ -1,7 +1,11 @@
 #include "Evaluator.h"
 #include "AllEvaluator.h"
+
+#include <random>
+
 Evaluator::Evaluator(std::string type, std::string filepath)
 {
+  initZobrist(0x114514AA114514AA);
   if (type == "sum1")//¼òµ¥ÇóºÍ
   {
     blackEvaluator = new Eva_sum1();
@@ -18,6 +22,18 @@ Evaluator::Evaluator(std::string type, std::string filepath)
   {
     throw "Invalid type of engine";
   }
+}
+
+void Evaluator::initZobrist(uint64_t seed)
+{
+  std::mt19937_64 prng {seed};
+  prng();
+  prng();
+  key = prng();
+  for (Key &k : zobrist[0])
+    k = prng();
+  for (Key &k : zobrist[1])
+    k = prng();
 }
 
 
