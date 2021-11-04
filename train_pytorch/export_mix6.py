@@ -160,8 +160,7 @@ if __name__ == '__main__':
 #1 map_leakyrelu
     #prepare
     scale_maplr=scale_now #prepare for value head
-    w_scale=(2**15) #mulhrs右移15位
-    w_scale*=0.25 #slope>1会溢出，所以负半轴乘slope*0.25，正半轴乘0.25
+
 
     map_lr_slope=model.map_leakyrelu.slope.data.cpu().numpy()
     map_lr_bias=model.map_leakyrelu.bias.data.cpu().numpy()
@@ -169,20 +168,21 @@ if __name__ == '__main__':
     #calculate max
     wmax=np.abs(map_lr_slope).max()
     bmax=np.abs(map_lr_bias).max()
+    bound_c=bound*(np.abs(map_lr_slope)+1)+np.abs(map_lr_bias)*scale_now
     print("map lr maxslope=",wmax)
     print("map lr maxbias=",bmax)
-    map_lr_slope_sub1=(map_lr_slope-1)*w_scale
+    map_lr_slope_sub1=(map_lr_slope-1)*0.125  #slope>1会溢出，所以负半轴乘slope*0.125再乘2，正半轴乘0.25
     map_lr_bias=map_lr_bias*scale_now
 
-    maxint=max((wmax+1)*w_scale,bmax*scale_now)
+    maxint=max((wmax+1)*2**15/8,bmax*scale_now) #mulhrs右移15位
     if(maxint>32700):
         print("Error! Maxint=",maxint)
         exit(0)
 
     #write
-    print("map_lr_slope_sub1div4",file=exportfile)
+    print("map_lr_slope_sub1div8",file=exportfile)
     for i in range(pc+vc):
-        print(int(map_lr_slope_sub1[i]),end=' ',file=exportfile)
+        print(int(map_lr_slope_sub1[i]*2**15),end=' ',file=exportfile) #mulhrs右移15位
     print('',file=exportfile)
 
     print("map_lr_bias",file=exportfile)
@@ -191,7 +191,8 @@ if __name__ == '__main__':
     print('',file=exportfile)
 
     #bound
-    bound=bound*4*w_scale/(2**15)*(wmax+1)+bmax*scale_now
+
+    bound=bound*(wmax+1)+bmax*scale_now
     print("Bound=",bound)
 
 # 2 policyConv
@@ -199,13 +200,13 @@ if __name__ == '__main__':
     w_scale=0.5
     scale_now*=w_scale #50
 
-    w_scale=w_scale*(2**15) #mulhrs右移15位
 
     policyConvWeight=model.policy_conv.weight.data.cpu().numpy()
     policyConvBias=model.policy_conv.bias.data.cpu().numpy()
 
     #calculate max
     wmax=np.abs(policyConvWeight).max()
+    bound_c=(np.abs(policyConvWeight).sum((1,2,3))*bound_c[:pc]+np.abs(policyConvBias)*scale_now/w_scale)*w_scale
     bmax=np.abs(policyConvBias).max()
     print("policyConvWeight max=",wmax)
     print("policyConvBias max=",bmax)
@@ -221,7 +222,7 @@ if __name__ == '__main__':
     print("policyConvWeight",file=exportfile)
     for i in range(9):
         for j in range(pc):
-            print(int(policyConvWeight[j,0,i//3,i%3]),end=' ',file=exportfile)
+            print(int(policyConvWeight[j,0,i//3,i%3]*2**15),end=' ',file=exportfile)
     print('',file=exportfile)
 
     print("policyConvBias",file=exportfile)
@@ -230,14 +231,13 @@ if __name__ == '__main__':
     print('',file=exportfile)
 
     #bound
-    bound=bound*9*w_scale/(2**15)*wmax+bmax*scale_now
-    print("Bound=",bound)
+    print("Boundc=",bound_c.max())
+    print("if boundc < 32767, that's ok")
 
 # 2 policyFinalConv
     #prepare
-    w_scale=0.2
+    w_scale=0.5
     scale_now*=w_scale #10
-    w_scale*=(2**15)
     policyFinalConv=model.policy_linear.weight.data.cpu().numpy()
 
     #calculate max
@@ -253,12 +253,13 @@ if __name__ == '__main__':
     policyFinalConv=policyFinalConv*w_scale
     print("policyFinalConv",file=exportfile)
     for i in range(pc):
-        print(int(policyFinalConv[0,i,0,0]),end=' ',file=exportfile)
+        print(int(policyFinalConv[0,i,0,0]*2**15),end=' ',file=exportfile)
     print('',file=exportfile)
 
     #bound
-    bound=bound*pc*w_scale*wmax/2**15
+    bound=(np.abs(policyFinalConv)[0,:,0,0]*bound_c).sum()
     print("Bound=",bound)
+    print("If this bound is a little bigger than 32767, there's no big problem")
 
 
 

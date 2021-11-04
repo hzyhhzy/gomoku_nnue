@@ -12,7 +12,7 @@ Evaluator::Evaluator(std::string type, std::string filepath)
     whiteEvaluator = new Eva_sum1();
     loadParam(filepath, filepath);
   }
-  if (type == "mix6")
+  else if (type == "mix6")
   {
     blackEvaluator = new Eva_mix6_avx2();
     whiteEvaluator = new Eva_mix6_avx2();

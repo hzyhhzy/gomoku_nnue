@@ -28,7 +28,7 @@ struct Mix6weight_int16
   //2  mapsum=map.sum(2), shape=HWc
   
   //3  mapAfterLR=leakyRelu(mapsum)
-  int16_t map_lr_slope_sub1div4[mix6::featureNum];//减去1方便计算  0.25f(x)=x>>2+min(x,0)*slopeSub1Div4
+  int16_t map_lr_slope_sub1div8[mix6::featureNum];//减去1方便计算  0.25f(x)=x>>2+min(x,0)*slopeSub1Div8*2
   int16_t map_lr_bias[mix6::featureNum];
 
   //4  update policyBeforeConv and valueSumBoard
