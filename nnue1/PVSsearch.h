@@ -68,7 +68,7 @@ constexpr int futilityMoveCount(int d)
 
 inline double trivialPolicyResidual(int depth)
 {
-  return double(0.25 * std::exp(-depth * 0.25));
+  return double(0.3 * std::exp(-depth * 0.125));
 }
 
 template <bool PV>
