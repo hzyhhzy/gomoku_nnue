@@ -257,7 +257,7 @@ if __name__ == '__main__':
     print('',file=exportfile)
 
     #bound
-    bound=(np.abs(policyFinalConv)*bound_c).sum()
+    bound=(np.abs(policyFinalConv)[0,:,0,0]*bound_c).sum()
     print("Bound=",bound)
     print("If this bound is a little bigger than 32767, there's no big problem")
 

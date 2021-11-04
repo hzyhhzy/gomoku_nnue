@@ -87,9 +87,9 @@ int main()//play a game
   }
 }
 
-int main()//play a game
+int main1()//play a game
 {
-  Evaluator* eva = new Evaluator("mix6", "weights/t16.txt");
+  Evaluator* eva = new Evaluator("mix6", "weights/t5.txt");
   // Evaluator *eva    = new Evaluator("sum1", "weights/sum1.txt");
   PVSsearch* search = new PVSsearch(eva);
   /*
@@ -136,7 +136,7 @@ int main()//play a game
       else if (colorchar == 'o')
         color = C_WHITE;
       if (color != C_EMPTY)
-        eva->play(color, x + y * BS);
+        eva->play(color, MakeLoc(x,y));
     }
 
   Color enginecolor = C_WHITE;
@@ -195,7 +195,7 @@ int main()//play a game
         y = 15 - 10 * (nextmove[1] - '0') - (nextmove[2] - '0');
       }
       if (x >= 0 && x < BS && y >= 0 && y < BS) {
-        eva->play(3 - enginecolor, x + y * BS);
+        eva->play(~enginecolor, MakeLoc(x,y));
         break;
       }
       else
