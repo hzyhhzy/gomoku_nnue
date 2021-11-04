@@ -88,6 +88,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -102,6 +103,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -116,6 +118,7 @@
       <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -130,6 +133,7 @@
       <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -145,8 +149,10 @@
     <ClCompile Include="EvaluatorOneSide.cpp" />
     <ClCompile Include="Eva_mix6_avx2.cpp" />
     <ClCompile Include="nnue1.cpp" />
+    <ClCompile Include="PVSsearch.cpp" />
     <ClCompile Include="Search.cpp" />
     <ClCompile Include="Eva_sum1.cpp" />
+    <ClCompile Include="TT.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ABsearch.h" />
@@ -157,6 +163,8 @@
     <ClInclude Include="EvaluatorOneSide.h" />
     <ClInclude Include="Eva_mix6_avx2.h" />
     <ClInclude Include="global.h" />
+    <ClInclude Include="TT.h" />
+    <ClInclude Include="PVSsearch.h" />
     <ClInclude Include="Search.h" />
     <ClInclude Include="Eva_sum1.h" />
   </ItemGroup>

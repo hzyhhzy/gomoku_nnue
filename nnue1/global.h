@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <numeric>
 #include <algorithm>
+#include <sstream>
 const int BS = 15;
 typedef int8_t Color;
 const Color C_EMPTY = 0;
@@ -50,6 +51,25 @@ struct ValueType
     return win -loss;
   }
 };
+
+const float quantFactor = 32;
+
+inline std::string dbg_board(const Color* board) {
+  std::ostringstream os;
+  for (int i = 0; i < BS; i++) {
+    for (int j = 0; j < BS; j++) {
+      switch (board[j + i * BS]) {
+      case C_BLACK: os << "X "; break;
+      case C_WHITE: os << "O "; break;
+      case C_EMPTY: os << ". "; break;
+      }
+    }
+    os << '\n';
+  }
+
+  return os.str();
+}
+
 
 
 

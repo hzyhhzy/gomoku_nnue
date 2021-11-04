@@ -36,7 +36,10 @@
     <ClCompile Include="Engine.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Eva_mix4_avx2.cpp">
+    <ClCompile Include="PVSsearch.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="TT.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -68,7 +71,10 @@
     <ClInclude Include="AllSearch.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Eva_mix4_avx2.h">
+    <ClInclude Include="PVSsearch.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="TT.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
