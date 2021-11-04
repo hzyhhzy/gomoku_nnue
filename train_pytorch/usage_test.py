@@ -3,8 +3,10 @@ import torch.nn as nn
 import math
 import torch.functional as F
 import numpy as np
-
-
+torch.max
+import torch.quantization.quantize_fx
+torch.quantize_per_tensor()
+nn.Conv2d.
 def fullData(length):  # 三进制全部排列
     x = np.zeros((1, length), dtype=np.int32)
     for i in range(length):

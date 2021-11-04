@@ -23,6 +23,12 @@ const PolicyType MYFIVE_POLICY = 1e8;
 const PolicyType OPPFOUR_POLICY = 1e7;
 const PolicyType MYFOUR_POLICY = 1e6;
 
+
+const double WIN_VALUE = 1;
+const double LOSE_VALUE = -1;
+
+const float quantFactor = 32;
+
 struct ValueType
 {
   float win, loss, draw;
@@ -46,7 +52,9 @@ struct ValueType
 };
 
 
-const double WIN_VALUE = 1;
-const double LOSE_VALUE = -1;
 
-const float quantFactor = 32;
+
+
+
+
+const int32_t pow3[] = { 1,3,9,27,81,243,729,2187,6561,19683,59049,177147,531441 };

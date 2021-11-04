@@ -4,10 +4,73 @@
 #include <iostream>
 #include "Engine.h"
 #include "AllSearch.h"
+#include "AllEvaluator.h"
 using namespace std;
 int main()
 {
-  Evaluator* eva = new Evaluator("sum1", "sum1.txt");
+  Eva_mix6_avx2* eva = new Eva_mix6_avx2();
+  eva->loadParam("weights/t5.txt");
+  eva->debug_print();
+
+  const char boardstr[] = ""
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . x . . . . . . "
+    ". . . . . . . x . . . . . . . "
+    ". . . . . . o . o . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . ";
+  for (int y = 0; y < BS; y++)
+    for (int x = 0; x < BS; x++)
+    {
+      char colorchar = boardstr[2 * (x + y * BS)];
+      Color color = C_EMPTY;
+      if (colorchar == 'x')color = C_BLACK;
+      else if (colorchar == 'o')color = C_WHITE;
+      if (color != C_EMPTY)eva->play(color, x + y * BS);
+    }
+
+
+  PolicyType policy[BS * BS];
+  ValueType value=eva->evaluate(policy);
+
+  cout << "WR " << (value.win + 0.5 * value.draw) << endl;
+  cout << "Win " << value.win  << endl;
+  cout << "Loss " << value.loss  << endl;
+  cout << "Draw " << value.draw  << endl;
+
+  for (int y = 0; y < BS; y++)
+  {
+    for (int x = 0; x < BS; x++)
+    {
+      Color c = eva->board[y * BS + x];
+      if (c == C_EMPTY)cout << ".\t";
+      else if (c == C_MY)cout << "x\t";
+      else if (c == C_OPP)cout << "o\t";
+    }
+    cout << endl;
+    for (int x = 0; x < BS; x++)
+    {
+      int p = policy[y * BS + x];
+      cout << p << "\t";
+    }
+    cout << endl;
+  }
+
+  eva->debug_print();
+
+}
+int test1()
+{
+  Evaluator* eva = new Evaluator("mix6", "weights/t5.txt");
   ABsearch* search = new ABsearch(eva);
   /*
   const char boardstr[] = ""
@@ -32,17 +95,17 @@ int main()
     ". . . . . . . . . . . . . . . "
     ". . . . . . . . . . . . . . . "
     ". . . . . . . . . . . . . . . "
-    ". . . . . x . x x o . . . . . "
-    ". . . . . . o o . . . . . . . "
-    ". . . . . . o x o o x . . . . "
-    ". . . . . . . x x x o . . . . "
-    ". . . . . . . o x x . . . . . "
-    ". . . . . . . o . . o . . . . "
     ". . . . . . . . . . . . . . . "
     ". . . . . . . . . . . . . . . "
     ". . . . . . . . . . . . . . . "
     ". . . . . . . . . . . . . . . "
     ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . x o x . . . . . . . "
+    ". . . . x o o . x . . . . . . "
+    ". . . . . o x . . . . . . . . "
+    ". . . . o . . . . . . . . . . "
+    ". . . . . . . x . . . . . . . "
     ". . . . . . . . . . . . . . . ";
   for (int y = 0; y < BS; y++)
     for (int x = 0; x < BS; x++)
@@ -57,16 +120,16 @@ int main()
 
 
 
-  for (int depth = 0; depth < 100; depth++)
+  for (int depth = 0; depth < 10; depth++)
   {
     Loc loc;
-    double value = search->fullsearch(C_BLACK, depth, loc);
+    double value = search->fullsearch(C_WHITE, depth, loc);
     //search->evaluator->recalculate();
-    cout << "Depth = " <<depth<< " Value = " << value << " Bestloc = " << loc % BS << "," << loc / BS<<endl;
+    cout << "Depth = " <<depth<< " Value = " << value << " Bestloc = " << char('A'+loc % BS) << 15-loc / BS << endl;
   }
 
 
-
+  return 0;
 }
 
 // 运行程序: Ctrl + F5 或调试 >“开始执行(不调试)”菜单

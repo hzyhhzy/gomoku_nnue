@@ -91,11 +91,12 @@ class Conv1dResnetBlock(nn.Module):
         return y
 
 class channelwiseLeakyRelu(nn.Module):
-    def __init__(self,c):
+    def __init__(self,c,bias=True):
         super().__init__()
         self.c=c
         self.slope = nn.Parameter(torch.ones((c))*0.5,True)
         self.bias = nn.Parameter(torch.zeros((c)),True)
+        self.useBias=bias
 
 
     def forward(self, x):
@@ -108,7 +109,10 @@ class channelwiseLeakyRelu(nn.Module):
             wshape = (1,-1,1,1)
         elif(dim==5):
             wshape = (1,-1,1,1,1)
-        return torch.relu(x)*(1-self.slope.view(wshape))+x*self.slope.view(wshape)+self.bias.view(wshape)
+        res=-torch.relu(-x)*(self.slope.view(wshape)-1)+x
+        if(self.useBias):
+            res+=self.bias.view(wshape)
+        return res
 
 class Mapping1(nn.Module):
 
@@ -592,7 +596,7 @@ class Model_mix4noconv(nn.Module):
 
 class Model_mix4(nn.Module):
 
-    def __init__(self, midc=64, pc=6, vc=10):  # 1d卷积通道，policy通道，胜负和通道
+    def __init__(self, midc=64, pc=8, vc=16):  # 1d卷积通道，policy通道，胜负和通道
         super().__init__()
         self.model_name = "mix4"
         self.model_size = (midc, pc, vc)
@@ -602,24 +606,31 @@ class Model_mix4(nn.Module):
         self.mapping = Mapping1(midc, pc+vc)
 
         self.map_leakyrelu=channelwiseLeakyRelu(pc+vc)
-        self.policy_conv=nn.Conv2d(pc,1,kernel_size=3,padding=1)
-        self.policy_leakyrelu=channelwiseLeakyRelu(1)
-        self.value_leakyrelu=channelwiseLeakyRelu(vc)
+        self.policy_conv=nn.Conv2d(pc,1,kernel_size=3,padding=1,bias=False)
+        self.policy_leakyrelu=channelwiseLeakyRelu(1,bias=False)
+        self.value_leakyrelu=channelwiseLeakyRelu(vc,bias=False)
         self.value_linear1=nn.Linear(vc,vc)
-        self.value_linear2=nn.Linear(vc,3)
+        self.value_linear2=nn.Linear(vc,vc)
+        self.value_linearfinal=nn.Linear(vc,3)
 
     def forward(self, x):
         map = self.mapping(x)
-        map = map.sum(1)
-        map=self.map_leakyrelu(map)
-        policy=map[:,:self.pc]
-        p=self.policy_conv(policy)
+        map=torch.relu(map+30)-30
+        map=30-torch.relu(30-map)
+        # |map|<30
+
+        map = map.mean(1) # |map|<30
+        map=self.map_leakyrelu(map) # |map|<300 if slope<10
+        p=map[:,:self.pc]
+        p=self.policy_conv(p)
         p=self.policy_leakyrelu(p)
-        value=map[:,self.pc:].mean((2,3))
-        value=self.value_leakyrelu(value)
-        value=self.value_linear1(value)
-        value=torch.relu(value)
-        v=self.value_linear2(value)
+        v=map[:,self.pc:].mean((2,3))
+        v0=self.value_leakyrelu(v)
+        v=self.value_linear1(v0)
+        v=torch.relu(v)
+        v=self.value_linear2(v)
+        v=torch.relu(v)+v0
+        v=self.value_linearfinal(v)
         return v, p
 
     def exportMapTable(self, x, device):  # x.shape=(n=1,c=2,h,w<=9)
@@ -714,6 +725,117 @@ class Model_mix5(nn.Module):
         with torch.no_grad():
             map = self.mapping(x)  # shape=(n=1,4,c=pc+vc,h,w<=9)
             return map[0, 0].to('cpu')  # shape=(c=pc+vc,h,w<=9)
+
+
+class Model_mix6(nn.Module):
+
+    def __init__(self, midc=128, pc=16, vc=32, mapmax=30):  # 1d卷积通道，policy通道，胜负和通道
+        super().__init__()
+        self.model_name = "mix6"
+        self.model_size = (midc, pc, vc, mapmax)
+        self.pc=pc
+        self.vc=vc
+
+        self.mapmax=mapmax
+
+        self.mapping = Mapping1(midc, pc+vc)
+        self.map_leakyrelu=channelwiseLeakyRelu(pc+vc)
+        self.policy_conv=nn.Conv2d(pc,pc,kernel_size=3,padding=1,bias=True,groups=pc)
+        self.policy_linear=nn.Conv2d(pc,1,kernel_size=1,padding=0,bias=False)
+        self.policy_leakyrelu=channelwiseLeakyRelu(1,bias=False)
+        self.value_leakyrelu=channelwiseLeakyRelu(vc,bias=False)
+        self.value_linear1=nn.Linear(vc,vc)
+        self.value_linear2=nn.Linear(vc,vc)
+        self.value_linearfinal=nn.Linear(vc,3)
+
+    def forward(self, x):
+        map = self.mapping(x)
+
+
+        if(self.mapmax!=0):
+            map=self.mapmax*torch.tanh(map/self.mapmax) # |map|<30
+
+        map = map.mean(1) # |map|<30
+        map=self.map_leakyrelu(map) # |map|<300 if slope<10
+        p=map[:,:self.pc]
+        p=self.policy_conv(p)
+        p=torch.relu(p)
+        p=self.policy_linear(p)
+        p=self.policy_leakyrelu(p)
+        v=map[:,self.pc:].mean((2,3))
+        v0=self.value_leakyrelu(v)
+        v=self.value_linear1(v0)
+        v=torch.relu(v)
+        v=self.value_linear2(v)
+        v=torch.relu(v)+v0
+        v=self.value_linearfinal(v)
+        return v, p
+
+    def testeval(self, x,loc):
+        y0=loc//boardW
+        x0=loc%boardW
+        map = self.mapping(x)
+
+        if(self.mapmax!=0):
+            map=self.mapmax*torch.tanh(map/self.mapmax) # |map|<30
+
+        w_scale = 200
+        scale_now = w_scale  # 200
+        print("map ",map[0,:,:,y0,x0]*scale_now)
+
+        map = map.mean(1) # |map|<30
+        w_scale=1
+        scale_now*=w_scale #200
+        print("mapsum ",map[0,:,y0,x0]*scale_now*4)
+        map=self.map_leakyrelu(map) # |map|<300 if slope<10
+        print("maplr ",map[0,:,y0,x0]*scale_now)
+        p=map[:,:self.pc]
+        p=self.policy_conv(p)
+        w_scale=0.5
+        scale_now*=w_scale #100
+        print("pconv ",p[0,:,y0,x0]*scale_now)
+        p=torch.relu(p)
+        p=self.policy_linear(p)
+        print("psum ",p[0,:,y0,x0])
+        p=self.policy_leakyrelu(p)
+        print("p \n",(p*32).long())
+        v=map[:,self.pc:].mean((2,3))
+        print("vmean ",v)
+        v0=self.value_leakyrelu(v)
+        print("vlayer0 ",v0)
+        v=self.value_linear1(v0)
+        print("vlayer1 ",v)
+        v=torch.relu(v)
+        v=self.value_linear2(v)
+        print("vlayer2 ",v)
+        v=torch.relu(v)+v0
+        v=self.value_linearfinal(v)
+        print("v ",v)
+        print("vsoftmax ",torch.softmax(v,dim=1))
+        return v, p
+    def exportMapTable(self, x, device):  # x.shape=(h,w<=9)
+        b = (x == 1)
+        w = (x == 2)
+        x = np.stack((b, w), axis=0).astype(np.float32)
+
+        x = torch.tensor(x[np.newaxis], dtype=torch.float32, device=device)# x.shape=(n=1,c=2,h,w<=9)
+
+        with torch.no_grad():
+            batchsize=4096
+            batchnum=1+(x.shape[2]-1)//batchsize
+            buf=[]
+            for i in range(batchnum):
+                start=i*batchsize
+                end=min((i+1)*batchsize,x.shape[2])
+
+                map=self.mapping(x[:, :, start:end, :])[0, 0]
+                if(self.mapmax!=0):
+                    map=self.mapmax*torch.tanh(map/self.mapmax) # |map|<30
+
+                buf.append(map.to('cpu').numpy())  # map.shape=(n=1,4,c=pc+vc,h,w<=9)
+            buf=np.concatenate(buf,axis=1)
+            return buf # shape=(c=pc+vc,h,w<=9)
+
 ModelDic = {
     "sum1": Model_sum1,#基础版
     "sum1relu": Model_sum1relu,#实验
@@ -729,5 +851,6 @@ ModelDic = {
     "mix3": Model_mix3, #实验
     "mix4noconv": Model_mix4noconv,#实验
     "mix4": Model_mix4, #sumrelu1的改进版，性价比较高
-    "mix4convep": Model_mix4convep #实验
+    "mix4convep": Model_mix4convep, #实验
+    "mix6": Model_mix6
 }

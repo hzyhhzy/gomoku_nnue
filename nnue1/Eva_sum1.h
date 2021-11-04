@@ -7,7 +7,6 @@
 
 #pragma once
 #include "EvaluatorOneSide.h"
-const int32_t pow3[] = { 1,3,9,27,81,243,729,2187,6561,19683,59049,177147,531441 };
 class Eva_sum1 :
     public EvaluatorOneSide
 {

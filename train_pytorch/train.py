@@ -49,15 +49,15 @@ if __name__ == '__main__':
     parser.add_argument('--cpu', action='store_true', default=False, help='whether use cpu')
     parser.add_argument('--bs', type=int,
                         default=128, help='batch size')
-    parser.add_argument('--lr', type=float, default=2e-3, help='learning rate')
-    parser.add_argument('--wd', type=float, default=0, help='weight decay')
+    parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
+    parser.add_argument('--wd', type=float, default=1e-7, help='weight decay')
     parser.add_argument('--data', type=str,
                         default='../alldata_p1_v1_6x96.npz', help='trainset path')
-    parser.add_argument('--type', type=str, default='sum1',help='model type defined in model.py')
+    parser.add_argument('--type', type=str, default='mix6',help='model type defined in model.py')
     parser.add_argument('--save', type=str ,default='test', help='model save pth')
     parser.add_argument('--new', action='store_true', default=False, help='whether to retrain')
     parser.add_argument('--epoch', type=int,
-                        default=100000, help='epoch num')
+                        default=1000000, help='epoch num')
     parser.add_argument('--maxstep', type=int,
                         default=5000000000, help='max step to train')
     parser.add_argument('--savestep', type=int,
@@ -65,7 +65,7 @@ if __name__ == '__main__':
     parser.add_argument('--infostep', type=int,
                         default=500, help='step to logger')
     parser.add_argument('--size', nargs='+',type=int,
-                        default=(128), help='model size')
+                        default=(128,16,32), help='model size')
     parser.add_argument('--val', action='store_true', default=False, help='whether use validation')
     parser.add_argument('--vdata', type=str,
                         default='../val_100k.npz', help='valset path')
@@ -115,7 +115,20 @@ if __name__ == '__main__':
     else:
         model = ModelDic[model_type](*modelsize).to(device)
 
-    optimizer = optim.Adam(model.parameters(), lr,weight_decay=args.wd)
+
+    #lowl2param是一些密集型神经网络参数，对lr和weightdecay更敏感
+    #另外，otherparam因为在c++代码中需要用int16计算，容易溢出，所以需要高的weightdecay控制范围
+    lowl2param = list(map(id, model.mapping.parameters()))+\
+                 list(map(id, model.value_leakyrelu.parameters()))+\
+                 list(map(id, model.value_linear1.parameters()))+\
+                 list(map(id, model.value_linear2.parameters()))+\
+                 list(map(id, model.value_linearfinal.parameters()))
+    otherparam=list(filter(lambda p:id(p) not in lowl2param,model.parameters()))
+    lowl2param=list(filter(lambda p:id(p) in lowl2param,model.parameters()))
+
+    optimizer = optim.Adam([{'params':otherparam},
+                            {'params': lowl2param,'lr':lr,'weight_decay':1e-7}],
+                            lr=lr,weight_decay=args.wd)
     model.train()
 
 
