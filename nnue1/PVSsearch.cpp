@@ -4,7 +4,8 @@ PVSsearch::PVSsearch(Evaluator *e) : Search(e), nodes(0), interiorNodes(0) {}
 
 float PVSsearch::fullsearch(Color color, double factor, Loc &bestmove)
 {
-  int depth = (int)factor;
+  int depth                 = (int)factor;
+  plyInfos[0].nullMoveCount = 0;
   return search<true>(color, 0, depth, -VALUE_MATE, VALUE_MATE, false, bestmove);
 }
 
@@ -62,8 +63,33 @@ float PVSsearch::search(Color me,
   if (!PV && /*对方无冲四*/ true && eval - futilityMargin(depth) >= beta)
     return eval;
 
+  // 剪枝: Null move pruning
+  if (!PV && /*对方无冲四*/ true && plyInfos[ply].nullMoveCount == 0
+      && eval - nullMoveMargin(depth) >= beta) {
+    int r                           = nullMoveReduction(depth);
+    plyInfos[ply].currentMove       = NULL_LOC;
+    plyInfos[ply].currentPolicySum  = 0;
+    plyInfos[ply].moveCount         = 0;
+    plyInfos[ply + 1].nullMoveCount = 1;
+
+    Loc nextBest;
+    value = search<false>(oppo, ply + 1, -beta, -(beta - 1), depth - r, !isCut, nextBest);
+
+    if (value >= beta) {
+      value = std::min(beta, VALUE_MATE_IN_MAX_PLY);
+      if (beta < VALUE_MATE_IN_MAX_PLY)
+        return value;
+      else {
+        value = search<false>(me, ply, beta - 1, beta, depth - r, false, bestmove);
+        if (value >= beta)
+          return value;
+      }
+    }
+  }
+
 expand_node:
   interiorNodes++;
+  plyInfos[ply + 1].nullMoveCount = plyInfos[ply].nullMoveCount;
   PolicyType rawPolicy[BS * BS];
   float      policy[BS * BS];
   Loc        policyRank[BS * BS];

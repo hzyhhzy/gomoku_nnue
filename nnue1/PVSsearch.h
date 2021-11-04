@@ -53,6 +53,13 @@ constexpr int razorVerifyMargin(int d) { return razorMargin(d - 2.0f); }
 
 constexpr int futilityMargin(int d) { return std::max(60 * d, 0); }
 
+constexpr int nullMoveMargin(int d)
+{
+  return d >= 8 ? 250 + std::max(20 * (d - 8), 0) : MARGIN_INFINITE;
+}
+
+constexpr int nullMoveReduction(int d) { return d / 3 + 2; }
+
 template <bool PV>
 constexpr int futilityMoveCount(int d)
 {
@@ -79,7 +86,7 @@ inline const auto Reductions = []() {
 
 constexpr int lmrReduction(int d, int moveCount)
 {
-  return int(Reductions[d] * Reductions[moveCount]);
+  return int(0.5f + Reductions[d] * Reductions[moveCount]);
 }
 
 // -------------------------------------------------
@@ -106,6 +113,7 @@ private:
     Loc   pv[MAX_PLY];
     int   staticEval;
     int   moveCount;
+    int   nullMoveCount;
     Loc   currentMove;
     float currentPolicySum;
   } plyInfos[BS * BS + 1];  // plyInfos[ply]
