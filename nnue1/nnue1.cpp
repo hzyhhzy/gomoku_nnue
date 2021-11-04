@@ -18,9 +18,10 @@ Time now()
 }
 
 using namespace std;
-int main()
+int main()//play a game
 {
-    Evaluator *eva    = new Evaluator("mix6", "weights/t5.txt");
+    Evaluator *eva = new Evaluator("mix6", "weights/t16.txt");
+    // Evaluator *eva    = new Evaluator("sum1", "weights/sum1.txt");
     PVSsearch *search = new PVSsearch(eva);
     /*
     const char boardstr[] = ""
@@ -42,21 +43,269 @@ int main()
       */
 
     const char boardstr[] = ""
-                            ". . . . . . . . . . . . . . . "
-                            ". . . . . . . . . . . . . . . "
-                            ". . . . . . . . . . . . . . . "
-                            ". . . . . . . . . . . . . . . "
-                            ". . . . . . . x . . . . . . . "
-                            ". . . . . . . o . . . . . . . "
-                            ". . . . . . o x o o x . . . . "
-                            ". . . . . . . x x x o . . . . "
-                            ". . . . . . . o x x . . . . . "
-                            ". . . . . . . o . . o . . . . "
-                            ". . . . . . . . . . . . . . . "
-                            ". . . . . . . . . . . . . . . "
-                            ". . . . . . . . . . . . . . . "
-                            ". . . . . . . . . . . . . . . "
-                            ". . . . . . . . . . . . . . . ";
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . x . . . . . . . . . "
+      ". . . . . . . . . . . . . . . ";
+    for (int y = 0; y < BS; y++)
+        for (int x = 0; x < BS; x++) {
+            char  colorchar = boardstr[2 * (x + y * BS)];
+            Color color     = C_EMPTY;
+            if (colorchar == 'x')
+                color = C_BLACK;
+            else if (colorchar == 'o')
+                color = C_WHITE;
+            if (color != C_EMPTY)
+                eva->play(color, x + y * BS);
+        }
+
+    Color enginecolor = C_WHITE;
+    while (1) 
+    {
+        Time tic = now();
+        Loc  bestloc;
+        string valuetext;
+        for (int depth = 0; depth < 100; depth++) {
+            Loc    loc;
+            double value = search->fullsearch(enginecolor, depth, loc);
+            Time   toc   = now();
+            // search->evaluator->recalculate();
+            cout << "Depth = " << depth << " Value = " << valueText(value)
+                 << " Bestloc = " << loc % BS << "," << loc / BS << " Nodes = " << search->nodes
+                 << "(" << search->interiorNodes << ")"
+                 << " Time = " << toc - tic << " Nps = " << search->nodes * 1000.0 / (toc - tic)
+                 << endl;
+            if (toc - tic > 5000) 
+            {
+                bestloc = loc;
+                valuetext = valueText(value);
+                break;
+            }
+        }
+
+        eva->play(enginecolor, bestloc);
+
+        for (int y = 0; y < BS; y++) {
+            for (int x = 0; x < BS; x++) {
+                Color c = eva->board()[y * BS + x];
+                if (y * BS + x == bestloc)
+                    cout << "@ ";
+                else if (c == C_EMPTY)
+                    cout << ". ";
+                else if (c == C_MY)
+                    cout << "x ";
+                else if (c == C_OPP)
+                    cout << "o ";
+            }
+            cout << endl;
+        }
+
+        cout << "BestLoc:" << 'A' + bestloc % BS << 15 - bestloc / BS << "   Value:"<<valuetext<< endl;
+
+        string nextmove;
+        while (1) {
+            cin >> nextmove;
+            int x=-1, y=-1;
+            if (nextmove.size() == 2) {
+                x = nextmove[0] - 'a';
+                y = 15 - (nextmove[1] - '0');
+            }
+            else if (nextmove.size() == 3) {
+                x = nextmove[0] - 'a';
+                y = 15 - 10 * (nextmove[1] - '0') - (nextmove[2] - '0');
+            }
+            if (x >= 0 && x < BS && y >= 0 && y < BS) {
+                eva->play(3 - enginecolor, x + y * BS);
+                break;
+            }
+            else
+                cout << "Bad input" << endl;
+        }
+
+    }
+    return 0;
+
+}
+
+
+
+
+
+
+
+
+
+
+
+int main1()
+{
+    Evaluator *eva = new Evaluator("mix6", "weights/t16.txt");
+    // Evaluator *eva    = new Evaluator("sum1", "weights/sum1.txt");
+    ABsearch *search = new ABsearch(eva);
+    /*
+    const char boardstr[] = ""
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . ";
+      */
+
+    const char boardstr[] = ""
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . x . . . . . . "
+      ". . . . . . . x . . . . . . . "
+      ". . . . . . o . o . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . ";
+    for (int y = 0; y < BS; y++)
+        for (int x = 0; x < BS; x++) {
+            char  colorchar = boardstr[2 * (x + y * BS)];
+            Color color     = C_EMPTY;
+            if (colorchar == 'x')
+                color = C_BLACK;
+            else if (colorchar == 'o')
+                color = C_WHITE;
+            if (color != C_EMPTY)
+                eva->play(color, x + y * BS);
+        }
+
+    PolicyType policyBuf[BS * BS];
+    auto       v = eva->evaluate(C_BLACK, policyBuf);
+
+    cout << "WR " << (v.win + 0.5 * v.draw) << endl;
+    cout << "Win " << v.win << endl;
+    cout << "Loss " << v.loss << endl;
+    cout << "Draw " << v.draw << endl;
+
+    for (int y = 0; y < BS; y++) {
+        for (int x = 0; x < BS; x++) {
+            Color c = eva->board()[y * BS + x];
+            if (c == C_EMPTY)
+                cout << ".\t";
+            else if (c == C_MY)
+                cout << "x\t";
+            else if (c == C_OPP)
+                cout << "o\t";
+        }
+        cout << endl;
+        for (int x = 0; x < BS; x++) {
+            int p = policyBuf[y * BS + x];
+            cout << p << "\t";
+        }
+        cout << endl;
+    }
+
+
+    Time tic = now();
+    for (int depth = 0; depth <10; depth++) {
+        Loc    loc;
+        double value = search->fullsearch(C_BLACK, depth, loc);
+        Time   toc   = now();
+        // search->evaluator->recalculate();
+        cout << "Depth = " << depth << " Value = " << value << " Bestloc = " << loc % BS
+             << "," << loc / BS 
+             << ")"
+             << " Time = " << toc - tic 
+             << endl;
+    }
+
+
+    v = eva->evaluate(C_BLACK, policyBuf);
+      
+    cout << "WR " << (v.win + 0.5 * v.draw) << endl;
+    cout << "Win " << v.win << endl;
+    cout << "Loss " << v.loss << endl;
+    cout << "Draw " << v.draw << endl;
+
+    for (int y = 0; y < BS; y++) {
+        for (int x = 0; x < BS; x++) {
+            Color c = eva->board()[y * BS + x];
+            if (c == C_EMPTY)
+                cout << ".\t";
+            else if (c == C_MY)
+                cout << "x\t";
+            else if (c == C_OPP)
+                cout << "o\t";
+        }
+        cout << endl;
+        for (int x = 0; x < BS; x++) {
+            int p = policyBuf[y * BS + x];
+            cout << p << "\t";
+        }
+        cout << endl;
+    }
+}
+int run_pvssearch()
+{
+    Evaluator *eva    = new Evaluator("mix6", "weights/t5.txt");
+    //Evaluator *eva    = new Evaluator("sum1", "weights/sum1.txt");
+    PVSsearch *search = new PVSsearch(eva);
+    /*
+    const char boardstr[] = ""
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . ";
+      */
+
+    const char boardstr[] = ""
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . x . . . "
+      ". . . . . . . . . . o . . . . "
+      ". . . . . . . . . o . . . . . "
+      ". . . . . . . . o . o . . . . "
+      ". . . . . x o o o o x . . . . "
+      ". . . . . . x . x . . . . . . "
+      ". . . . . x x x o . . . . . . "
+      ". . . . . . x . o . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . "
+      ". . . . . . . . . . . . . . . ";
     for (int y = 0; y < BS; y++)
         for (int x = 0; x < BS; x++) {
             char  colorchar = boardstr[2 * (x + y * BS)];
@@ -81,6 +330,7 @@ int main()
              << " Time = " << toc - tic << " Nps = " << search->nodes * 1000.0 / (toc - tic)
              << endl;
     }
+    return 0;
 }
 
 // 运行程序: Ctrl + F5 或调试 >“开始执行(不调试)”菜单

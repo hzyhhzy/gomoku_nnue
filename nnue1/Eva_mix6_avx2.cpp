@@ -58,11 +58,11 @@ void Mix6buf_int16::update(Color oldcolor, Color newcolor, Loc loc, const Mix6we
       _mm256_storeu_si256(wp, sumw);
 
       //leaky relu
-      auto lrw = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(weights.map_lr_slope_sub1div4 + i * 16));
+      auto lrw = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(weights.map_lr_slope_sub1div8 + i * 16));
       auto lrb = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(weights.map_lr_bias + i * 16));
       neww = _mm256_add_epi16(_mm256_add_epi16(//0.25leakyrelu(x)=
         _mm256_srai_epi16(sumw,2),  // 0.25x
-        _mm256_mulhrs_epi16(lrw, _mm256_min_epi16(_mm256_setzero_si256(), sumw))),//+slopeSub1Div4*-relu(-x)
+        _mm256_slli_epi16(_mm256_mulhrs_epi16(lrw, _mm256_min_epi16(_mm256_setzero_si256(), sumw)),1)),//+2*slopeSub1Div8*-relu(-x)
         lrb);//+bias
       wp = reinterpret_cast<__m256i*>(mapAfterLR[c.loc] + i * 16);
       oldw = _mm256_loadu_si256(wp);
@@ -321,11 +321,11 @@ void Mix6buf_int16::emptyboard(const Mix6weight_int16& weights)
 
       //leaky relu
       //leaky relu
-      auto lrw = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(weights.map_lr_slope_sub1div4 + i * 16));
+      auto lrw = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(weights.map_lr_slope_sub1div8 + i * 16));
       auto lrb = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(weights.map_lr_bias + i * 16));
       sumw = _mm256_add_epi16(_mm256_add_epi16(//0.25leakyrelu(x)=
         _mm256_srai_epi16(sumw, 2),  // 0.25x
-        _mm256_mulhrs_epi16(lrw, _mm256_min_epi16(_mm256_setzero_si256(), sumw))),//+slopeSub1Div4*-relu(-x)
+        _mm256_slli_epi16(_mm256_mulhrs_epi16(lrw, _mm256_min_epi16(_mm256_setzero_si256(), sumw)),1)),//+2*slopeSub1Div8*-relu(-x)
         lrb);//+bias
       
       wp = reinterpret_cast<__m256i*>(mapAfterLR[loc] + i * 16);
@@ -475,15 +475,15 @@ bool Mix6weight_int16::loadParam(std::string filename)
       fs >> map[shapeID][j];
   }
 
-  //map_lr_slope_sub1div4
+  //map_lr_slope_sub1div8
   fs >> varname;
-  if (varname != "map_lr_slope_sub1div4")
+  if (varname != "map_lr_slope_sub1div8")
   {
     cout << "Wrong parameter name:" << varname << endl;
     return false;
   }
   for (int i = 0; i < mix6::featureNum; i++)
-    fs >> map_lr_slope_sub1div4[i];
+    fs >> map_lr_slope_sub1div8[i];
 
   //map_lr_bias
   fs >> varname;
