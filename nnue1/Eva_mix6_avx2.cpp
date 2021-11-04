@@ -23,7 +23,7 @@ void Mix6buf_int16::update(Color oldcolor, Color newcolor, Loc loc, const Mix6we
         int y = y0 - dist * dys[dir];
         if (x < 0 || x >= BS || y < 0 || y >= BS)continue;
         OnePointChange c;
-        c.dir = dir, c.loc = x + BS * y;
+        c.dir = dir, c.loc = MakeLoc(x,y);
         c.oldshape = shapeTable[c.loc][dir];
         c.newshape = c.oldshape + (newcolor - oldcolor) * pow3[dist + 5];
         shapeTable[c.loc][dir]= c.newshape;
@@ -79,7 +79,7 @@ void Mix6buf_int16::update(Color oldcolor, Color newcolor, Loc loc, const Mix6we
           {
             int x = x0 + dx;
             if (x < 0 || x >= BS)continue;
-            Loc thisloc = y * BS + x;
+            Loc thisloc = MakeLoc(x,y);
             auto convw= _mm256_loadu_si256(reinterpret_cast<const __m256i*>(weights.policyConvWeight[4 - dy * 3 - dx] + i * 16));
             wp = reinterpret_cast<__m256i*>(policyAfterConv[thisloc] + i * 16);
             sumw= _mm256_loadu_si256(wp);
@@ -195,7 +195,7 @@ void Mix6buf_int16::calculatePolicy(PolicyType* policy, const Mix6weight_int16& 
 {
   static_assert(mix6::policyBatch == 1,"Assume there's only one policy batch,or we need to calculate policy by batch");//
   if (policy == NULL)return;
-  for (Loc loc = 0; loc < BS * BS; loc++)
+  for (Loc loc = ZERO_LOC; loc < BS * BS; ++loc)
   {
     __m256i* wp = reinterpret_cast<__m256i*>(policyAfterConv[loc]);
     auto t = _mm256_loadu_si256(wp);
@@ -286,7 +286,7 @@ void Mix6buf_int16::emptyboard(const Mix6weight_int16& weights)
   for (int i = 0; i < mix6::policyBatch; i++)
   {
     auto bias= _mm256_loadu_si256(reinterpret_cast<const __m256i*>(weights.policyConvBias + i * 16));
-    for (Loc loc = 0; loc < BS * BS; loc++)
+    for (Loc loc = ZERO_LOC; loc < BS * BS; ++loc)
     {
       _mm256_storeu_si256(reinterpret_cast<__m256i*>(policyAfterConv[loc] + i * 16), bias);
     }
@@ -300,7 +300,7 @@ void Mix6buf_int16::emptyboard(const Mix6weight_int16& weights)
 
   //mapsum,mapAfterLR,policyAfterConv,valueSumBoard
   
-  for (Loc loc = 0; loc < BS * BS; loc++)
+  for (Loc loc = ZERO_LOC; loc < BS * BS; ++loc)
   {
     int y0 = loc / BS, x0 =loc % BS;
 
@@ -343,7 +343,7 @@ void Mix6buf_int16::emptyboard(const Mix6weight_int16& weights)
           {
             int x = x0 + dx;
             if (x < 0 || x >= BS)continue;
-            Loc thisloc = y * BS + x;
+            Loc  thisloc = MakeLoc(x, y);
             auto convw = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(weights.policyConvWeight[4 - dy * 3 - dx] + i * 16));
             wp = reinterpret_cast<__m256i*>(policyAfterConv[thisloc] + i * 16);
             auto oldw = _mm256_loadu_si256(wp);
@@ -397,7 +397,7 @@ void Eva_mix6_avx2::recalculate()
   Color boardCopy[BS * BS];
   memcpy(boardCopy, board, BS * BS * sizeof(Color));
   clear();
-  for (int i = 0; i < BS * BS; i++)
+  for (Loc i = ZERO_LOC; i < BS * BS; ++i)
   {
     if (boardCopy[i] != C_EMPTY)play(boardCopy[i], i);
   }
@@ -424,7 +424,7 @@ void Eva_mix6_avx2::undo(Loc loc)
 void Eva_mix6_avx2::debug_print()
 {
   using namespace std;
-  Loc loc = 7 * BS + 7;
+  Loc loc = MakeLoc(7, 7);
   cout << "mapsum";
   for (int i = 0; i < mix6::featureNum; i++)
     cout << buf.mapsum[loc][i] << " ";

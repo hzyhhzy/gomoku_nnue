@@ -63,7 +63,7 @@ void Eva_sum1::recalculate()
   Color boardCopy[BS * BS];
   memcpy(boardCopy, board, BS * BS * sizeof(Color));
   clear();
-  for (int i = 0; i < BS * BS; i++)
+  for (Loc i = ZERO_LOC; i < BS * BS; ++i)
   {
     if (boardCopy[i] != C_EMPTY)play(boardCopy[i], i);
   }
