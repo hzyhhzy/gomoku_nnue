@@ -19,7 +19,7 @@ public:
     if (color == C_BLACK)return blackEvaluator->evaluate(policy);
     else return whiteEvaluator->evaluate(policy);
   }
-  void play(Color color, Loc loc) { blackEvaluator->play(color, loc); whiteEvaluator->play(3 - color, loc); }
+  void play(Color color, Loc loc) { blackEvaluator->play(color, loc); whiteEvaluator->play(~color, loc); }
   void undo(Loc loc) { blackEvaluator->undo(loc); whiteEvaluator->undo(loc); }
   Color* board() const { return blackEvaluator->board; }
 };

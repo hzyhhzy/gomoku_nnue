@@ -1,12 +1,12 @@
 ---
 # Common settings
 BasedOnStyle: LLVM
-IndentWidth: '4'
-TabWidth: '4'
+IndentWidth: '2'
+TabWidth: '2'
 UseTab: Never
-ColumnLimit: '100'
+ColumnLimit: '90'
 
-AccessModifierOffset: '-4'
+AccessModifierOffset: '-2'
 AlignAfterOpenBracket: Align
 AlignConsecutiveMacros: 'true'
 AlignConsecutiveAssignments: 'true'
@@ -19,7 +19,7 @@ AllowAllConstructorInitializersOnNextLine: 'false'
 AllowAllParametersOfDeclarationOnNextLine: 'false'
 AllowShortBlocksOnASingleLine: 'true'
 AllowShortCaseLabelsOnASingleLine: 'true'
-AllowShortFunctionsOnASingleLine: Inline
+AllowShortFunctionsOnASingleLine: All
 AllowShortIfStatementsOnASingleLine: 'false'
 AllowShortLambdasOnASingleLine: All
 AllowShortLoopsOnASingleLine: 'false'

@@ -23,7 +23,7 @@ float ABsearch::searchRec(Color color, int depth, float maxEval, float minEval, 
   float bestValue = -1e30;
   for (int i = 0; i < BS * BS; i++)
   {
-    Loc loc = policyRankPtr[i];
+    Loc loc = Loc(policyRankPtr[i]);
     if (policyPtr[loc] < minPolicy&&i>=minExploreChildren(depth))break;
     if (boardPointer[loc] != C_EMPTY) { std::cout << "This nonempty point has a very big policy\n"; continue; }
     
@@ -36,7 +36,7 @@ float ABsearch::searchRec(Color color, int depth, float maxEval, float minEval, 
     {
       evaluator->play(color, loc);
       Loc nextBestMove;
-      value = -searchRec(3 - color, depth - 1, -std::max(bestValue,minEval), -maxEval, nextBestMove);
+      value = -searchRec(~color, depth - 1, -std::max(bestValue,minEval), -maxEval, nextBestMove);
       evaluator->undo(loc);
     }
     if (depth == 9)
