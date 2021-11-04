@@ -42,6 +42,7 @@ float PVSsearch::search(Color me,
 
   // Static eval
   int eval = plyInfos[ply].staticEval = value;
+  int evalDelta = ply >= 2 ? plyInfos[ply].staticEval - plyInfos[ply - 2].staticEval : 0;
 
   // 剪枝: Razoring
   if (!PV && eval + razorMargin(depth) <= alpha) {
@@ -113,7 +114,8 @@ expand_node:
     plyInfos[ply].moveCount        = ++moveCount;
 
     if (isWin(me, move)) {
-      value = mateValue(ply);
+      value                   = mateValue(ply);
+      plyInfos[ply + 1].pv[0] = NULL_LOC;
     }
     else {
       if (!Root && bestValue > -VALUE_MATE_IN_MAX_PLY) {
@@ -130,15 +132,19 @@ expand_node:
       int  newDepth        = depth - 1;
       bool fullDepthSearch = !PV || moveCount > 1;
 
+      // 延伸: 本方估值显著增加
+      newDepth += evalDelta >= 150;
+
       evaluator->play(me, move);
 
       // Do LMR
       if (depth >= LMR_DEPTH && moveCount > 1
           && (moveCount >= lateMoveCount<PV>(depth) || isCut)) {
         int r = lmrReduction(depth, moveCount) + 2 * isCut;
-        r += (plyInfos[ply].currentPolicySum > 0.95)
-             + (plyInfos[ply].currentPolicySum > 0.99);
-        r -= (ply > 1 && plyInfos[ply - 1].currentPolicySum < 0.1);
+        r += (plyInfos[ply].currentPolicySum > 0.9)
+             + (plyInfos[ply].currentPolicySum > 0.95);
+        r -= (ply > 1 && policySum < 0.75 && plyInfos[ply - 1].currentPolicySum < 0.1);
+        r += (evalDelta < -90) + (evalDelta < -180);
 
         int d = std::clamp(newDepth - r, 1, newDepth);
         value =
