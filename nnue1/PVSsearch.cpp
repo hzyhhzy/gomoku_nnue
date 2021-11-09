@@ -134,7 +134,7 @@ expand_node:
   for (int i = -1; i < BS * BS; i++) {
     Loc move;
     if (i == -1) {
-      if (ttMove == NULL_LOC)
+      if (ttMove == NULL_LOC || boardPointer[ttMove] != C_EMPTY)
         continue;
       move = ttMove;
     }
