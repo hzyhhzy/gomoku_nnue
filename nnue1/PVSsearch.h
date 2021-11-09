@@ -9,7 +9,7 @@
 
 constexpr int   MAX_PLY               = 128;
 constexpr int   VALUE_MATE            = 30000;
-constexpr int   VALUE_MATE_IN_MAX_PLY = 30000 - 256;
+constexpr int   VALUE_MATE_IN_MAX_PLY = 30000 - MAX_PLY;
 constexpr int   VALUE_MAX_EVAL        = 10000;
 constexpr int   VALUE_DRAW            = 0;
 constexpr float WLR_MATE_VALUE        = 0.99;
