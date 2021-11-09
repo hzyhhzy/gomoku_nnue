@@ -2,14 +2,17 @@
 #include "global.h"
 #include "Evaluator.h"
 #include "Search.h"
+#include "PVSsearch.h"
 class Engine
 {
 public:
-  Evaluator* evaluator;
-  Search* search;
-  Engine(std::string evaluator_type, std::string search_type);
+  Evaluator *evaluator;
+  PVSsearch *search;
+  Color      nextColor;
+  Engine(std::string evaluator_type, std::string weightfile,int TTsize);
+  Engine(const Engine &e) = delete;
+  Engine(Engine &&e) = delete;
   ~Engine() { delete evaluator; delete search; }
 
-
-  Color* getBoard() { return evaluator->blackEvaluator->board; }
+  void protocolLoop();
 };

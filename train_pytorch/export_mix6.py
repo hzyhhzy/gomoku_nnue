@@ -138,7 +138,7 @@ if __name__ == '__main__':
 
 
     #np.set_printoptions(suppress=True,precision=3)
-    w_scale=200
+    w_scale=6000/wmax
     scale_now*=w_scale #200
     maxint=wmax*w_scale
     if(maxint>32700):
@@ -196,9 +196,6 @@ if __name__ == '__main__':
     print("Bound=",bound)
 
 # 2 policyConv
-    #prepare
-    w_scale=0.5
-    scale_now*=w_scale #50
 
 
     policyConvWeight=model.policy_conv.weight.data.cpu().numpy()
@@ -206,15 +203,24 @@ if __name__ == '__main__':
 
     #calculate max
     wmax=np.abs(policyConvWeight).max()
-    bound_c=(np.abs(policyConvWeight).sum((1,2,3))*bound_c[:pc]+np.abs(policyConvBias)*scale_now/w_scale)*w_scale
+    bound_c=(np.abs(policyConvWeight).sum((1,2,3))*bound_c[:pc]+np.abs(policyConvBias)*scale_now)
     bmax=np.abs(policyConvBias).max()
     print("policyConvWeight max=",wmax)
     print("policyConvBias max=",bmax)
+
+    maxint=max(wmax*2**15,bmax*scale_now)
+
+    w_scale=min(32700/maxint,32700/bound_c.max())
+    print("policy conv w_scale=",w_scale)
+    scale_now*=w_scale
+    bound_c*=w_scale
+
+
     policyConvWeight=policyConvWeight*w_scale
     policyConvBias=policyConvBias*scale_now
 
-    maxint=max(wmax*w_scale,bmax*scale_now)
-    if(maxint>32700):
+    maxint=max(wmax*w_scale*2**15,bmax*scale_now)
+    if(maxint>32750):
         print("Error! Maxint=",maxint)
         exit(0)
 
@@ -236,16 +242,16 @@ if __name__ == '__main__':
 
 # 2 policyFinalConv
     #prepare
-    w_scale=0.5
-    scale_now*=w_scale #10
     policyFinalConv=model.policy_linear.weight.data.cpu().numpy()
 
     #calculate max
     wmax=np.abs(policyFinalConv).max()
     print("policyFinalConv max=",wmax)
 
-    maxint=wmax*w_scale
-    if(maxint>32700):
+    maxint=wmax*2**15
+    w_scale=min(32700/maxint,0.5)
+    scale_now*=w_scale
+    if(maxint*w_scale>32750):
         print("Error! Maxint=",maxint)
         exit(0)
 

@@ -6,7 +6,8 @@
 
 # Custom
 nnue/weights/
-
+*.lz4
+test/
 
 
 # User-specific files
