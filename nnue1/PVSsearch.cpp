@@ -33,36 +33,36 @@ float PVSsearch::search(Color me,
   plyInfos[ply].pv[0] = bestmove = NULL_LOC;
   nodes++;
 
-  // Ҷ������: ˮƽ�� ���� ��ֵɱ
+  // 叶子节点估值
   if (depth <= 0 || ply >= MAX_PLY || std::abs(value) >= VALUE_MATE_IN_MAX_PLY) {
     return value;
   }
 
-  // TODO: ���̺���
-
-  // ��֦: Mate distance pruning
+  // 剪枝: Mate distance pruning
   alpha = std::max(-mateValue(ply), alpha);
   beta  = std::min(mateValue(ply + 1), beta);
   if (alpha >= beta)
     return alpha;
 
-  // �û�������
+  // 置换表查找
   auto [tte, ttHit] = TT.probe(evaluator->key);
   int  ttValue      = ttHit ? valueFromTT(tte->value, ply) : 0;
   Loc  ttMove       = ttHit ? tte->best : NULL_LOC;
   bool ttPv         = ttHit ? tte->pv : false;
   ttHits += ttHit;
+
+  // 剪枝: 置换表剪枝
   if (!PV && ttHit && tte->depth >= depth
       && (ttValue >= beta ? (tte->bound & BOUND_LOWER) : (tte->bound & BOUND_UPPER))) {
     ttCuts++;
     return ttValue;
   }
 
-  // ��̬��ֵ
+  // 静态估值
   int eval = plyInfos[ply].staticEval = value;
   int evalDelta = ply >= 2 ? plyInfos[ply].staticEval - plyInfos[ply - 2].staticEval : 0;
 
-  // ��֦: Razoring
+  // 剪枝: Razoring
   if (!PV && eval + razorMargin(depth) <= alpha) {
     // TODO: do some VCF search to verify!
     int lowAlpha = alpha - razorVerifyMargin(depth);
@@ -78,12 +78,12 @@ float PVSsearch::search(Color me,
       return value;
   }
 
-  // ��֦: Futility pruning
-  if (!PV && /*�Է��޳���*/ true && eval - futilityMargin(depth) >= beta)
+  // 剪枝: Futility pruning
+  if (!PV && true && eval - futilityMargin(depth) >= beta)
     return eval;
 
-  // ��֦: Null move pruning
-  if (!PV && /*�Է��޳���*/ true && plyInfos[ply].nullMoveCount == 0
+  // 剪枝: Null move pruning
+  if (!PV && true && plyInfos[ply].nullMoveCount == 0
       && eval - nullMoveMargin(depth) >= beta) {
     int r                           = nullMoveReduction(depth);
     plyInfos[ply].currentMove       = NULL_LOC;
@@ -134,7 +134,7 @@ expand_node:
   for (int i = -1; i < BS * BS; i++) {
     Loc move;
     if (i == -1) {
-      if (ttMove == NULL_LOC)
+      if (ttMove == NULL_LOC || boardPointer[ttMove] != C_EMPTY)
         continue;
       move = ttMove;
     }
@@ -156,11 +156,11 @@ expand_node:
     }
     else {
       if (!Root && bestValue > -VALUE_MATE_IN_MAX_PLY) {
-        // PRUNING: Move count based pruning
+        // 剪枝: Move count based pruning
         if (moveCount >= futilityMoveCount<PV>(depth))
           continue;
 
-        // PRUNING: trivial policy pruning
+        // 剪枝: trivial policy pruning
         if (1 - policySum < trivialPolicyResidual(depth))
           continue;
       }
