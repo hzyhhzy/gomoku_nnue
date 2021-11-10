@@ -1,5 +1,4 @@
 #pragma once
-#include <chrono>
 #include "global.h"
 #include "Evaluator.h"
 #include "Search.h"
@@ -30,5 +29,3 @@ public:
   void protocolLoop();
 };
 
-typedef int64_t Time;  // value in milliseconds
-Time            now();

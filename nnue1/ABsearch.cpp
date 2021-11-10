@@ -12,7 +12,7 @@ float ABsearch::searchRec(Color color, int depth, float maxEval, float minEval, 
     // std::endl;//debug
     PolicyType *policyPtr     = policyBuf[depth];
     int *       policyRankPtr = policyRankBuf[depth];
-    float       value         = evaluator->evaluate(color, policyPtr).winlossrate();
+    float       value         = evaluator->evaluateFull(color, policyPtr).winlossrate();
     // std::cout << value<<std::endl;
     // if (color == C_BLACK)evaluator->blackEvaluator->debug_print();//debug
     // if (color == C_WHITE)evaluator->whiteEvaluator->debug_print();//debug
@@ -27,7 +27,10 @@ float ABsearch::searchRec(Color color, int depth, float maxEval, float minEval, 
   {
     Loc loc = Loc(policyRankPtr[i]);
     if (policyPtr[loc] < minPolicy&&i>=minExploreChildren(depth))break;
-    if (boardPointer[loc] != C_EMPTY) { std::cout << "This nonempty point has a very big policy\n"; continue; }
+    if (boardPointer[loc] != C_EMPTY) {
+      //std::cout << "This nonempty point has a very big policy\n";
+      continue;
+    }
     
     float value;
     if (isWin(color, loc))

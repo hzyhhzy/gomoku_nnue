@@ -38,7 +38,9 @@ public:
 
   //计算拆分为两部分，第一部分是可增量计算的，放在play函数里。第二部分是不易增量计算的，放在evaluate里。
   virtual void play(Color color, Loc loc);
-  virtual ValueType evaluate(PolicyType* policy);//policy通过函数参数返回
+  virtual ValueType evaluateFull(PolicyType* policy);//policy通过函数参数返回
+  virtual void evaluatePolicy(PolicyType *policy);  // policy通过函数参数返回
+  virtual ValueType evaluateValue();  //
 
   virtual void undo(Loc loc);//play的逆过程
 

@@ -28,7 +28,7 @@ float PVSsearch::search(Color me,
 {
   const bool  Root  = ply == 0;
   const Color oppo  = ~me;
-  int         value = valueFromWLR(evaluator->evaluate(me, nullptr).winlossrate(), ply);
+  int         value = valueFromWLR(evaluator->evaluateValue(me).winlossrate(), ply);
 
   plyInfos[ply].pv[0] = bestmove = NULL_LOC;
   nodes++;
@@ -121,7 +121,7 @@ expand_node:
   float      policySum = 0;
 
   auto calcPolicy = [&]() {
-    evaluator->evaluate(me, rawPolicy);
+    evaluator->evaluatePolicy(me, rawPolicy);
 
     normalizePolicy(rawPolicy, policy);
     sortPolicy(policy, policyRank);

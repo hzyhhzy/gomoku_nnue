@@ -1,13 +1,13 @@
+#include "EngineDev.h"
 
-#include "Engine.h"
 
 #include "TT.h"
 using namespace std;
 
-Engine::Engine(std::string evaluator_type, std::string weightfile, int TTsize)
+EngineDev::EngineDev(std::string evaluator_type, std::string weightfile, int TTsize)
 {
   evaluator = new Evaluator(evaluator_type, weightfile);
-  search    = new PVSsearch(evaluator);
+  search    = new ABsearch(evaluator);
   TT.resize(TTsize);
   nextColor = C_BLACK;
 
@@ -16,33 +16,28 @@ Engine::Engine(std::string evaluator_type, std::string weightfile, int TTsize)
          && logfilepath[logfilepath.length() - 1] != '\\' && logfilepath.length() > 0)
     logfilepath.pop_back();
   logfilepath = logfilepath + "log.txt";
-	
 
   logfile = ofstream(logfilepath, ios::app | ios::out);
 
-  timeout_turn = 1000;
+  timeout_turn  = 1000;
   timeout_match = 10000000;
   time_left     = 10000000;
 }
 
-std::string Engine::genmove()
+std::string EngineDev::genmove()
 {
-  Time tic    = now();
+  Time tic = now();
 
   Loc bestloc = NULL_LOC;
   for (int depth = 1; depth < 100; depth++) {
     double value = search->fullsearch(nextColor, depth, bestloc);
     Time   toc   = now();
     // search->evaluator->recalculate();
-    cout << "MESSAGE Depth = " << depth << " Value = " << valueText(value)
-         << " Nodes = " << search->nodes << "(" << search->interiorNodes << ")"
-         << " Time = " << toc - tic << " Nps = " << search->nodes * 1000.0 / (toc - tic)
-         << " TT = " << 100.0 * search->ttHits / search->interiorNodes << "("
-         << 100.0 * search->ttCuts / search->ttHits << ")"
-         << " PV = " << search->rootPV() << endl;
+    cout << "MESSAGE Depth = " << depth << " Value = " << value
+         << " Time = " << toc - tic << endl;
 
     // TODO : time limit
-    if (toc - tic > timeout_turn/2)
+    if (toc - tic > timeout_turn / 2)
       break;
   }
 
@@ -53,7 +48,7 @@ std::string Engine::genmove()
   return to_string(bestx) + "," + to_string(besty);
 }
 
-void Engine::protocolLoop()
+void EngineDev::protocolLoop()
 {
   string line;
   logfile << "Start protocol loop" << endl;
@@ -72,7 +67,6 @@ void Engine::protocolLoop()
           line[newLen++] = line[i];
 
       line.erase(line.begin() + newLen, line.end());
-
 
       // Convert tabs to spaces
       for (size_t i = 0; i < line.length(); i++)
@@ -104,7 +98,7 @@ void Engine::protocolLoop()
       nextColor = C_BLACK;
     }
     else if (command == "TURN") {
-      int  oppx, oppy;
+      int oppx, oppy;
       if (pieces.size() != 2 || !strOp::tryStringToInt(pieces[0], oppx)
           || !strOp::tryStringToInt(pieces[1], oppy))
         response = "ERROR Bad command";
@@ -112,18 +106,15 @@ void Engine::protocolLoop()
         Loc opploc = MakeLoc(oppx, oppy);
         evaluator->play(nextColor, opploc);
         nextColor = ~nextColor;
-        response = genmove();
+        response  = genmove();
       }
-
-
     }
     else if (command == "BOARD") {
       evaluator->clear();
       nextColor = C_BLACK;
 
       string line2;
-      while (1) 
-      {
+      while (1) {
         getline(cin, line2);
         logfile << line2 << endl;
         // Convert tabs to spaces
@@ -142,7 +133,7 @@ void Engine::protocolLoop()
 
         int x, y;
 
-        if (pieces2.size()==1 && pieces2[0] == "DONE") { //finish
+        if (pieces2.size() == 1 && pieces2[0] == "DONE") {  // finish
           response = genmove();
           break;
         }
@@ -150,22 +141,19 @@ void Engine::protocolLoop()
                  || !strOp::tryStringToInt(pieces2[1], y)) {
           cout << "ERROR Bad command";
         }
-        else {//normal move
+        else {  // normal move
           Loc loc = MakeLoc(x, y);
           evaluator->play(nextColor, loc);
           nextColor = ~nextColor;
         }
-
       }
-
     }
     else if (command == "BEGIN") {
       evaluator->clear();
       nextColor = C_BLACK;
-      response = genmove();
+      response  = genmove();
     }
     else if (command == "INFO") {
-      
       print_endl        = false;
       string subcommand = "";
       if (pieces.size() != 0) {
@@ -178,7 +166,6 @@ void Engine::protocolLoop()
           cout << "ERROR Bad command" << endl;
         else
           timeout_turn = tmp;
-
       }
       else if (subcommand == "timeout_match") {
         int tmp;
@@ -194,7 +181,7 @@ void Engine::protocolLoop()
         else
           time_left = tmp;
       }
-      else {//do nothing
+      else {  // do nothing
       }
     }
     else if (command == "END") {
@@ -223,6 +210,6 @@ void Engine::protocolLoop()
       cout << endl;
     logfile << response << endl;
   }
-  
+
   logfile << "Finished protocol loop" << endl;
 }
