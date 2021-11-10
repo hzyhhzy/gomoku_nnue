@@ -8,19 +8,32 @@
 #include <chrono>
 #include <iostream>
 
-typedef int64_t Time;  // value in milliseconds
-
-Time now()
-{
-  static_assert(sizeof(Time) == sizeof(std::chrono::milliseconds::rep),
-                "Time should be 64 bits");
-
-  auto dur = std::chrono::steady_clock::now().time_since_epoch();
-  return std::chrono::duration_cast<std::chrono::milliseconds>(dur).count();
-}
 
 using namespace std;
-int main2()
+
+
+int main(int argc,const char** argv)
+{
+  std::string path(argv[0]);
+  while (path[path.length() - 1] != '/' && path[path.length() - 1] != '\\'
+         && path.length() > 0)
+    path.pop_back();
+  path = path + "model.txt";
+	
+  Engine engine("mix6", path,128);
+  engine.protocolLoop();
+  return 0;
+}
+
+
+
+
+
+
+
+
+
+int main4()
 {
   Evaluator *eva    = new Evaluator("mix6", "weights/t1e2.txt");
   PVSsearch *search = new PVSsearch(eva);
@@ -50,11 +63,11 @@ int main2()
     ". . . . . . . . . . . . . . . "
     ". . . . . . . . . . . . . . . "
     ". . . . . . . . . . . . . . . "
-    ". . . . . . . . . . . . . . . "
-    ". . . . . . o . o . . . . . . "
+    ". . . . . . o o . . . . . . . "
+    ". . . . . . o . o x . . . . . "
     ". . . . . . . x . . . . . . . "
     ". . . . . . . . x . . . . . . "
-    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . x . . . . . "
     ". . . . . . . . . . . . . . . "
     ". . . . . . . . . . . . . . . "
     ". . . . . . . . . . . . . . . "
@@ -210,7 +223,7 @@ int main1()//play a game
 
 
 
-int main()
+int main3()
 {
   Evaluator *eva    = new Evaluator("mix6", "weights/t1e.txt");
   Search *search = new ABsearch(eva);
@@ -272,6 +285,7 @@ int main()
          << " Time = " << toc - tic 
         << endl;
   }
+  return 0;
 }
 // 运行程序: Ctrl + F5 或调试 >“开始执行(不调试)”菜单
 // 调试程序: F5 或调试 >“开始调试”菜单

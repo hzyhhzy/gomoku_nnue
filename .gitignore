@@ -8,6 +8,8 @@
 nnue/weights/
 *.lz4
 test/
+**/model.txt
+
 
 
 # User-specific files

@@ -6,7 +6,8 @@ void Mix6buf_int16::update(Color oldcolor, Color newcolor, Loc loc, const Mix6we
 {
 
   //update shapeTable
-  std::vector<OnePointChange> changeTable;
+  std::vector<OnePointChange> changeTable(44);
+  int                         changenum = 0;
 
   {
     int x0 = loc % BS;
@@ -32,14 +33,14 @@ void Mix6buf_int16::update(Color oldcolor, Color newcolor, Loc loc, const Mix6we
           Color o = oldcolor, n = newcolor;
           int a = 0;
         }
-        changeTable.push_back(c);
+        changeTable[changenum]=c;
+        changenum++;
       }
     }
   }
 
-  int changeNum = changeTable.size();
 
-  for (int p = 0; p < changeNum; p++)
+  for (int p = 0; p < changenum; p++)
   {
     OnePointChange c = changeTable[p];
 
