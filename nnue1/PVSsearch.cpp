@@ -44,6 +44,9 @@ float PVSsearch::search(Color me,
   if (alpha >= beta)
     return alpha;
 
+  if (terminate.load(std::memory_order_relaxed))
+    return VALUE_NONE;
+
   // 置换表查找
   auto [tte, ttHit] = TT.probe(evaluator->key);
   int  ttValue      = ttHit ? valueFromTT(tte->value, ply) : 0;
@@ -206,6 +209,9 @@ expand_node:
       evaluator->undo(me, move);
     }
 
+    if (terminate.load(std::memory_order_relaxed))
+      return VALUE_NONE;
+
     if (value > bestValue) {
       bestValue = value;
       if (value > alpha) {
@@ -311,4 +317,11 @@ std::vector<Loc> PVSsearch::rootPV() const
   while (*pvPtr != NULL_LOC)
     pv.push_back(*pvPtr++);
   return pv;
+}
+
+void PVSsearch::clear()
+{
+  terminate = false;
+  nodes = interiorNodes = 0;
+  ttHits = ttCuts = 0;
 }

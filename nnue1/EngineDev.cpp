@@ -1,7 +1,9 @@
 #include "EngineDev.h"
 
-
 #include "TT.h"
+
+#include <chrono>
+#include <future>
 using namespace std;
 
 EngineDev::EngineDev(std::string evaluator_type, std::string weightfile, int TTsize)
@@ -33,8 +35,8 @@ std::string EngineDev::genmove()
     double value = search->fullsearch(nextColor, depth, bestloc);
     Time   toc   = now();
     // search->evaluator->recalculate();
-    cout << "MESSAGE Depth = " << depth << " Value = " << value
-         << " Time = " << toc - tic << endl;
+    cout << "MESSAGE Depth = " << depth << " Value = " << value << " Time = " << toc - tic
+         << endl;
 
     // TODO : time limit
     if (toc - tic > timeout_turn / 2)

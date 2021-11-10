@@ -7,6 +7,8 @@ class ABsearch
 public:
   ABsearch(Evaluator* e) :Search(e) {}
   virtual float fullsearch(Color color, double factor, Loc& bestmove);
+  virtual void  stop() {}
+
 private:
   float searchRec(Color color, int depth, float maxEval,float minEval,Loc& bestmove);//发现一条分支大于maxeval则直接返回（用于ab剪枝）。minEval传递到下层
 
