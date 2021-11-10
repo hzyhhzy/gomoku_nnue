@@ -10,4 +10,5 @@ public:
   virtual float fullsearch(Color color, double factor, Loc& bestmove) = 0;//factor是搜索因数（可以指代层数，节点数等），越大则搜索量越大
   virtual void play(Color color, Loc loc) { evaluator->play(color, loc); }
   virtual void undo(Color color, Loc loc) { evaluator->undo(color, loc); }
+  virtual void stop() = 0;
 };

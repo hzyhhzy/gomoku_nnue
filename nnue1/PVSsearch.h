@@ -8,6 +8,7 @@
 // -------------------------------------------------
 
 constexpr int   MAX_PLY               = 128;
+constexpr int   VALUE_NONE            = -30001;
 constexpr int   VALUE_MATE            = 30000;
 constexpr int   VALUE_MATE_IN_MAX_PLY = 30000 - MAX_PLY;
 constexpr int   VALUE_MAX_EVAL        = 10000;
@@ -47,7 +48,7 @@ inline std::string valueText(int value)
   if (value >= VALUE_MATE_IN_MAX_PLY)
     return "+M" + std::to_string(VALUE_MATE - value);
   else if (value <= -VALUE_MATE_IN_MAX_PLY)
-    return "-M" + std::to_string(-VALUE_MATE + value);
+    return "-M" + std::to_string(VALUE_MATE + value);
   else
     return std::to_string(value);
 }
@@ -112,9 +113,12 @@ class PVSsearch : public Search
 public:
   PVSsearch(Evaluator *e);
   virtual float    fullsearch(Color color, double factor, Loc &bestmove);
+  virtual void     stop() { terminate.store(true, std::memory_order_relaxed); }
   std::vector<Loc> rootPV() const;
+  void             clear();
   size_t           nodes, interiorNodes;
   size_t           ttHits, ttCuts;
+  std::atomic_bool terminate;
 
 private:
   template <bool PV>
