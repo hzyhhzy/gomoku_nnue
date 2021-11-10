@@ -1,7 +1,9 @@
-
 #include "Engine.h"
 
 #include "TT.h"
+
+#include <chrono>
+#include <future>
 using namespace std;
 
 namespace strOp {
@@ -63,25 +65,40 @@ Engine::Engine(std::string evaluator_type, std::string weightfile, int TTsize)
          && logfilepath[logfilepath.length() - 1] != '\\' && logfilepath.length() > 0)
     logfilepath.pop_back();
   logfilepath = logfilepath + "log.txt";
-	
 
   logfile = ofstream(logfilepath, ios::app | ios::out);
 
-  timeout_turn = 1000;
+  timeout_turn  = 1000;
   timeout_match = 10000000;
   time_left     = 10000000;
 }
 
 std::string Engine::genmove()
 {
-  Time tic    = now();
+  Time   tic         = now();
+  double bestvalue   = VALUE_NONE;
+  Loc    bestloc     = NULL_LOC;
+  int    maxTurnTime = min(timeout_turn - ReservedTime, time_left / 5);
+  int    maxWaitTime = max(maxTurnTime - AsyncWaitReservedTime, 0);
 
-  Loc bestloc = NULL_LOC;
+  search->clear();
   for (int depth = 1; depth < 100; depth++) {
-    double value = search->fullsearch(nextColor, depth, bestloc);
-    Time   toc   = now();
+    auto result = std::async(std::launch::async, [&]() {
+      Loc    loc;
+      double value = search->fullsearch(nextColor, depth, loc);
+      return std::make_pair(value, loc);
+    });
+
+    if (result.wait_for(chrono::milliseconds(max(maxWaitTime + tic - now(), 0LL)))
+        == future_status::timeout) {
+      search->stop();
+      break;
+    }
+
+    std::tie(bestvalue, bestloc) = result.get();
+    Time toc                     = now();
     // search->evaluator->recalculate();
-    cout << "MESSAGE Depth = " << depth << " Value = " << valueText(value)
+    cout << "MESSAGE Depth = " << depth << " Value = " << valueText(bestvalue)
          << " Nodes = " << search->nodes << "(" << search->interiorNodes << ")"
          << " Time = " << toc - tic << " Nps = " << search->nodes * 1000.0 / (toc - tic)
          << " TT = " << 100.0 * search->ttHits / search->interiorNodes << "("
@@ -89,7 +106,7 @@ std::string Engine::genmove()
          << " PV = " << search->rootPV() << endl;
 
     // TODO : time limit
-    if (toc - tic > timeout_turn/2)
+    if (toc - tic > maxTurnTime / 2)
       break;
   }
 
@@ -119,7 +136,6 @@ void Engine::protocolLoop()
           line[newLen++] = line[i];
 
       line.erase(line.begin() + newLen, line.end());
-
 
       // Convert tabs to spaces
       for (size_t i = 0; i < line.length(); i++)
@@ -151,7 +167,7 @@ void Engine::protocolLoop()
       nextColor = C_BLACK;
     }
     else if (command == "TURN") {
-      int  oppx, oppy;
+      int oppx, oppy;
       if (pieces.size() != 2 || !strOp::tryStringToInt(pieces[0], oppx)
           || !strOp::tryStringToInt(pieces[1], oppy))
         response = "ERROR Bad command";
@@ -159,18 +175,15 @@ void Engine::protocolLoop()
         Loc opploc = MakeLoc(oppx, oppy);
         evaluator->play(nextColor, opploc);
         nextColor = ~nextColor;
-        response = genmove();
+        response  = genmove();
       }
-
-
     }
     else if (command == "BOARD") {
       evaluator->clear();
       nextColor = C_BLACK;
 
       string line2;
-      while (1) 
-      {
+      while (1) {
         getline(cin, line2);
         logfile << line2 << endl;
         // Convert tabs to spaces
@@ -189,7 +202,7 @@ void Engine::protocolLoop()
 
         int x, y;
 
-        if (pieces2.size()==1 && pieces2[0] == "DONE") { //finish
+        if (pieces2.size() == 1 && pieces2[0] == "DONE") {  // finish
           response = genmove();
           break;
         }
@@ -197,22 +210,19 @@ void Engine::protocolLoop()
                  || !strOp::tryStringToInt(pieces2[1], y)) {
           cout << "ERROR Bad command";
         }
-        else {//normal move
+        else {  // normal move
           Loc loc = MakeLoc(x, y);
           evaluator->play(nextColor, loc);
           nextColor = ~nextColor;
         }
-
       }
-
     }
     else if (command == "BEGIN") {
       evaluator->clear();
       nextColor = C_BLACK;
-      response = genmove();
+      response  = genmove();
     }
     else if (command == "INFO") {
-      
       print_endl        = false;
       string subcommand = "";
       if (pieces.size() != 0) {
@@ -225,7 +235,6 @@ void Engine::protocolLoop()
           cout << "ERROR Bad command" << endl;
         else
           timeout_turn = tmp;
-
       }
       else if (subcommand == "timeout_match") {
         int tmp;
@@ -241,7 +250,14 @@ void Engine::protocolLoop()
         else
           time_left = tmp;
       }
-      else {//do nothing
+      else if (subcommand == "max_memory") {
+        int tmp;
+        if (!strOp::tryStringToInt(pieces[0], tmp))
+          cout << "ERROR Bad command" << endl;
+        else
+          TT.resize(1 + tmp / (1024 * 1024) / 2);
+      }
+      else {  // do nothing
       }
     }
     else if (command == "END") {
@@ -270,7 +286,7 @@ void Engine::protocolLoop()
       cout << endl;
     logfile << response << endl;
   }
-  
+
   logfile << "Finished protocol loop" << endl;
 }
 
