@@ -5,24 +5,36 @@
 #include <future>
 using namespace std;
 
-Engine::Engine(std::string evaluator_type, std::string weightfile, int TTsize)
+Engine::Engine(std::string evaluator_type,
+               std::string weightfile,
+               int         TTsize,
+               bool        writeLogEnable)
+    : writeLogEnable(writeLogEnable)
 {
   evaluator = new Evaluator(evaluator_type, weightfile);
   search    = new PVSsearch(evaluator);
   TT.resize(TTsize);
   nextColor = C_BLACK;
 
-  string logfilepath = weightfile;
-  while (logfilepath[logfilepath.length() - 1] != '/'
-         && logfilepath[logfilepath.length() - 1] != '\\' && logfilepath.length() > 0)
-    logfilepath.pop_back();
-  logfilepath = logfilepath + "log.txt";
+  if (writeLogEnable) {
+    string logfilepath = weightfile;
+    while (logfilepath[logfilepath.length() - 1] != '/'
+           && logfilepath[logfilepath.length() - 1] != '\\' && logfilepath.length() > 0)
+      logfilepath.pop_back();
+    logfilepath = logfilepath + "log.txt";
 
-  logfile = ofstream(logfilepath, ios::app | ios::out);
+    logfile = ofstream(logfilepath, ios::app | ios::out);
+  }
 
   timeout_turn  = 1000;
   timeout_match = 10000000;
   time_left     = 10000000;
+}
+
+void Engine::writeLog(std::string str)
+{
+  if (writeLogEnable)
+    logfile << str << endl;
 }
 
 std::string Engine::genmove()
@@ -73,9 +85,9 @@ std::string Engine::genmove()
 void Engine::protocolLoop()
 {
   string line;
-  logfile << "Start protocol loop" << endl;
+  writeLog( "Start protocol loop" );
   while (getline(cin, line)) {
-    logfile << line << endl;
+    writeLog( line );
     bool           print_endl = true;
     string         response   = "";
     string         command;
@@ -138,7 +150,7 @@ void Engine::protocolLoop()
       string line2;
       while (1) {
         getline(cin, line2);
-        logfile << line2 << endl;
+        writeLog( line2 );
         // Convert tabs to spaces
         for (size_t i = 0; i < line2.length(); i++)
           if (line2[i] == '\t' || line2[i] == ',')
@@ -240,8 +252,8 @@ void Engine::protocolLoop()
     cout << response;
     if (print_endl)
       cout << endl;
-    logfile << response << endl;
+    writeLog(response);
   }
 
-  logfile << "Finished protocol loop" << endl;
+  writeLog("Finished protocol loop");
 }
