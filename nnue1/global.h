@@ -20,7 +20,7 @@ inline Loc           MakeLoc(int x, int y) { return Loc(x + y * BS); }
 inline Loc &         operator++(Loc &loc) { return loc = Loc(loc + 1); }
 inline std::ostream &operator<<(std::ostream &os, Loc loc)
 {
-  return os << char('A' + loc % BS) << int(1 + loc / BS);
+  return os << char('A' + loc % BS) << int(BS - loc / BS);
 }
 inline std::ostream &operator<<(std::ostream &os, std::vector<Loc> pv)
 {

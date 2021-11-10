@@ -6,6 +6,9 @@
 
 # Custom
 nnue/weights/
+*.lz4
+test/
+**/model.txt
 
 
 
