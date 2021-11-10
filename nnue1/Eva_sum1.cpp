@@ -101,18 +101,25 @@ void Eva_sum1::play(Color color, Loc loc)
   }
 }
 
-ValueType Eva_sum1::evaluate(PolicyType* policy)
+ValueType Eva_sum1::evaluateFull(PolicyType* policy)
 {
-  Total_Eval_Num++;
-  //if (Total_Eval_Num % 100000 == 0)std::cout << "TotalEval " << Total_Eval_Num << std::endl;
-  if (policy != nullptr)
-  {
-    memcpy(policy, policyBuf, sizeof(policyBuf));
+  if (policy != nullptr) {
+    evaluatePolicy(policy);
   }
-  float factor = BS * BS * quantFactor;
-  return ValueType(float(winSum)/factor, float(lossSum)/factor, float(drawSum)/factor);
+  return evaluateValue();
 }
 
+void Eva_sum1::evaluatePolicy(PolicyType *policy)
+{
+    memcpy(policy, policyBuf, sizeof(policyBuf));
+}
+ValueType Eva_sum1::evaluateValue()
+{
+  float factor = BS * BS * quantFactor;
+  return ValueType(float(winSum) / factor,
+                   float(lossSum) / factor,
+                   float(drawSum) / factor);
+}
 void Eva_sum1::undo(Loc loc)
 {
   Color color = board[loc];

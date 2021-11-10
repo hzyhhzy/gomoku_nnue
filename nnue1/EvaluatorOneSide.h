@@ -10,8 +10,10 @@ public:
   virtual void recalculate() = 0;//根据board完全重新计算棋形表
   
   //计算拆分为两部分，第一部分是可增量计算的，放在play函数里。第二部分是不易增量计算的，放在evaluate里。
-  virtual void play(Color color, Loc loc) = 0;
-  virtual ValueType evaluate(PolicyType* policy) = 0;//policy通过函数参数返回
+  virtual void      play(Color color, Loc loc)   = 0;
+  virtual ValueType evaluateFull(PolicyType *policy) = 0;  // policy通过函数参数返回
+  virtual void evaluatePolicy(PolicyType *policy) = 0;  // policy通过函数参数返回
+  virtual ValueType evaluateValue()  = 0;  //
 
   virtual void undo(Loc loc) = 0;//play的逆过程
   virtual void debug_print() {}//debug用

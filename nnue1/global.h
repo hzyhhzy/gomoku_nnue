@@ -1,5 +1,6 @@
 #pragma once
 #include <algorithm>
+#include <chrono>
 #include <cstdint>
 #include <fstream>
 #include <iostream>
@@ -79,5 +80,24 @@ inline std::string dbg_board(const Color *board)
   return os.str();
 }
 
+typedef int64_t Time;  // value in milliseconds
+inline Time     now()
+{
+  static_assert(sizeof(Time) == sizeof(std::chrono::milliseconds::rep),
+                "Time should be 64 bits");
+
+  auto dur = std::chrono::steady_clock::now().time_since_epoch();
+  return std::chrono::duration_cast<std::chrono::milliseconds>(dur).count();
+}
+
 const int32_t pow3[] =
     {1, 3, 9, 27, 81, 243, 729, 2187, 6561, 19683, 59049, 177147, 531441};
+
+namespace strOp {
+using namespace std;
+string trim(const string &s);
+
+vector<string> split(const string &s);
+vector<string> split(const string &s, char delim);
+bool           tryStringToInt(const string &str, int &x);
+}  // namespace strOp

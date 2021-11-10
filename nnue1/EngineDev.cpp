@@ -1,14 +1,15 @@
-#include "Engine.h"
+#include "EngineDev.h"
 
 #include "TT.h"
 
+#include <chrono>
 #include <future>
 using namespace std;
 
-Engine::Engine(std::string evaluator_type, std::string weightfile, int TTsize)
+EngineDev::EngineDev(std::string evaluator_type, std::string weightfile, int TTsize)
 {
   evaluator = new Evaluator(evaluator_type, weightfile);
-  search    = new PVSsearch(evaluator);
+  search    = new ABsearch(evaluator);
   TT.resize(TTsize);
   nextColor = C_BLACK;
 
@@ -25,41 +26,20 @@ Engine::Engine(std::string evaluator_type, std::string weightfile, int TTsize)
   time_left     = 10000000;
 }
 
-std::string Engine::genmove()
+std::string EngineDev::genmove()
 {
-  Time   tic         = now();
-  double bestvalue   = VALUE_NONE;
-  Loc    bestloc     = NULL_LOC;
-  int    maxTurnTime = min(timeout_turn - ReservedTime, time_left / 5);
-  int    maxWaitTime = max(maxTurnTime - AsyncWaitReservedTime, 0);
-  int    optimalTime = maxTurnTime / 2;
+  Time tic = now();
 
-  search->clear();
+  Loc bestloc = NULL_LOC;
   for (int depth = 1; depth < 100; depth++) {
-    auto result = std::async(std::launch::async, [&]() {
-      Loc    loc;
-      double value = search->fullsearch(nextColor, depth, loc);
-      return std::make_pair(value, loc);
-    });
-
-    if (result.wait_for(chrono::milliseconds(max(maxWaitTime + tic - now(), 0LL)))
-        == future_status::timeout) {
-      search->stop();
-      break;
-    }
-
-    std::tie(bestvalue, bestloc) = result.get();
-    Time toc                     = now();
+    double value = search->fullsearch(nextColor, depth, bestloc);
+    Time   toc   = now();
     // search->evaluator->recalculate();
-    cout << "MESSAGE Depth = " << depth << " Value = " << valueText(bestvalue)
-         << " Nodes = " << search->nodes << "(" << search->interiorNodes << ")"
-         << " Time = " << toc - tic << " Nps = " << search->nodes * 1000.0 / (toc - tic)
-         << " TT = " << 100.0 * search->ttHits / search->interiorNodes << "("
-         << 100.0 * search->ttCuts / search->ttHits << ")"
-         << " PV = " << search->rootPV() << endl;
+    cout << "MESSAGE Depth = " << depth << " Value = " << value << " Time = " << toc - tic
+         << endl;
 
     // TODO : time limit
-    if (toc - tic > optimalTime)
+    if (toc - tic > timeout_turn / 2)
       break;
   }
 
@@ -70,7 +50,7 @@ std::string Engine::genmove()
   return to_string(bestx) + "," + to_string(besty);
 }
 
-void Engine::protocolLoop()
+void EngineDev::protocolLoop()
 {
   string line;
   logfile << "Start protocol loop" << endl;
@@ -202,16 +182,6 @@ void Engine::protocolLoop()
           cout << "ERROR Bad command" << endl;
         else
           time_left = tmp;
-      }
-      else if (subcommand == "max_memory") {
-        int tmp;
-        if (!strOp::tryStringToInt(pieces[0], tmp))
-          cout << "ERROR Bad command" << endl;
-        else {
-          constexpr int ReversedMemMb   = 132;  // ¹ÀËãµÄÄÚ´æÏûºÄ
-          int           useableMemoryMb = max(tmp - ReversedMemMb, 0);
-          TT.resize(1 + useableMemoryMb / 2 / (1024 * 1024));
-        }
       }
       else {  // do nothing
       }

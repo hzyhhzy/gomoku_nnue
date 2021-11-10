@@ -1,19 +1,21 @@
 #pragma once
+//功能同engine，只是可以在不删engine代码的同时进行测试
+#include "AllSearch.h"
 #include "Evaluator.h"
-#include "PVSsearch.h"
 #include "Search.h"
 #include "global.h"
-class Engine
+
+class EngineDev
 {
 public:
   Evaluator *   evaluator;
-  PVSsearch *   search;
+  Search *      search;
   Color         nextColor;
   std::ofstream logfile;
-  Engine(std::string evaluator_type, std::string weightfile, int TTsize);
-  Engine(const Engine &e) = delete;
-  Engine(Engine &&e)      = delete;
-  ~Engine()
+  EngineDev(std::string evaluator_type, std::string weightfile, int TTsize);
+  EngineDev(const EngineDev &e) = delete;
+  EngineDev(EngineDev &&e)      = delete;
+  ~EngineDev()
   {
     delete evaluator;
     delete search;
@@ -24,11 +26,7 @@ public:
   int timeout_match;
   int time_left;
 
-  static constexpr int ReservedTime          = 50;
-  static constexpr int AsyncWaitReservedTime = 100;
-
   std::string genmove();
 
   void protocolLoop();
 };
-

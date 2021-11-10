@@ -42,6 +42,18 @@
     <ClCompile Include="TT.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Eva_mix6_avx2.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="VCFsolver.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="EngineDev.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="utils.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Evaluator.h">
@@ -75,6 +87,15 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="TT.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Eva_mix6_avx2.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="VCFsolver.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="EngineDev.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

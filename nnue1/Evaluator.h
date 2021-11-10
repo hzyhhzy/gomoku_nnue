@@ -15,11 +15,31 @@ public:
   void initZobrist(uint64_t seed);
   bool loadParam(std::string filepathB, std::string filepathW);
   void clear() {blackEvaluator->clear();whiteEvaluator->clear();}
-  void recalculate() { blackEvaluator->recalculate(); whiteEvaluator->recalculate(); }
-  ValueType evaluate(Color color, PolicyType* policy)
+  void recalculate()
   {
-    if (color == C_BLACK)return blackEvaluator->evaluate(policy);
-    else return whiteEvaluator->evaluate(policy);
+    blackEvaluator->recalculate();
+    whiteEvaluator->recalculate();
+  }
+  ValueType evaluateFull(Color color, PolicyType *policy)
+  {
+    if (color == C_BLACK)
+      return blackEvaluator->evaluateFull(policy);
+    else
+      return whiteEvaluator->evaluateFull(policy);
+  }
+  void evaluatePolicy(Color color, PolicyType *policy)
+  {
+    if (color == C_BLACK)
+      blackEvaluator->evaluatePolicy(policy);
+    else
+      whiteEvaluator->evaluatePolicy(policy);
+  }
+  ValueType evaluateValue(Color color)
+  {
+    if (color == C_BLACK)
+      return blackEvaluator->evaluateValue();
+    else
+      return whiteEvaluator->evaluateValue();
   }
   void play(Color color, Loc loc) { 
       key ^= zobrist[color - C_BLACK][loc];

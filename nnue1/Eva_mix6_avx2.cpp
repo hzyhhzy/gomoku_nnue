@@ -410,9 +410,21 @@ void Eva_mix6_avx2::play(Color color, Loc loc)
   buf.update(C_EMPTY, color, loc, weights);
 }
 
-ValueType Eva_mix6_avx2::evaluate(PolicyType* policy)
+ValueType Eva_mix6_avx2::evaluateFull(PolicyType* policy)
 {
-  buf.calculatePolicy(policy,weights);
+  if (policy != nullptr) {
+    evaluatePolicy(policy);
+  }
+  return evaluateValue();
+}
+
+void Eva_mix6_avx2::evaluatePolicy(PolicyType *policy)
+{
+  buf.calculatePolicy(policy, weights);
+}
+
+ValueType Eva_mix6_avx2::evaluateValue()
+{
   return buf.calculateValue(weights);
 }
 

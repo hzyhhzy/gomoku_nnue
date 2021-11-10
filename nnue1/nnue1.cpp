@@ -1,8 +1,10 @@
 // nnue1.cpp : 此文件包含 "main" 函数。程序执行将在此处开始并结束。
 //
 
+#include "AllEvaluator.h"
 #include "AllSearch.h"
 #include "Engine.h"
+#include "EngineDev.h"
 #include "TT.h"
 
 #include <chrono>
@@ -19,7 +21,7 @@ std::string appPath(int argc, const char **argv)
   return path;
 }
 
-int main(int argc, const char **argv)
+int maingtp(int argc, const char **argv)
 {
   std::string modelPath = appPath(argc, argv) + "model.txt";
   // 如果有第二个参数，认为是model path
@@ -27,12 +29,12 @@ int main(int argc, const char **argv)
     modelPath = argv[1];
   }
 
-  Engine engine("mix6", modelPath, 128);
+  Engine engine("mix6", modelPath, 0);
   engine.protocolLoop();
   return 0;
 }
 
-int main4()
+int main_testsearch()
 {
   Evaluator *eva    = new Evaluator("mix6", "weights/t1e2.txt");
   PVSsearch *search = new PVSsearch(eva);
@@ -99,7 +101,7 @@ int main4()
   }
 }
 
-int main1()  // play a game
+int main1_play()  // play a game
 {
   Evaluator *eva = new Evaluator("mix6", "weights/t1e2.txt");
   // Evaluator *eva    = new Evaluator("sum1", "weights/sum1.txt");
@@ -217,7 +219,7 @@ int main1()  // play a game
   return 0;
 }
 
-int main3()
+int main_testABsearch()
 {
   Evaluator *eva    = new Evaluator("mix6", "weights/t1e.txt");
   Search *   search = new ABsearch(eva);
@@ -280,14 +282,64 @@ int main3()
   }
   return 0;
 }
-// 运行程序: Ctrl + F5 或调试 >“开始执行(不调试)”菜单
-// 调试程序: F5 或调试 >“开始调试”菜单
 
-// 入门使用技巧:
-//   1. 使用解决方案资源管理器窗口添加/管理文件
-//   2. 使用团队资源管理器窗口连接到源代码管理
-//   3. 使用输出窗口查看生成输出和其他消息
-//   4. 使用错误列表窗口查看错误
-//   5.
-//   转到“项目”>“添加新项”以创建新的代码文件，或转到“项目”>“添加现有项”以将现有代码文件添加到项目
-//   6. 将来，若要再次打开此项目，请转到“文件”>“打开”>“项目”并选择 .sln 文件
+int main_testeval()
+{
+  Eva_sum1 *eva = new Eva_sum1();
+  eva->loadParam("weights/sum1.txt");
+  /*
+  const char boardstr[] = ""
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . ";
+    */
+
+  const char boardstr[] = ""
+                          ". . . . . . . . . . . . . . . "
+                          ". . . . . . . . . . . . . . . "
+                          ". . . . . . . . . . . . . . . "
+                          ". . . . . . . . . . . . . . . "
+                          ". . . . . . o . . . . . . . . "
+                          ". . . . . . o . . . . . . . . "
+                          ". . . . . . o . o o . . . . . "
+                          ". . . . . . . x . . . . . . . "
+                          ". . . . . . . . x . . . . . . "
+                          ". . . . . . . . . x . . . . . "
+                          ". . . . . . . . . . . . . . . "
+                          ". . . . . . . . . . . . . . . "
+                          ". . . . . . . . . . . . . . . "
+                          ". . . . . . . . . . . . . . . "
+                          ". . . . . . . . . . . . . . . ";
+  for (int y = 0; y < BS; y++)
+    for (int x = 0; x < BS; x++) {
+      char  colorchar = boardstr[2 * (x + y * BS)];
+      Color color     = C_EMPTY;
+      if (colorchar == 'x')
+        color = C_BLACK;
+      else if (colorchar == 'o')
+        color = C_WHITE;
+      if (color != C_EMPTY)
+        eva->play(color, MakeLoc(x, y));
+    }
+
+  eva->debug_print();
+  return 0;
+}
+
+int main(int argc, const char **argv)
+{
+  return maingtp(argc, argv);
+  // return main_testeval();
+}
