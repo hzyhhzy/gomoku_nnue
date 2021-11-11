@@ -116,8 +116,14 @@ public:
   virtual void     stop() { terminate.store(true, std::memory_order_relaxed); }
   std::vector<Loc> rootPV() const;
   void             clear();
+  void             setOptions(size_t maxNodes) { option.maxNodes = maxNodes; }
   size_t           nodes, interiorNodes;
   size_t           ttHits, ttCuts;
+  int              selDepth;
+  struct Option
+  {
+    size_t maxNodes;
+  } option;
   std::atomic_bool terminate;
 
 private:
