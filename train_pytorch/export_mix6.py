@@ -13,6 +13,7 @@ import torch.nn as nn
 import torch
 import os
 import time
+import shutil
 
 try:
     os.mkdir("export")
@@ -29,6 +30,7 @@ if __name__ == '__main__':
     parser.add_argument('--cpu', action='store_true', default=False, help='whether use cpu')
     parser.add_argument('--model', type=str ,default='test', help='model path')
     parser.add_argument('--export', type=str ,default='', help='export path')
+    parser.add_argument('--copy', action='store_true', default=False, help='copy a backup for this model, for selfplay training')
     args = parser.parse_args()
 
     device = torch.device(f"cuda:{args.gpu}")
@@ -38,7 +40,6 @@ if __name__ == '__main__':
     exportname=args.export
     if(exportname==''):
         exportname=modelname
-
 
 
 
@@ -60,6 +61,20 @@ if __name__ == '__main__':
         print("Invalid Model Path")
         exit(0)
 
+
+    #copy model file
+    if(args.copy):
+        modeldir='export/'+modelname
+        try:
+            os.mkdir(modeldir)
+        except:
+            pass
+        else:
+            pass
+        modelDestPath=modeldir+'/'+str(totalstep)+'.pth'
+        shutil.copy(file_path,modelDestPath)
+
+
     model.eval()
 
 
@@ -69,7 +84,8 @@ if __name__ == '__main__':
 
     time0=time.time()
     print("Start")
-    exportfile=open('export/'+exportname+'.txt','w')
+    exportPath='export/'+exportname+'.txt'
+    exportfile=open(exportPath,'w')
 
     pc=model.pc
     vc=model.vc
@@ -349,14 +365,17 @@ if __name__ == '__main__':
 
 
 
-
-
-
-
-
-
-
     exportfile.close()
+
+
+
+    # #copy txt file
+    # if(args.copy):
+    #     #modeldir='export/'+modelname
+    #     exportCopyDestPath=modeldir+'/'+str(totalstep)+'.txt'
+    #     shutil.copy(exportPath,exportCopyDestPath)
+
+
     print("success")
 
 
