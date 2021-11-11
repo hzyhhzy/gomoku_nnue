@@ -29,6 +29,8 @@ Engine::Engine(std::string evaluator_type,
   timeout_turn  = 1000;
   timeout_match = 10000000;
   time_left     = 10000000;
+  max_nodes     = UINT64_MAX;
+  max_depth     = 64;
 }
 
 void Engine::writeLog(std::string str)
@@ -45,9 +47,11 @@ std::string Engine::genmove()
   int    maxTurnTime = min(timeout_turn - ReservedTime, time_left / 5);
   int    maxWaitTime = max(maxTurnTime - AsyncWaitReservedTime, 0);
   int    optimalTime = maxTurnTime / 2;
+  int    maxDepth    = min(max_depth, 64);
 
   search->clear();
-  for (int depth = 1; depth < 100; depth++) {
+  search->setOptions(max_nodes);
+  for (int depth = 1; depth < maxDepth; depth++) {
     auto result = std::async(std::launch::async, [&]() {
       Loc    loc;
       double value = search->fullsearch(nextColor, depth, loc);
@@ -59,23 +63,31 @@ std::string Engine::genmove()
       search->stop();
       break;
     }
+    else if (search->terminate) {
+      break;
+    }
 
     std::tie(bestvalue, bestloc) = result.get();
     Time toc                     = now();
     // search->evaluator->recalculate();
-    cout << "MESSAGE Depth = " << depth << " Value = " << valueText(bestvalue)
-         << " Nodes = " << search->nodes << "(" << search->interiorNodes << ")"
-         << " Time = " << toc - tic << " Nps = " << search->nodes * 1000.0 / (toc - tic)
-         << " TT = " << 100.0 * search->ttHits / search->interiorNodes << "("
-         << 100.0 * search->ttCuts / search->ttHits << ")"
+    cout << "MESSAGE Depth = " << depth << "-" << search->selDepth
+         << " Value = " << valueText(bestvalue) << " Nodes = " << search->nodes << "("
+         << search->interiorNodes << ")"
+         << " Time = " << toc - tic << " Nps = "
+         << search->nodes * 1000.0 / (toc - tic)
+         //<< " TT = " << 100.0 * search->ttHits / search->interiorNodes << "("
+         //<< 100.0 * search->ttCuts / search->ttHits << ")"
          << " PV = " << search->rootPV() << endl;
 
-    // TODO : time limit
+    // Reach time limit
     if (toc - tic > optimalTime)
       break;
   }
 
-  evaluator->play(nextColor, bestloc);
+  if (bestloc != NULL_LOC)
+    evaluator->play(nextColor, bestloc);
+  else
+    bestloc = PASS_LOC;
   nextColor = ~nextColor;
 
   int bestx = bestloc % BS, besty = bestloc / BS;
@@ -85,9 +97,9 @@ std::string Engine::genmove()
 void Engine::protocolLoop()
 {
   string line;
-  writeLog( "Start protocol loop" );
+  writeLog("Start protocol loop");
   while (getline(cin, line)) {
-    writeLog( line );
+    writeLog(line);
     bool           print_endl = true;
     string         response   = "";
     string         command;
@@ -150,7 +162,7 @@ void Engine::protocolLoop()
       string line2;
       while (1) {
         getline(cin, line2);
-        writeLog( line2 );
+        writeLog(line2);
         // Convert tabs to spaces
         for (size_t i = 0; i < line2.length(); i++)
           if (line2[i] == '\t' || line2[i] == ',')
@@ -194,6 +206,7 @@ void Engine::protocolLoop()
         subcommand = pieces[0];
         pieces.erase(pieces.begin());
       }
+
       if (subcommand == "timeout_turn") {
         int tmp;
         if (pieces.size() != 1 || !strOp::tryStringToInt(pieces[0], tmp))
@@ -217,13 +230,27 @@ void Engine::protocolLoop()
       }
       else if (subcommand == "max_memory") {
         int tmp;
-        if (!strOp::tryStringToInt(pieces[0], tmp))
+        if (pieces.size() != 1 || !strOp::tryStringToInt(pieces[0], tmp))
           cout << "ERROR Bad command" << endl;
         else {
           constexpr int ReversedMemMb   = 132;  // ¹ÀËãµÄÄÚ´æÏûºÄ
-          int           useableMemoryMb = max(tmp - ReversedMemMb, 0);
+          size_t        useableMemoryMb = max(tmp - ReversedMemMb, 0);
           TT.resize(1 + useableMemoryMb / 2 / (1024 * 1024));
         }
+      }
+      else if (subcommand == "max_node") {
+        int tmp;
+        if (pieces.size() != 1 || !strOp::tryStringToInt(pieces[0], tmp))
+          cout << "ERROR Bad command" << endl;
+        else
+          max_nodes = tmp;
+      }
+      else if (subcommand == "max_depth") {
+        int tmp;
+        if (pieces.size() != 1 || !strOp::tryStringToInt(pieces[0], tmp))
+          cout << "ERROR Bad command" << endl;
+        else
+          max_depth = tmp;
       }
       else {  // do nothing
       }

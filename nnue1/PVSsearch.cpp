@@ -13,6 +13,7 @@ PVSsearch::PVSsearch(Evaluator *e)
 float PVSsearch::fullsearch(Color color, double factor, Loc &bestmove)
 {
   int depth                 = (int)factor;
+  selDepth                  = 0;
   plyInfos[0].nullMoveCount = 0;
   return search<true>(color, 0, depth, -VALUE_MATE, VALUE_MATE, false, bestmove);
 }
@@ -33,6 +34,9 @@ float PVSsearch::search(Color me,
   plyInfos[ply].pv[0] = bestmove = NULL_LOC;
   nodes++;
 
+  if (ply > selDepth)
+    selDepth = ply;
+
   // 叶子节点估值
   if (depth <= 0 || ply >= MAX_PLY || std::abs(value) >= VALUE_MATE_IN_MAX_PLY) {
     return value;
@@ -44,8 +48,8 @@ float PVSsearch::search(Color me,
   if (alpha >= beta)
     return alpha;
 
-  if (terminate.load(std::memory_order_relaxed))
-    return VALUE_NONE;
+  if (nodes > option.maxNodes)
+    terminate.store(true, std::memory_order_relaxed);
 
   // 置换表查找
   auto [tte, ttHit] = TT.probe(evaluator->key);
