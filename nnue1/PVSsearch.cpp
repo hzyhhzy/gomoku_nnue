@@ -27,10 +27,10 @@ float PVSsearch::search(Color me,
                         Loc & bestmove)
 {
   const bool  Root  = ply == 0;
-  const Color oppo  = ~me;
+  const Color oppo  = getOpp(me);
   int         value = valueFromWLR(evaluator->evaluateValue(me).winlossrate(), ply);
 
-  plyInfos[ply].pv[0] = bestmove = NULL_LOC;
+  plyInfos[ply].pv[0] = bestmove = LOC_NULL;
   nodes++;
 
   // 叶子节点估值
@@ -50,7 +50,7 @@ float PVSsearch::search(Color me,
   // 置换表查找
   auto [tte, ttHit] = TT.probe(evaluator->key);
   int  ttValue      = ttHit ? valueFromTT(tte->value, ply) : 0;
-  Loc  ttMove       = ttHit ? tte->best : NULL_LOC;
+  Loc  ttMove       = ttHit ? tte->best : LOC_NULL;
   bool ttPv         = ttHit ? tte->pv : false;
   ttHits += ttHit;
 
@@ -89,7 +89,7 @@ float PVSsearch::search(Color me,
   if (!PV && true && plyInfos[ply].nullMoveCount == 0
       && eval - nullMoveMargin(depth) >= beta) {
     int r                           = nullMoveReduction(depth);
-    plyInfos[ply].currentMove       = NULL_LOC;
+    plyInfos[ply].currentMove       = LOC_NULL;
     plyInfos[ply].currentPolicySum  = 0;
     plyInfos[ply].moveCount         = 0;
     plyInfos[ply + 1].nullMoveCount = 1;
@@ -111,7 +111,7 @@ float PVSsearch::search(Color me,
 
 expand_node:
   // IID
-  if (depth >= IID_DEPTH && ttMove == NULL_LOC) {
+  if (depth >= IID_DEPTH && ttMove == LOC_NULL) {
     search<PV>(me, ply, depth - IID_REDUCTION, alpha, beta, isCut, ttMove);
   }
 
@@ -131,13 +131,13 @@ expand_node:
     maxPolicy = policy[policyRank[0]];
   };
 
-  bestmove      = NULL_LOC;
+  bestmove      = LOC_NULL;
   int moveCount = 0;
   int bestValue = -VALUE_MATE;
   for (int i = -1; i < BS * BS; i++) {
     Loc move;
     if (i == -1) {
-      if (ttMove == NULL_LOC || boardPointer[ttMove] != C_EMPTY)
+      if (ttMove == LOC_NULL || boardPointer[ttMove] != C_EMPTY)
         continue;
       move = ttMove;
     }
@@ -155,7 +155,7 @@ expand_node:
 
     if (isWin(me, move)) {
       value                   = mateValue(ply);
-      plyInfos[ply + 1].pv[0] = NULL_LOC;
+      plyInfos[ply + 1].pv[0] = LOC_NULL;
     }
     else {
       if (!Root && bestValue > -VALUE_MATE_IN_MAX_PLY) {
@@ -168,7 +168,7 @@ expand_node:
           continue;
       }
 
-      Loc  nextBestMove    = NULL_LOC;
+      Loc  nextBestMove    = LOC_NULL;
       int  newDepth        = depth - 1;
       bool fullDepthSearch = !PV || moveCount > 1;
 
@@ -229,7 +229,7 @@ expand_node:
   tte->save(evaluator->key,
             valueToTT(bestValue, ply),
             bestValue >= beta            ? BOUND_LOWER
-            : PV && bestmove != NULL_LOC ? BOUND_EXACT
+            : PV && bestmove != LOC_NULL ? BOUND_EXACT
                                          : BOUND_UPPER,
             depth,
             PV,
@@ -296,7 +296,7 @@ void PVSsearch::normalizePolicy(const PolicyType *rawPolicy, float *normPolicy) 
 void PVSsearch::sortPolicy(const float *policy,
                            Loc *        policyRank) const  // assume policyBuf is ready
 {
-  std::iota(policyRank, policyRank + BS * BS, ZERO_LOC);
+  std::iota(policyRank, policyRank + BS * BS, LOC_ZERO);
   std::sort(policyRank, policyRank + BS * BS, [&](Loc a, Loc b) {
     return policy[a] > policy[b];
   });
@@ -307,14 +307,14 @@ void PVSsearch::copyPV(Loc *pvDst, Loc bestMove, Loc *pvSrc) const
   *pvDst++ = bestMove;
   do {
     *pvDst++ = *pvSrc;
-  } while (*pvSrc++ != NULL_LOC);
+  } while (*pvSrc++ != LOC_NULL);
 }
 
 std::vector<Loc> PVSsearch::rootPV() const
 {
   std::vector<Loc> pv;
   const Loc *      pvPtr = plyInfos[0].pv;
-  while (*pvPtr != NULL_LOC)
+  while (*pvPtr != LOC_NULL)
     pv.push_back(*pvPtr++);
   return pv;
 }

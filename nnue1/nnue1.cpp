@@ -209,7 +209,7 @@ int main1_play()  // play a game
         y = 15 - 10 * (nextmove[1] - '0') - (nextmove[2] - '0');
       }
       if (x >= 0 && x < BS && y >= 0 && y < BS) {
-        eva->play(~enginecolor, MakeLoc(x, y));
+        eva->play(getOpp(enginecolor), MakeLoc(x, y));
         break;
       }
       else
