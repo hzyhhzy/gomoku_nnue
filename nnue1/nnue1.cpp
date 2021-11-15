@@ -29,7 +29,7 @@ int maingtp(int argc, const char **argv)
     modelPath = argv[1];
   }
 
-  Engine engine("mix6", modelPath, 0,false);
+  Engine engine("mix6", modelPath, 128, false);
   engine.protocolLoop();
   return 0;
 }
