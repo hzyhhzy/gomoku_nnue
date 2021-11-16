@@ -30,7 +30,7 @@ static constexpr Loc LOC_PASS = BS * BS;
 inline Loc           MakeLoc(int x, int y) { return Loc(x + y * BS); }
 inline std::string locstr(Loc loc)
 {
-  return std::to_string(char('A' + loc % BS))+ std::to_string(int(BS - loc / BS));
+  return std::string(1,char('A' + loc % BS))+ std::to_string(int(BS - loc / BS));
 }
 inline std::ostream &operator<<(std::ostream &os, std::vector<Loc> pv)
 {
