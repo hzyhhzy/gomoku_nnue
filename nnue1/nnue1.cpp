@@ -407,7 +407,7 @@ int main_testvcf()
       board[x + y * BS] = color;
     }
   VCFsolver v(BS,BS,C_BLACK);
-  v.setBoard(board, false);
+  v.setBoard(board, false,true);
   Loc bestloc;
   int result;
   result = v.fullSearch(1e38, bestloc,false);
