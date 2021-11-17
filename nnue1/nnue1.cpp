@@ -379,11 +379,11 @@ int main_testvcf()
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "
     ;
-  const char boardstr[] = ""
+  const char boardstr2[] = ""
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "
   ". . . . o . . . . . . . . . . "
-  ". . . . . . . . . . o . . . . "
+  ". . . . . . . . . o o . . . . "
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . x . . . . . "
   ". . . . . o . . . . o . . . . "
@@ -396,6 +396,23 @@ int main_testvcf()
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "
     ;
+  const char boardstr[] = ""
+    ". . . . . . . . . o . . . . . "
+    ". . . . . . x x x . . . . . . "
+    ". . . . . . x x x o . . . . . "
+    ". . . . . . x o x x . . . . . "
+    ". . . . . x o . o . o . . . . "
+    ". . . . o o x . x . . . . . . "
+    ". . . . x o x o o o . . . . . "
+    ". . . . . o x x o x x . . . . "
+    ". . . . . . o x o o o . . . . "
+    ". . . . . x o o o x o . . . . "
+    ". . . . . . o . x . . x . . . "
+    ". . . . . x . o . . . . . . . "
+    ". . . . . . x . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ;
   for (int y = 0; y < BS; y++)
     for (int x = 0; x < BS; x++) {
       char  colorchar = boardstr[2 * (x + y * BS)];
@@ -406,7 +423,7 @@ int main_testvcf()
         color = C_WHITE;
       board[x + y * BS] = color;
     }
-  VCFsolver v(BS,BS,C_BLACK);
+  VCFsolver v(BS,BS,C_WHITE);
   v.setBoard(board, false,true);
   Loc bestloc;
   int result;

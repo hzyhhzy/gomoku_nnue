@@ -424,8 +424,8 @@ void VCFsolver::undo(Loc loc)
 
 VCF::SearchResult VCFsolver::search(int maxNoThree, Loc forceLoc, Loc& winLoc)
 {
-  //std::cout << nodeNumThisSearch << std::endl;
-  //printboard();
+  std::cout << nodeNumThisSearch << std::endl;
+  printboard();
   nodeNumThisSearch++;
   int ptNumOld = ptNum;
   SearchResult result = SR_Lose;
