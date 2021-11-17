@@ -35,7 +35,7 @@ void VCFsolver::reset()
   ptNum = 0;
 }
 
-void VCFsolver::setBoard(Color* b, bool katagoType)
+void VCFsolver::setBoard(Color* b, bool katagoType, bool colorType)
 {
   for (int x = 0; x < W; x++)
     for (int y = 0; y < H; y++)
@@ -44,7 +44,7 @@ void VCFsolver::setBoard(Color* b, bool katagoType)
       Loc locDst = xytoshapeloc(x, y);
       Color c = b[locSrc];
       if (c == C_EMPTY)continue;
-      playOutside(locDst, c, 0);
+      playOutside(locDst, c, 0,colorType);
     }
 
 }
@@ -52,7 +52,6 @@ void VCFsolver::setBoard(Color* b, bool katagoType)
 
 VCF::SearchResult VCFsolver::fullSearch(float factor, Loc& bestmove, bool katagoType )
 {
-  nodeNumThisSearch = 0;
   if (katagoType) {
     std::cout << "Support katago loc in the future";
     return SR_Uncertain;
@@ -68,6 +67,7 @@ VCF::SearchResult VCFsolver::fullSearch(float factor, Loc& bestmove, bool katago
   }
   for (int maxNoThree =0;; maxNoThree++)
   {
+    nodeNumThisSearch = 0;
     Loc winMove = LOC_NULL;
     SearchResult sr = search(maxNoThree, onlyLoc, winMove);
     std::cout << maxNoThree << " " << nodeNumThisSearch << std::endl;
@@ -86,12 +86,14 @@ VCF::SearchResult VCFsolver::fullSearch(float factor, Loc& bestmove, bool katago
       bestmove = LOC_NULL;
       return sr;
     }
+    factor = factor * 0.5;
   }
 }
 
-void VCFsolver::playOutside(Loc loc, Color color, int locType)
+void VCFsolver::playOutside(Loc loc, Color color, int locType,bool colorType)
 {
   if (color == C_EMPTY)return;
+
   //loc»»Ëã
   if (locType == 1)
   {
@@ -104,7 +106,10 @@ void VCFsolver::playOutside(Loc loc, Color color, int locType)
     loc = xytoshapeloc(x, y);
   }
 
-  int d = (isWhite ^ (color == C_BLACK)) ? 1 : 64;
+  //color»»Ëã
+  if (colorType && isWhite)color = getOpp(color);
+
+  int d = (color == C_BLACK) ? 1 : 64;
   board[loc] = color;
 
 #define OpPerShape(DIR,DIF,INC) shape[DIR][loc+(DIF)]+=INC

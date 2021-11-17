@@ -57,14 +57,18 @@ public:
   //两种board
   //b是外部的棋盘，pla是进攻方
   //katagoType是否是katago的棋盘，false对应loc=x+y*BS，true对应loc=x+1+(y+1)*(W+1)
-  void setBoard(Color* b, bool katagoType);
+  //colorType是源棋盘的表达形式，=false 己方对方，=true 黑色白色
+  void setBoard(Color* b, bool katagoType, bool colorType);
 
 
   VCF::SearchResult fullSearch(float factor, Loc& bestmove, bool katagoType);//factor是搜索因数，保证factor正比于节点数。
-  void playOutside(Loc loc, Color color, int locType);//用于外部调用，更新棋盘。保证shape正确，不保证pts正确。
+
+  
+  //用于外部调用，更新棋盘。保证shape正确，不保证pts正确。
+  //locType=0 vcf内部loc格式，=1 x+y*BS，=2 katago格式
+  //colorType=false 己方对方，=true 黑色白色
+  void playOutside(Loc loc, Color color, int locType,bool colorType);
   void undoOutside(Loc loc, int locType);//用于外部调用，更新棋盘。保证shape正确，不保证pts正确。
-  //color是外界color（C_BLACK/WHITE），不是C_MY/OPP
-  //loctype=0是vcf求解器的loc，=1是y*BS+x，=2是katago
 
 private:
 
