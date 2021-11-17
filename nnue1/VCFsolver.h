@@ -8,7 +8,7 @@ namespace VCF {
     PT():loc1(LOC_NULL),loc2(LOC_NULL){}
     PT(Loc loc1,Loc loc2):loc1(loc1),loc2(loc2){}
   };
-  inline Loc xytoshapeloc(int x, int y) { return Loc((BS + 3) * (y + 3) + x + 3); }
+  inline Loc xytoshapeloc(int x, int y) { return Loc((BS + 6) * (y + 3) + x + 3); }
 
   enum PlayResult : int16_t {
     PR_Win,                  //双四或者连五或者抓禁
@@ -17,7 +17,8 @@ namespace VCF {
     PR_Lose                  //不合法(被抓禁)或者没有生成冲四
   };
   enum SearchResult : int16_t {
-    SR_Win = 0,//有解
+    SR_Win = -1,//有解
+    SR_Uncertain = 0,//完全不知道有没有解，还没搜
     SR_Lose = 32767//确定无解
     //其他值代表暂时无解，若SearchResult=n，说明“允许n-1次无新眠三的冲四无解”
   };
@@ -47,7 +48,7 @@ public:
   int     ptNum;             // pts里面前多少个有效
   VCF::PT pts[8 * BS * BS];  //眠三
 
-  int nodeNumThisSearch;//记录这次搜索已经搜索了多少节点了，用来提前终止，每次fullSearch开始时清零
+  int64_t nodeNumThisSearch;//记录这次搜索已经搜索了多少节点了，用来提前终止，每次fullSearch开始时清零
 
   VCFsolver(Color pla) :VCFsolver(BS, BS,pla) {}
   VCFsolver(int h, int w,Color pla);
@@ -55,18 +56,21 @@ public:
 
   //两种board
   //b是外部的棋盘，pla是进攻方
-  //katagoType是否是katago的棋盘，false对应loc=x+y*BS，true对应loc=x+1+(y+1)*(BS+1)
+  //katagoType是否是katago的棋盘，false对应loc=x+y*BS，true对应loc=x+1+(y+1)*(W+1)
   void setBoard(Color* b, bool katagoType);
 
 
-  VCF::SearchResult fullSearch(float factor, Loc& bestmove);//factor是搜索因数，保证factor正比于节点数，具体如何实现还未想好。
+  VCF::SearchResult fullSearch(float factor, Loc& bestmove, bool katagoType);//factor是搜索因数，保证factor正比于节点数。
   void playOutside(Loc loc, Color color, int locType);//用于外部调用，更新棋盘。保证shape正确，不保证pts正确。
+  void undoOutside(Loc loc, int locType);//用于外部调用，更新棋盘。保证shape正确，不保证pts正确。
   //color是外界color（C_BLACK/WHITE），不是C_MY/OPP
   //loctype=0是vcf求解器的loc，=1是y*BS+x，=2是katago
 
 private:
 
-  void resetPts();//重置pts，完整搜索前一定调用这个
+  //重置pts，完整搜索前一定调用这个。
+  //同时检查己方，对方有没有连五冲四
+  VCF::SearchResult resetPts(Loc& onlyLoc);
 
   //找两个空点
   VCF::PT findEmptyPoint2(Loc loc,Loc bias);
@@ -76,11 +80,22 @@ private:
   //走一个回合，先冲四再防守
   //loc1是攻，loc2是守，nextForceLoc是白棋冲四
   VCF::PlayResult playTwo(Loc loc1,Loc loc2, Loc& nextForceLoc);
-
-  VCF::SearchResult search(int maxNoThree, Loc forceLoc, Loc& winLoc);//最多maxNoThree步没有新眠三，挡对手反四的冲四不算
+  void undo(Loc loc);
+  //maxNoThree：最多maxNoThree步没有新眠三，挡对手反四的冲四不算
+  //forceLoc：下一步必须走这里，因为白棋有冲四
+  //winLoc：返回获胜点
+  //ptNumOld：上一步活三个数，搜索之后还原
+  VCF::SearchResult search(int maxNoThree, Loc forceLoc, Loc& winLoc);
 
   // shape=1*己方棋子+8*长连+64*对方棋子+512*对手长连+4096*出界
+  inline bool shape_isMyFive(int16_t s) { return (s & 0170777) == 5; }
   inline bool shape_isMyFour(int16_t s) { return (s & 0170777) == 4; }
   inline bool shape_isMyThree(int16_t s) { return (s & 0170777) == 3; }
+  inline bool shape_isOppFive(int16_t s) { return (s & 0177707) == 5*64; }
   inline bool shape_isOppFour(int16_t s) { return (s & 0177707) == 4*64; }
+
+
+
+  //debug
+  void printboard();
 };
