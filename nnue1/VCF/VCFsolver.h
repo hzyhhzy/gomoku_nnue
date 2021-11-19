@@ -1,5 +1,6 @@
 #pragma once
 #include "..\global.h"
+#include "VCFHashTable.h"
 namespace VCF {
 
   struct alignas(64) PT
@@ -9,7 +10,13 @@ namespace VCF {
     PT():shapeDir(0), shapeLoc(LOC_NULL),loc1(LOC_NULL),loc2(LOC_NULL){}
     //PT(Loc loc1,Loc loc2):loc1(loc1),loc2(loc2){}
   };
-  inline Loc xytoshapeloc(int x, int y) { return Loc((BS + 6) * (y + 3) + x + 3); }
+
+  struct zobristTable
+  {
+    Hash128 boardhash[2][(BS + 6) * (BS + 6)];
+    Hash128 isWhite;
+    zobristTable(int64_t seed);
+  };
 
   enum PlayResult : int16_t {
     PR_Win,                  //双四或者连五或者抓禁
@@ -26,6 +33,7 @@ namespace VCF {
   };
 
 
+  inline Loc xytoshapeloc(int x, int y) { return Loc((BS + 6) * (y + 3) + x + 3); }
   static const Loc dirs[4] = { 1, BS + 6, BS + 6 + 1, -BS - 6 + 1 };//+x +y +x+y +x-y
   //为了方便常量调用，分开再写一遍
   static const Loc dir0 = 1;
@@ -35,10 +43,17 @@ namespace VCF {
   static const int ArrSize = (BS + 6) * (BS + 6);//考虑额外3圈后的棋盘格点数
 
 
+
 }  // namespace VCF
 
 class VCFsolver
 {
+
+  //hashTable
+  static VCFHashTable hashtable;
+  static VCF::zobristTable zobrist;
+
+
 public:
   const int H, W;
   const bool isWhite;//如果进攻方是黑棋，则false，进攻方是白棋则true。若true，color全是反向
@@ -46,6 +61,7 @@ public:
   Color board[(BS + 6) * (BS + 6)];  //预留3圈
   // shape=1*己方棋子+8*长连+64*对方棋子+512*对手长连+4096*出界
   int16_t shape[4][(BS + 6) * (BS + 6)];  //预留3圈
+  Hash128 boardHash;
 
   int     ptNum;             // pts里面前多少个有效
   VCF::PT pts[8 * BS * BS];  //眠三

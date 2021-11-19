@@ -1,5 +1,24 @@
 #include "VCFsolver.h"
+#include <random>
 using namespace VCF;
+VCFHashTable VCFsolver::hashtable(20, 5);
+VCF::zobristTable VCFsolver::zobrist(1919810);
+
+VCF::zobristTable::zobristTable(int64_t seed)
+{
+  std::mt19937_64 r(seed);
+  r();
+  r();
+  isWhite = Hash128(r(), r());
+  for (int i = 0; i < 2; i++)
+    for (int j = 0; j < (BS+6)*(BS+6); j++)
+    {
+      boardhash[i][j] = Hash128(r(), r());
+      //std::cout << boardhash[i][j] << std::endl;
+    }
+
+}
+
 VCFsolver::VCFsolver(int h, int w, Color pla) :H(h), W(w), isWhite(pla == C_WHITE)
 {
   reset();
@@ -7,6 +26,10 @@ VCFsolver::VCFsolver(int h, int w, Color pla) :H(h), W(w), isWhite(pla == C_WHIT
 
 void VCFsolver::reset()
 {
+  //hash
+  if (isWhite)boardHash = zobrist.isWhite;
+  else boardHash = Hash128();
+
   //board
   for (int i = 0; i < ArrSize; i++)
     board[i] = C_WALL;
@@ -135,8 +158,15 @@ void VCFsolver::playOutside(Loc loc, Color color, int locType,bool colorType)
   //color换算
   if (colorType && isWhite)color = getOpp(color);
 
-  int d = (color == C_BLACK) ? 1 : 64;
+
+  //board
   board[loc] = color;
+
+  //hash
+  boardHash ^= zobrist.boardhash[color - 1][loc];
+
+  //shape
+  int d = (color == C_BLACK) ? 1 : 64;
 
 #define OpPerShape(DIR,DIF,INC) shape[DIR][loc+(DIF)]+=INC
   OpPerShape(0, -2 * dir0, d);
@@ -283,6 +313,8 @@ VCF::PlayResult VCFsolver::playTwo(Loc loc1, Loc loc2, Loc& nextForceLoc)
   movenum += 2;
   //自己落子------------------------------------------------------------------------------
   board[loc1] = C_MY;
+  //hash
+  boardHash ^= zobrist.boardhash[C_MY - 1][loc1];
   //处理长连问题
 #define OpSix(DIR,DIF) shape[DIR][loc1+3*(DIF)]+=8
   OpSix(0, -dir0);
@@ -325,6 +357,8 @@ VCF::PlayResult VCFsolver::playTwo(Loc loc1, Loc loc2, Loc& nextForceLoc)
   //对手落子------------------------------------------------------------------------------
 
   board[loc2] = C_OPP;
+  //hash
+  boardHash ^= zobrist.boardhash[C_OPP-1][loc2];
   //处理长连问题
 #define OpSix(DIR,DIF) shape[DIR][loc2+3*(DIF)]+=8*64
   OpSix(0, -dir0);
@@ -479,6 +513,9 @@ void VCFsolver::undo(Loc loc)
   int d = (color == C_MY) ? 1 : 64;
   board[loc] = C_EMPTY;
 
+  //hash
+  boardHash ^= zobrist.boardhash[color - 1][loc];
+
 #define OpPerShape(DIR,DIF,INC) shape[DIR][loc+(DIF)]-=INC
   OpPerShape(0, -2 * dir0, d);
   OpPerShape(0, -1 * dir0, d);
@@ -523,6 +560,15 @@ VCF::SearchResult VCFsolver::search(int maxNoThree, Loc forceLoc)
   //std::cout << nodeNumThisSearch << std::endl;
   //printboard();
   nodeNumThisSearch++;
+
+  //检查是否在hash表中
+  SearchResult hashResult = SearchResult(hashtable.get(boardHash));
+  if (hashResult > maxNoThree)//有比现在的解更准确的解
+  {
+    return hashResult;
+  }
+
+
   int ptNumOld = ptNum;
   SearchResult result = SR_Lose;
   for (int i = 0; i < ptNumOld; i++)
@@ -592,6 +638,7 @@ VCF::SearchResult VCFsolver::search(int maxNoThree, Loc forceLoc)
   }
 
   ptNum = ptNumOld;
+  hashtable.set(boardHash, result);
   return result;
 }
 
@@ -621,3 +668,4 @@ void VCFsolver::printboard()
   }
   cout << endl;
 }
+

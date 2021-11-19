@@ -13,6 +13,12 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="头文件\VCF">
+      <UniqueIdentifier>{129e874b-e305-4368-b8e5-dd1a12e258a2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="源文件\VCF">
+      <UniqueIdentifier>{c9a7e839-02b2-40ab-b223-c968774fd989}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="nnue1.cpp">
@@ -52,7 +58,16 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="VCF\VCFsolver.cpp">
-      <Filter>源文件</Filter>
+      <Filter>源文件\VCF</Filter>
+    </ClCompile>
+    <ClCompile Include="VCF\VCFHashTable.cpp">
+      <Filter>源文件\VCF</Filter>
+    </ClCompile>
+    <ClCompile Include="VCF\mutexpool.cpp">
+      <Filter>源文件\VCF</Filter>
+    </ClCompile>
+    <ClCompile Include="VCF\hash.cpp">
+      <Filter>源文件\VCF</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -92,11 +107,20 @@
     <ClInclude Include="Eva_mix6_avx2.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="VCFsolver.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="EngineDev.h">
       <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="VCF\VCFHashTable.h">
+      <Filter>头文件\VCF</Filter>
+    </ClInclude>
+    <ClInclude Include="VCF\VCFsolver.h">
+      <Filter>头文件\VCF</Filter>
+    </ClInclude>
+    <ClInclude Include="VCF\mutexpool.h">
+      <Filter>头文件\VCF</Filter>
+    </ClInclude>
+    <ClInclude Include="VCF\hash.h">
+      <Filter>头文件\VCF</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

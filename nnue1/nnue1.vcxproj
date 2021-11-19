@@ -155,6 +155,9 @@
     <ClCompile Include="Eva_sum1.cpp" />
     <ClCompile Include="TT.cpp" />
     <ClCompile Include="utils.cpp" />
+    <ClCompile Include="VCF\hash.cpp" />
+    <ClCompile Include="VCF\mutexpool.cpp" />
+    <ClCompile Include="VCF\VCFHashTable.cpp" />
     <ClCompile Include="VCF\VCFsolver.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -171,7 +174,10 @@
     <ClInclude Include="PVSsearch.h" />
     <ClInclude Include="Search.h" />
     <ClInclude Include="Eva_sum1.h" />
-    <ClInclude Include="VCFsolver.h" />
+    <ClInclude Include="VCF\hash.h" />
+    <ClInclude Include="VCF\mutexpool.h" />
+    <ClInclude Include="VCF\VCFHashTable.h" />
+    <ClInclude Include="VCF\VCFsolver.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
