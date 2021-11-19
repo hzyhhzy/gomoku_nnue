@@ -45,13 +45,13 @@
     <ClCompile Include="Eva_mix6_avx2.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="VCFsolver.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="EngineDev.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="utils.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="VCF\VCFsolver.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

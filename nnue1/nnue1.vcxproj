@@ -155,7 +155,7 @@
     <ClCompile Include="Eva_sum1.cpp" />
     <ClCompile Include="TT.cpp" />
     <ClCompile Include="utils.cpp" />
-    <ClCompile Include="VCFsolver.cpp" />
+    <ClCompile Include="VCF\VCFsolver.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ABsearch.h" />

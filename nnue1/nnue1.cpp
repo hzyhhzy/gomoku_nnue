@@ -6,7 +6,7 @@
 #include "Engine.h"
 #include "EngineDev.h"
 #include "TT.h"
-#include "VCFsolver.h"
+#include "VCF\VCFsolver.h"
 
 #include <chrono>
 #include <iostream>
@@ -379,11 +379,11 @@ int main_testvcf()
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "
     ;
-  const char boardstr2[] = ""
+  const char boardstr[] = ""
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "
   ". . . . o . . . . . . . . . . "
-  ". . . . . . . . . o o . . . . "
+  ". . . . . . . . . . o . . . . "
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . x . . . . . "
   ". . . . . o . . . . o . . . . "
@@ -396,7 +396,7 @@ int main_testvcf()
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "
     ;
-  const char boardstr[] = ""
+  const char boardstr2[] = ""
     ". . . . . . . . . o . . . . . "
     ". . . . . . x x x . . . . . . "
     ". . . . . . x x x o . . . . . "
@@ -423,12 +423,15 @@ int main_testvcf()
         color = C_WHITE;
       board[x + y * BS] = color;
     }
-  VCFsolver v(BS,BS,C_WHITE);
+  VCFsolver v(BS,BS,C_BLACK);
   v.setBoard(board, false,true);
   Loc bestloc;
   int result;
   result = v.fullSearch(1e38, bestloc,false);
-  cout << result << " " << locstr(bestloc) << endl;
+  cout << "Initial Board:" << endl;
+  v.printboard();
+  cout <<"Result="<< result << " " << locstr(bestloc) << endl;
+  cout << "PV:" << v.getPVlen() << " " << v.getPVreduced();
 
 
   return 0;

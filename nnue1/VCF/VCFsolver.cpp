@@ -65,14 +65,14 @@ VCF::SearchResult VCFsolver::fullSearch(float factor, Loc& bestmove, bool katago
     bestmove = (onlyLoc/(BS+6)-3)*BS+(onlyLoc%(BS+6)-3);
     return SR_beforeSearch;
   }
-  for (int maxNoThree =0;; maxNoThree++)
+  for (int maxNoThree =0;; maxNoThree+=1)
   {
     nodeNumThisSearch = 0;
-    Loc winMove = LOC_NULL;
-    SearchResult sr = search(maxNoThree, onlyLoc, winMove);
+    SearchResult sr = search(maxNoThree, onlyLoc);
     std::cout << maxNoThree << " " << nodeNumThisSearch << std::endl;
     if (sr == SR_Win)
     {
+      Loc winMove = PV[0];
       bestmove =  (winMove/(BS+6)-3)*BS+(winMove%(BS+6)-3);
       return sr;
     }
@@ -88,6 +88,32 @@ VCF::SearchResult VCFsolver::fullSearch(float factor, Loc& bestmove, bool katago
     }
     factor = factor * 0.5;
   }
+}
+
+std::vector<Loc> VCFsolver::getPV()
+{
+  std::vector<Loc> PVvector(PVlen);
+  for (int i = 0; i < PVlen; i++)
+  {
+    Loc oldloc = PV[i];
+    Loc loc =  (oldloc/(BS+6)-3)*BS+(oldloc%(BS+6)-3);
+    PVvector[i] = loc;
+  }
+  return PVvector;
+
+}
+
+std::vector<Loc> VCFsolver::getPVreduced()
+{
+  std::vector<Loc> PVvector((PVlen+1)/2);
+  for (int i = 0; i < PVlen; i++)
+  {
+    if (i % 2 == 1)continue;
+    Loc oldloc = PV[i];
+    Loc loc =  (oldloc/(BS+6)-3)*BS+(oldloc%(BS+6)-3);
+    PVvector[i/2] = loc;
+  }
+  return PVvector;
 }
 
 void VCFsolver::playOutside(Loc loc, Color color, int locType,bool colorType)
@@ -169,6 +195,9 @@ void VCFsolver::undoOutside(Loc loc, int locType)
 
 SearchResult VCFsolver::resetPts(Loc& onlyLoc)
 {
+  movenum = 0;
+  for (int i = 0; i < BS * BS; i++)PV[i] = LOC_NULL;
+
   ptNum = 0;
   onlyLoc = LOC_NULL;
   bool oppDoubleFour = false;
@@ -200,7 +229,7 @@ SearchResult VCFsolver::resetPts(Loc& onlyLoc)
         }
         else if (shape_isMyThree(s))
         {
-          pts[ptNum] = findEmptyPoint2(loc, dirs[d]);
+          pts[ptNum] = findEmptyPoint2(loc, d);
           ptNum++;
         }
       }
@@ -208,10 +237,13 @@ SearchResult VCFsolver::resetPts(Loc& onlyLoc)
   return SR_Uncertain;
 }
 
-VCF::PT VCFsolver::findEmptyPoint2(Loc loc, Loc bias)
+VCF::PT VCFsolver::findEmptyPoint2(Loc loc, int dir)
 {
   PT pt;
+  pt.shapeDir = dir;
+  pt.shapeLoc = loc;
   bool secondEmpty = false;
+  Loc bias = dirs[dir];
   loc = loc - 2 * bias;
   for (int i = 0; i < 5; i++)
   {
@@ -248,11 +280,7 @@ Loc VCFsolver::findEmptyPoint1(Loc loc, Loc bias)
 
 VCF::PlayResult VCFsolver::playTwo(Loc loc1, Loc loc2, Loc& nextForceLoc)
 {
-  bool newThree = false;
-  bool isWin = false;//只检测自己是否双四
-  bool isLose = false;//只检测对手是否双四，优先级低于isWin
-  nextForceLoc = LOC_NULL;
-
+  movenum += 2;
   //自己落子------------------------------------------------------------------------------
   board[loc1] = C_MY;
   //处理长连问题
@@ -269,24 +297,7 @@ VCF::PlayResult VCFsolver::playTwo(Loc loc1, Loc loc2, Loc& nextForceLoc)
 #undef OpSix
 
   //DIR方向编号，DX方向编号对应的指针改变量，DIS是移动距离
-#define OpPerShape(DIR,DX,DIS) {\
-  Loc loc=loc1+(DIS*DX);\
-  int s=shape[DIR][loc];\
-  s+=1;\
-  shape[DIR][loc]=s;\
-  if(shape_isMyFour(s)){\
-    Loc defendLoc=findEmptyPoint1(loc,DX);\
-    if(defendLoc!=loc2)isWin=true;\
-  }\
-  else if(shape_isMyThree(s)){\
-    PT pt=findEmptyPoint2(loc,DX);\
-    if(pt.loc1!=loc2&&pt.loc2!=loc2){\
-      newThree=true;\
-      pts[ptNum]=pt;\
-      ptNum++;\
-    }\
-  }\
-}
+#define OpPerShape(DIR,DX,DIS) shape[DIR][loc1+(DIS*DX)]+=1
 
   OpPerShape(0, dir0, -2);
   OpPerShape(0, dir0, -1);
@@ -310,7 +321,6 @@ VCF::PlayResult VCFsolver::playTwo(Loc loc1, Loc loc2, Loc& nextForceLoc)
   OpPerShape(3, dir3, 2);
 
 #undef OpPerShape
-  
 
   //对手落子------------------------------------------------------------------------------
 
@@ -329,19 +339,53 @@ VCF::PlayResult VCFsolver::playTwo(Loc loc1, Loc loc2, Loc& nextForceLoc)
 #undef OpSix
 
   //DIR方向编号，DX方向编号对应的指针改变量，DIS是移动距离
+#define OpPerShape(DIR,DX,DIS) shape[DIR][loc2+(DIS*DX)]+=64
+
+  OpPerShape(0, dir0, -2);
+  OpPerShape(0, dir0, -1);
+  OpPerShape(0, dir0, 0);
+  OpPerShape(0, dir0, 1);
+  OpPerShape(0, dir0, 2);
+  OpPerShape(1, dir1, -2);
+  OpPerShape(1, dir1, -1);
+  OpPerShape(1, dir1, 0);
+  OpPerShape(1, dir1, 1);
+  OpPerShape(1, dir1, 2);
+  OpPerShape(2, dir2, -2);
+  OpPerShape(2, dir2, -1);
+  OpPerShape(2, dir2, 0);
+  OpPerShape(2, dir2, 1);
+  OpPerShape(2, dir2, 2);
+  OpPerShape(3, dir3, -2);
+  OpPerShape(3, dir3, -1);
+  OpPerShape(3, dir3, 0);
+  OpPerShape(3, dir3, 1);
+  OpPerShape(3, dir3, 2);
+
+#undef OpPerShape
+
+
+  //检查自己棋形------------------------------------------------------------------------------
+
+  bool newThree = false;//是否有新眠三
+  bool newTwo = false;//是否有新眠二
+  bool isWin = false;//只检测自己是否双四
+
+  //DIR方向编号，DX方向编号对应的指针改变量，DIS是移动距离
 #define OpPerShape(DIR,DX,DIS) {\
-  Loc loc=loc2+(DIS*DX);\
+  Loc loc=loc1+(DIS*DX);\
   int s=shape[DIR][loc];\
-  s+=64;\
-  shape[DIR][loc]=s;\
-  if(shape_isOppFour(s)){\
-    if(nextForceLoc==LOC_NULL){\
-      nextForceLoc=findEmptyPoint1(loc,DX);\
-    }\
-    else{\
-      if(findEmptyPoint1(loc,DX)!=nextForceLoc)isLose=true;\
-    }\
+  if(shape_isMyFour(s)){\
+  isWin = true; \
+  PV[movenum]=findEmptyPoint1(loc,DX);\
   }\
+  else if(shape_isMyThree(s)){\
+      newThree=true;\
+      PT pt=findEmptyPoint2(loc,DIR);\
+      pts[ptNum]=pt;\
+      ptNum++;\
+  }\
+  else if(shape_isMyTwo(s))newTwo=true;\
 }
 
   OpPerShape(0, dir0, -2);
@@ -367,18 +411,70 @@ VCF::PlayResult VCFsolver::playTwo(Loc loc1, Loc loc2, Loc& nextForceLoc)
 
 #undef OpPerShape
 
+
+
+
+
+
+  //检查对手棋形------------------------------------------------------------------------------
+
+
+  bool isLose = false;//只检测对手是否双四，优先级低于isWin
+  nextForceLoc = LOC_NULL;//是不是挡冲四
+
+#define OpPerShape(DIR,DX,DIS) {\
+    Loc loc=loc2+(DIS*DX);\
+    int s=shape[DIR][loc];\
+    if(shape_isOppFour(s)){\
+      if(nextForceLoc==LOC_NULL){\
+        nextForceLoc=findEmptyPoint1(loc,DX);\
+      }\
+      else{\
+        if(findEmptyPoint1(loc,DX)!=nextForceLoc)isLose=true;\
+      }\
+    }\
+  }
+  OpPerShape(0, dir0, -2);
+  OpPerShape(0, dir0, -1);
+  OpPerShape(0, dir0, 0);
+  OpPerShape(0, dir0, 1);
+  OpPerShape(0, dir0, 2);
+  OpPerShape(1, dir1, -2);
+  OpPerShape(1, dir1, -1);
+  OpPerShape(1, dir1, 0);
+  OpPerShape(1, dir1, 1);
+  OpPerShape(1, dir1, 2);
+  OpPerShape(2, dir2, -2);
+  OpPerShape(2, dir2, -1);
+  OpPerShape(2, dir2, 0);
+  OpPerShape(2, dir2, 1);
+  OpPerShape(2, dir2, 2);
+  OpPerShape(3, dir3, -2);
+  OpPerShape(3, dir3, -1);
+  OpPerShape(3, dir3, 0);
+  OpPerShape(3, dir3, 1);
+  OpPerShape(3, dir3, 2);
+
+
+
+
+
+
+
   isLose = (!isWin) && isLose;
 
   if (isWin)return PR_Win;
   else if (isLose)return PR_Lose;
   else if (newThree)return PR_OneFourWithThree;
-  else return PR_OneFourWithoutThree;
+  else if (newTwo)return PR_OneFourWithTwo;
+  else return PR_OneFourWithoutTwo;
 
 
 }
 
 void VCFsolver::undo(Loc loc)
 {
+  movenum--;
   Color color = board[loc];
   int d = (color == C_MY) ? 1 : 64;
   board[loc] = C_EMPTY;
@@ -422,17 +518,17 @@ void VCFsolver::undo(Loc loc)
 #undef OpPerShape
 }
 
-VCF::SearchResult VCFsolver::search(int maxNoThree, Loc forceLoc, Loc& winLoc)
+VCF::SearchResult VCFsolver::search(int maxNoThree, Loc forceLoc)
 {
-  std::cout << nodeNumThisSearch << std::endl;
-  printboard();
+  //std::cout << nodeNumThisSearch << std::endl;
+  //printboard();
   nodeNumThisSearch++;
   int ptNumOld = ptNum;
   SearchResult result = SR_Lose;
   for (int i = 0; i < ptNumOld; i++)
   {
     PT pt = pts[i];
-    if (board[pt.loc1] != C_EMPTY || board[pt.loc2] != C_EMPTY)continue;//眠三作废了
+    if (!shape_isMyThree( shape[pt.shapeDir][pt.shapeLoc]))continue;//眠三作废了
     for (int j = 0; j < 2; j++)
     {
       Loc loc1 = pt.loc1, loc2 = pt.loc2;
@@ -447,7 +543,9 @@ VCF::SearchResult VCFsolver::search(int maxNoThree, Loc forceLoc, Loc& winLoc)
       {
         undo(loc1);
         undo(loc2);
-        winLoc = loc1;
+        PV[movenum] = loc1;
+        PV[movenum + 1] = loc2;
+        PVlen = movenum + 3;
         ptNum = ptNumOld;
         return SR_Win;
       }
@@ -459,22 +557,26 @@ VCF::SearchResult VCFsolver::search(int maxNoThree, Loc forceLoc, Loc& winLoc)
       }
       else//正常情况
       {
-        bool noThree = (pr == PR_OneFourWithoutThree) && (forceLoc == LOC_NULL);
-        int newMaxNoThree = noThree ? maxNoThree - 1 : maxNoThree;
+        int decrease = (forceLoc != LOC_NULL) ? 0 :
+          (pr == PR_OneFourWithoutTwo) ? 4 :
+          (pr == PR_OneFourWithTwo) ? 1 :
+          0;
+
+        int newMaxNoThree = maxNoThree - decrease;
         if (newMaxNoThree < 0)
         {
-          result = SearchResult(1);//说明还是有可以走的，只是剪枝了
+          result = SearchResult(maxNoThree + 1);//说明还是有可以走的，只是剪枝了
           undo(loc1);
           undo(loc2);
           continue;
         }
-        Loc nextWinLoc;//无用
-        SearchResult sr = search(newMaxNoThree, nextForceLoc, nextWinLoc);//递归搜索
+        SearchResult sr = search(newMaxNoThree, nextForceLoc);//递归搜索
         if(sr==SR_Win)//直接return
         {
           undo(loc1);
           undo(loc2);
-          winLoc = loc1;
+          PV[movenum] = loc1;
+          PV[movenum + 1] = loc2;
           ptNum = ptNumOld;
           return SR_Win;
         }
@@ -496,8 +598,18 @@ VCF::SearchResult VCFsolver::search(int maxNoThree, Loc forceLoc, Loc& winLoc)
 void VCFsolver::printboard()
 {
   using namespace std;
+  cout << "   ";
+  for (int x = 0; x < W; x++)
+  {
+    cout << char('A' + x)<<" ";
+  }
+  cout << endl;
   for (int y = 0; y < H; y++)
   {
+    int printy = H - y;
+    if (printy < 10)cout << " ";
+    cout << printy;
+    cout << " ";
     for (int x = 0; x < W; x++)
     {
       Color c = board[xytoshapeloc(x,y)];
