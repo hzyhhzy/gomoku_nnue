@@ -88,7 +88,7 @@ VCF::SearchResult VCFsolver::fullSearch(float factor, Loc& bestmove, bool katago
     bestmove = (onlyLoc/(BS+6)-3)*BS+(onlyLoc%(BS+6)-3);
     return SR_beforeSearch;
   }
-  for (int maxNoThree =1;; maxNoThree+=2)
+  for (int maxNoThree =InitialBound;; maxNoThree+=BoundIncrease)
   {
     nodeNumThisSearch = 0;
     SearchResult sr = search(maxNoThree, onlyLoc);
@@ -109,7 +109,7 @@ VCF::SearchResult VCFsolver::fullSearch(float factor, Loc& bestmove, bool katago
       bestmove = LOC_NULL;
       return sr;
     }
-    factor = factor * 0.5;
+//    factor = factor * 0.5;
   }
 }
 
@@ -605,8 +605,8 @@ VCF::SearchResult VCFsolver::search(int maxNoThree, Loc forceLoc)
       else//正常情况
       {
         int decrease = (forceLoc != LOC_NULL) ? 0 :
-          (pr == PR_OneFourWithoutTwo) ? 4 :
-          (pr == PR_OneFourWithTwo) ? 1 :
+          (pr == PR_OneFourWithoutTwo) ? NoTwoDecrease :
+          (pr == PR_OneFourWithTwo) ? NoThreeDecrease :
           0;
 
         int newMaxNoThree = maxNoThree - decrease;

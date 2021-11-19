@@ -25,6 +25,13 @@ namespace VCF {
     PR_OneFourWithoutTwo,  //单个冲四同时不生成眠二和三
     PR_Lose                  //不合法(被抓禁)或者没有生成冲四
   };
+  //无眠三扣NoThreeDecrease分，无眠二扣NoTwoDecrease分
+  //初始分是InitialBound，之后每次搜索加BoundIncrease分
+  static const int NoThreeDecrease = 1;
+  static const int NoTwoDecrease = 3;
+  static const int InitialBound = 1;
+  static const int BoundIncrease = 2;
+
   enum SearchResult : int16_t {
     SR_Win = -1,//有解
     SR_Uncertain = 0,//完全不知道有没有解，还没搜
