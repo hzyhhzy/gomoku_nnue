@@ -1,7 +1,7 @@
 #include "VCFsolver.h"
 #include <random>
 using namespace VCF;
-VCFHashTable VCFsolver::hashtable(20, 5);
+VCFHashTable VCFsolver::hashtable(24, 5);//如果要多线程，可以把第二个数改大
 VCF::zobristTable VCFsolver::zobrist(1919810);
 
 VCF::zobristTable::zobristTable(int64_t seed)
@@ -88,7 +88,7 @@ VCF::SearchResult VCFsolver::fullSearch(float factor, Loc& bestmove, bool katago
     bestmove = (onlyLoc/(BS+6)-3)*BS+(onlyLoc%(BS+6)-3);
     return SR_beforeSearch;
   }
-  for (int maxNoThree =0;; maxNoThree+=1)
+  for (int maxNoThree =1;; maxNoThree+=2)
   {
     nodeNumThisSearch = 0;
     SearchResult sr = search(maxNoThree, onlyLoc);
@@ -226,6 +226,7 @@ void VCFsolver::undoOutside(Loc loc, int locType)
 SearchResult VCFsolver::resetPts(Loc& onlyLoc)
 {
   movenum = 0;
+  PVlen = 0;
   for (int i = 0; i < BS * BS; i++)PV[i] = LOC_NULL;
 
   ptNum = 0;
