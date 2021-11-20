@@ -1,6 +1,7 @@
 #pragma once
 #include "Search.h"
 #include "global.h"
+#include "VCF/VCFsolver.h"
 
 #include <array>
 #include <cmath>
@@ -144,4 +145,6 @@ private:
     Loc   currentMove;
     float currentPolicySum;
   } plyInfos[BS * BS + 1];  // plyInfos[ply]
+
+  VCFsolver vcfSolver[2];
 };

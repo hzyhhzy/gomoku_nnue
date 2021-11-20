@@ -440,6 +440,6 @@ int main(int argc, const char **argv)
 {
   //return maingtp(argc, argv);
   // return main_testeval();
-  main_testvcf();
+  maingtp(argc, argv);
   return 0;
 }
