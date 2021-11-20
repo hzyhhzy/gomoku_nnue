@@ -44,7 +44,7 @@ public:
   void play(Color color, Loc loc) { 
       key ^= zobrist[color - C_BLACK][loc];
       blackEvaluator->play(color, loc); 
-      whiteEvaluator->play(~color, loc); 
+      whiteEvaluator->play(getOpp(color), loc); 
   }
   void undo(Color color, Loc loc)
   {

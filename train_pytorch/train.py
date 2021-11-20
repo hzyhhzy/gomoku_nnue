@@ -15,6 +15,7 @@ import torch.nn as nn
 import torch
 import os
 import time
+import random
 
 forced_save_points=[]
 
@@ -71,6 +72,8 @@ if __name__ == '__main__':
                         default='../val_100k.npz', help='valset path')
     parser.add_argument('--vstep', type=int,
                         default=5000, help="how many step each validation")
+    parser.add_argument('--sp', type=float, default=1, help='sampling rate')
+    parser.add_argument('--vs', type=float, default=1, help='value sampling rate')
     args = parser.parse_args()
 
     device = torch.device(f"cuda:{args.gpu}")
@@ -87,6 +90,8 @@ if __name__ == '__main__':
     savestep=args.savestep
     infostep=args.infostep
     modelsize=args.size
+    samplingrate=args.sp
+    valuesampling=args.vs
 
 
 
@@ -137,6 +142,8 @@ if __name__ == '__main__':
     print("Start training")
     for epochs in range(maxepoch):
         for step, (board, valueTarget, policyTarget) in enumerate(dataloader):
+            if(random.random()>samplingrate):
+                continue
             # data
             board = board.to(device)
             valueTarget = valueTarget.to(device)
@@ -148,8 +155,10 @@ if __name__ == '__main__':
 
             vloss = cross_entropy_loss(value, valueTarget)
             ploss = cross_entropy_loss(policy.flatten(start_dim=1), policyTarget.flatten(start_dim=1))
-            loss = 1.2*vloss+1.0*ploss
 
+            loss = 1.0*ploss
+            if(random.random()<=valuesampling):
+                loss=loss+(valuesampling**-0.5)*vloss*1.2
             loss_record[0]+=(vloss.detach()+ploss.detach())
             loss_record[1]+=vloss.detach()
             loss_record[2]+=ploss.detach()

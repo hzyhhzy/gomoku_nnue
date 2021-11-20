@@ -43,7 +43,7 @@ std::string Engine::genmove()
 {
   Time   tic         = now();
   double bestvalue   = VALUE_NONE;
-  Loc    bestloc     = NULL_LOC;
+  Loc    bestloc     = LOC_NULL;
   int    maxTurnTime = min(timeout_turn - ReservedTime, time_left / 5);
   int    maxWaitTime = max(maxTurnTime - AsyncWaitReservedTime, 0);
   int    optimalTime = maxTurnTime / 2;
@@ -84,11 +84,12 @@ std::string Engine::genmove()
       break;
   }
 
-  if (bestloc != NULL_LOC)
+
+  if (bestloc != LOC_NULL)
     evaluator->play(nextColor, bestloc);
   else
-    bestloc = PASS_LOC;
-  nextColor = ~nextColor;
+    bestloc = LOC_PASS;
+  nextColor = getOpp(nextColor);
 
   int bestx = bestloc % BS, besty = bestloc / BS;
   return to_string(bestx) + "," + to_string(besty);
@@ -151,7 +152,7 @@ void Engine::protocolLoop()
       else {
         Loc opploc = MakeLoc(oppx, oppy);
         evaluator->play(nextColor, opploc);
-        nextColor = ~nextColor;
+        nextColor = getOpp(nextColor);
         response  = genmove();
       }
     }
@@ -190,7 +191,7 @@ void Engine::protocolLoop()
         else {  // normal move
           Loc loc = MakeLoc(x, y);
           evaluator->play(nextColor, loc);
-          nextColor = ~nextColor;
+          nextColor = getOpp(nextColor);
         }
       }
     }

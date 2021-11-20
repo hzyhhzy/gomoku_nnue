@@ -21,7 +21,7 @@ float ABsearch::searchRec(Color color, int depth, float maxEval, float minEval, 
     sortPolicy(policyPtr, policyRankPtr);
     PolicyType minPolicy = policyPtr[policyRankPtr[0]] - explorationFactor(depth);
 
-  bestmove = NULL_LOC;
+  bestmove = LOC_NULL;
   float bestValue = -1e30;
   for (int i = 0; i < BS * BS; i++)
   {
@@ -41,7 +41,7 @@ float ABsearch::searchRec(Color color, int depth, float maxEval, float minEval, 
     {
       evaluator->play(color, loc);
       Loc nextBestMove;
-      value = -searchRec(~color, depth - 1, -std::max(bestValue,minEval), -maxEval, nextBestMove);
+      value = -searchRec(getOpp(color), depth - 1, -std::max(bestValue,minEval), -maxEval, nextBestMove);
       evaluator->undo(color, loc);
     }
     if (depth == 9)

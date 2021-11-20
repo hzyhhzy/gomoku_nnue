@@ -196,7 +196,7 @@ void Mix6buf_int16::calculatePolicy(PolicyType* policy, const Mix6weight_int16& 
 {
   static_assert(mix6::policyBatch == 1,"Assume there's only one policy batch,or we need to calculate policy by batch");//
   if (policy == NULL)return;
-  for (Loc loc = ZERO_LOC; loc < BS * BS; ++loc)
+  for (Loc loc = LOC_ZERO; loc < BS * BS; ++loc)
   {
     __m256i* wp = reinterpret_cast<__m256i*>(policyAfterConv[loc]);
     auto t = _mm256_loadu_si256(wp);
@@ -287,7 +287,7 @@ void Mix6buf_int16::emptyboard(const Mix6weight_int16& weights)
   for (int i = 0; i < mix6::policyBatch; i++)
   {
     auto bias= _mm256_loadu_si256(reinterpret_cast<const __m256i*>(weights.policyConvBias + i * 16));
-    for (Loc loc = ZERO_LOC; loc < BS * BS; ++loc)
+    for (Loc loc = LOC_ZERO; loc < BS * BS; ++loc)
     {
       _mm256_storeu_si256(reinterpret_cast<__m256i*>(policyAfterConv[loc] + i * 16), bias);
     }
@@ -301,7 +301,7 @@ void Mix6buf_int16::emptyboard(const Mix6weight_int16& weights)
 
   //mapsum,mapAfterLR,policyAfterConv,valueSumBoard
   
-  for (Loc loc = ZERO_LOC; loc < BS * BS; ++loc)
+  for (Loc loc = LOC_ZERO; loc < BS * BS; ++loc)
   {
     int y0 = loc / BS, x0 =loc % BS;
 
@@ -398,7 +398,7 @@ void Eva_mix6_avx2::recalculate()
   Color boardCopy[BS * BS];
   memcpy(boardCopy, board, BS * BS * sizeof(Color));
   clear();
-  for (Loc i = ZERO_LOC; i < BS * BS; ++i)
+  for (Loc i = LOC_ZERO; i < BS * BS; ++i)
   {
     if (boardCopy[i] != C_EMPTY)play(boardCopy[i], i);
   }

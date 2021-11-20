@@ -13,20 +13,29 @@ const int BS = 15;
 
 typedef uint64_t Key;
 
-enum Color : int8_t { C_EMPTY = 0, C_BLACK = 1, C_WHITE = 2, C_MY = 1, C_OPP = 2 };
-constexpr Color operator~(Color c) { return Color(3 - c); }
+typedef int8_t Color;
+static constexpr Color C_EMPTY = 0;
+static constexpr Color C_BLACK = 1;
+static constexpr Color C_WHITE = 2;
+static constexpr Color C_WALL = 3;
+static constexpr Color C_MY= 1;
+static constexpr Color C_OPP = 2;
 
-enum Loc : int16_t { ZERO_LOC = 0, NULL_LOC = BS * BS + 1, PASS_LOC = BS * BS };
+static inline Color getOpp(Color c){return c ^ 3;}
+
+typedef int16_t Loc;
+static constexpr Loc LOC_ZERO = 0;
+static constexpr Loc LOC_NULL = BS * BS + 1;
+static constexpr Loc LOC_PASS = BS * BS;
 inline Loc           MakeLoc(int x, int y) { return Loc(x + y * BS); }
-inline Loc &         operator++(Loc &loc) { return loc = Loc(loc + 1); }
-inline std::ostream &operator<<(std::ostream &os, Loc loc)
+inline std::string locstr(Loc loc)
 {
-  return os << char('A' + loc % BS) << int(BS - loc / BS);
+  return std::string(1,char('A' + loc % BS))+ std::to_string(int(BS - loc / BS));
 }
 inline std::ostream &operator<<(std::ostream &os, std::vector<Loc> pv)
 {
   for (size_t i = 0; i < pv.size(); i++)
-    os << " " + !i << pv[i];
+    os << " " + !i << locstr(pv[i]);
   return os;
 }
 

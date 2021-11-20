@@ -18,10 +18,10 @@ static unsigned long upper_power_of_two(unsigned long v)
 
 void TTEntry::save(Key k, int v, Bound b, int d, bool isPv, Loc l)
 {
-  if (l != NULL_LOC)
+  if (l != LOC_NULL)
     best = l;
   else if (k != key)
-    best = NULL_LOC;
+    best = LOC_NULL;
 
   if (b == BOUND_EXACT || (uint16_t)k != key || d + 3 > depth) {
     key   = (uint16_t)k;
@@ -49,7 +49,7 @@ void HashTable::clear()
 {
   std::memset(tbl, 0, sizeof(TTEntry) * size);
   for (size_t i = 0; i < size; i++) {
-    tbl[i].best = NULL_LOC;
+    tbl[i].best = LOC_NULL;
   }
   gen = 0;
 }

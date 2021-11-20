@@ -6,6 +6,7 @@
 #include "Engine.h"
 #include "EngineDev.h"
 #include "TT.h"
+#include "VCF/VCFsolver.h"
 
 #include <chrono>
 #include <iostream>
@@ -99,6 +100,7 @@ int main_testsearch()
          << 100.0 * search->ttCuts / search->ttHits << ")"
          << " PV = " << search->rootPV() << endl;
   }
+  return 0;
 }
 
 int main1_play()  // play a game
@@ -209,7 +211,7 @@ int main1_play()  // play a game
         y = 15 - 10 * (nextmove[1] - '0') - (nextmove[2] - '0');
       }
       if (x >= 0 && x < BS && y >= 0 && y < BS) {
-        eva->play(~enginecolor, MakeLoc(x, y));
+        eva->play(getOpp(enginecolor), MakeLoc(x, y));
         break;
       }
       else
@@ -337,9 +339,107 @@ int main_testeval()
   eva->debug_print();
   return 0;
 }
+int main_testvcf()
+{
+  Color board[BS * BS];
+  /*
+  const char boardstr[] = ""
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ;
+  */
 
+  const char boardstr1[] = ""
+  "x . . x . . x . . x . . x . . "
+  "x . . x . . x . . x . . x . . "
+  "x . . x . . x . . x . . x . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  "o . . o . . o . . o . . o . . "
+  "x . . x . . x . . x . . x . . "
+  "x . . x . . x . . x . . x . . "
+  "x . . x . . x . . x . . x . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  "x . . x . . x . . x . . x . . "
+  "x . . x . . x . . x . . x . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+    ;
+  const char boardstr[] = ""
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . o . . . . . . . . . . "
+  ". . . . . . . . . . o . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . x . . . . . "
+  ". . . . . o . . . . o . . . . "
+  ". . . . . x . x . . . . . . . "
+  ". . . . . . . x . . . . x . o "
+  ". . . x . . . . . . . x . . . "
+  ". . . . o . . . . o . . . . . "
+  ". . . . o . . x . . . . . . . "
+  ". . . . o . . . x . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+    ;
+  const char boardstr2[] = ""
+    ". . . . . . . . . o . . . . . "
+    ". . . . . . x x x . . . . . . "
+    ". . . . . . x x x o . . . . . "
+    ". . . . . . x o x x . . . . . "
+    ". . . . . x o . o . o . . . . "
+    ". . . . o o x . x . . . . . . "
+    ". . . . x o x o o o . . . . . "
+    ". . . . . o x x o x x . . . . "
+    ". . . . . . o x o o o . . . . "
+    ". . . . . x o o o x o . . . . "
+    ". . . . . . o . x . . x . . . "
+    ". . . . . x . o . . . . . . . "
+    ". . . . . . x . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ;
+  for (int y = 0; y < BS; y++)
+    for (int x = 0; x < BS; x++) {
+      char  colorchar = boardstr[2 * (x + y * BS)];
+      Color color     = C_EMPTY;
+      if (colorchar == 'x')
+        color = C_BLACK;
+      else if (colorchar == 'o')
+        color = C_WHITE;
+      board[x + y * BS] = color;
+    }
+  VCFsolver v(BS,BS,C_BLACK);
+  v.setBoard(board, false,true);
+  Loc bestloc;
+  int result;
+  result = v.fullSearch(1e38, bestloc,false);
+  cout << "Initial Board:" << endl;
+  v.printboard();
+  cout <<"Result="<< result << " " << locstr(bestloc) << endl;
+  cout << "PV:" << v.getPVlen() << " " << v.getPVreduced();
+
+
+  return 0;
+}
 int main(int argc, const char **argv)
 {
-  return maingtp(argc, argv);
+  //return maingtp(argc, argv);
   // return main_testeval();
+  main_testvcf();
+  return 0;
 }

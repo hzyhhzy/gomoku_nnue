@@ -30,7 +30,7 @@ std::string EngineDev::genmove()
 {
   Time tic = now();
 
-  Loc bestloc = NULL_LOC;
+  Loc bestloc = LOC_NULL;
   for (int depth = 1; depth < 100; depth++) {
     double value = search->fullsearch(nextColor, depth, bestloc);
     Time   toc   = now();
@@ -44,7 +44,7 @@ std::string EngineDev::genmove()
   }
 
   evaluator->play(nextColor, bestloc);
-  nextColor = ~nextColor;
+  nextColor = getOpp(nextColor);
 
   int bestx = bestloc % BS, besty = bestloc / BS;
   return to_string(bestx) + "," + to_string(besty);
@@ -107,7 +107,7 @@ void EngineDev::protocolLoop()
       else {
         Loc opploc = MakeLoc(oppx, oppy);
         evaluator->play(nextColor, opploc);
-        nextColor = ~nextColor;
+        nextColor = getOpp(nextColor);
         response  = genmove();
       }
     }
@@ -146,7 +146,7 @@ void EngineDev::protocolLoop()
         else {  // normal move
           Loc loc = MakeLoc(x, y);
           evaluator->play(nextColor, loc);
-          nextColor = ~nextColor;
+          nextColor = getOpp(nextColor);
         }
       }
     }
