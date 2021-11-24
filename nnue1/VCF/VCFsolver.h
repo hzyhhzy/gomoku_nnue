@@ -3,7 +3,7 @@
 #include "VCFHashTable.h"
 namespace VCF {
 
-  struct alignas(64) PT
+  struct alignas(int64_t) PT
   {
     int16_t shapeDir;
     Loc shapeLoc,loc1, loc2;
