@@ -30,7 +30,7 @@ int maingtp(int argc, const char **argv)
     modelPath = argv[1];
   }
 
-  Engine engine("mix6vcf", modelPath, 128, false);
+  Engine engine("mix6", modelPath, 128, false);
   engine.protocolLoop();
   return 0;
 }

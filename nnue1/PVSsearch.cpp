@@ -8,7 +8,7 @@ PVSsearch::PVSsearch(Evaluator *e)
     , interiorNodes(0)
     , ttHits(0)
     , ttCuts(0)
-    //, vcfSolver {{BS, BS, C_BLACK}, {BS, BS, C_WHITE}}
+    , vcfSolver {{BS, BS, C_BLACK}, {BS, BS, C_WHITE}}
 {}
 
 float PVSsearch::fullsearch(Color color, double factor, Loc &bestmove)
@@ -16,8 +16,8 @@ float PVSsearch::fullsearch(Color color, double factor, Loc &bestmove)
   int depth                 = (int)factor;
   selDepth                  = 0;
   plyInfos[0].nullMoveCount = 0;
-  //vcfSolver[0].setBoard(evaluator->board(), false, true);
-  //vcfSolver[1].setBoard(evaluator->board(), false, true);
+  vcfSolver[0].setBoard(evaluator->board(), false, true);
+  vcfSolver[1].setBoard(evaluator->board(), false, true);
   return search<true>(color, 0, depth, -VALUE_MATE, VALUE_MATE, false, bestmove);
 }
 
@@ -42,16 +42,16 @@ float PVSsearch::search(Color me,
 
   // 叶子节点估值
   if (depth <= 0 || ply >= MAX_PLY) {
-    //// 为对方算杀
-    //if (value >= beta) {
-    //  if (vcfSolver[oppo - 1].fullSearch(10000, bestmove, false) == VCF::SR_Win)
-    //    return -mateValue(ply + vcfSolver[oppo - 1].getPVlen());
-    //}
-    //// 为己方算杀
-    //else {
-    //  if (vcfSolver[me - 1].fullSearch(10000, bestmove, false) == VCF::SR_Win)
-    //    return mateValue(ply + vcfSolver[me - 1].getPVlen());
-    //}
+    // 为对方算杀
+    if (value >= beta) {
+      if (vcfSolver[oppo - 1].fullSearch(10000, bestmove, false) == VCF::SR_Win)
+        return -mateValue(ply + vcfSolver[oppo - 1].getPVlen());
+    }
+    // 为己方算杀
+    else {
+      if (vcfSolver[me - 1].fullSearch(10000, bestmove, false) == VCF::SR_Win)
+        return mateValue(ply + vcfSolver[me - 1].getPVlen());
+    }
     
     return value;
   }
@@ -197,8 +197,8 @@ expand_node:
       newDepth += policy[move] >= 0.8;
 
       evaluator->play(me, move);
-      //vcfSolver[0].playOutside(move, me, 1, true);
-      //vcfSolver[1].playOutside(move, me, 1, true);
+      vcfSolver[0].playOutside(move, me, 1, true);
+      vcfSolver[1].playOutside(move, me, 1, true);
 
       // Do LMR
       if (depth >= LMR_DEPTH && moveCount > 1
@@ -230,8 +230,8 @@ expand_node:
             -search<true>(oppo, ply + 1, newDepth, -beta, -alpha, false, nextBestMove);
 
       evaluator->undo(me, move);
-      //vcfSolver[0].undoOutside(move, 1);
-      //vcfSolver[1].undoOutside(move, 1);
+      vcfSolver[0].undoOutside(move, 1);
+      vcfSolver[1].undoOutside(move, 1);
     }
 
     if (terminate.load(std::memory_order_relaxed))
