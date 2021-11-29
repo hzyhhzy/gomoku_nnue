@@ -193,6 +193,9 @@ expand_node:
       // 延伸: 估值显著增加
       newDepth += evalDelta >= 150;
 
+      // 延伸: 该步的policy集中度很高
+      newDepth += policy[move] >= 0.8;
+
       evaluator->play(me, move);
       //vcfSolver[0].playOutside(move, me, 1, true);
       //vcfSolver[1].playOutside(move, me, 1, true);
