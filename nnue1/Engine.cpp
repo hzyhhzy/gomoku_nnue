@@ -44,9 +44,9 @@ std::string Engine::genmove()
   Time   tic         = now();
   double bestvalue   = VALUE_NONE;
   Loc    bestloc     = LOC_NULL;
-  int    maxTurnTime = min(timeout_turn - ReservedTime, time_left / 5);
+  int    maxTurnTime = min(timeout_turn - ReservedTime, time_left / 7);
   int    maxWaitTime = max(maxTurnTime - AsyncWaitReservedTime, 0);
-  int    optimalTime = maxTurnTime / 2;
+  int    optimalTime = maxTurnTime * 2 / 5;
   int    maxDepth    = min(max_depth, 64);
 
   search->clear();
@@ -58,7 +58,8 @@ std::string Engine::genmove()
       return std::make_pair(value, loc);
     });
 
-    if (result.wait_for(chrono::milliseconds(max(maxWaitTime + tic - now(), 0LL)))
+    if (result.wait_for(chrono::milliseconds(
+            max(maxWaitTime + tic - now(), depth == 1 ? 1000LL : 0LL)))
         == future_status::timeout) {
       search->stop();
       break;
@@ -83,7 +84,6 @@ std::string Engine::genmove()
     if (toc - tic > optimalTime)
       break;
   }
-
 
   if (bestloc != LOC_NULL)
     evaluator->play(nextColor, bestloc);
