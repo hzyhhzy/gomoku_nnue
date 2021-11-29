@@ -60,6 +60,7 @@ void VCFsolver::reset()
 
 void VCFsolver::setBoard(Color* b, bool katagoType, bool colorType)
 {
+  reset();
   for (int x = 0; x < W; x++)
     for (int y = 0; y < H; y++)
     {
