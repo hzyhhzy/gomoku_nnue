@@ -18,6 +18,12 @@ Evaluator::Evaluator(std::string type, std::string filepath)
     whiteEvaluator = new Eva_mix6_avx2();
     loadParam(filepath, filepath);
   }
+  else if (type == "mix6vcf")
+  {
+    blackEvaluator = new Eva_mix6VCF();
+    whiteEvaluator = new Eva_mix6VCF();
+    loadParam(filepath, filepath);
+  }
   else
   {
     throw "Invalid type of engine";

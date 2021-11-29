@@ -44,6 +44,7 @@ const PolicyType MIN_POLICY     = -5e8;
 const PolicyType MYFIVE_POLICY  = 1e8;
 const PolicyType OPPFOUR_POLICY = 1e7;
 const PolicyType MYFOUR_POLICY  = 1e6;
+const PolicyType VCF_POLICY  = 1e5;
 
 const double WIN_VALUE  = 1;
 const double LOSE_VALUE = -1;

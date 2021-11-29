@@ -78,6 +78,7 @@ public:
   Loc PV[BS * BS];//¼ÇÂ¼Â·Ïß
   int PVlen;
 
+  VCFsolver() :VCFsolver(C_BLACK) {}
   VCFsolver(Color pla) :VCFsolver(BS, BS,pla) {}
   VCFsolver(int h, int w,Color pla);
   void reset();

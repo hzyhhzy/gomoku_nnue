@@ -30,14 +30,14 @@ int maingtp(int argc, const char **argv)
     modelPath = argv[1];
   }
 
-  Engine engine("mix6", modelPath, 128, false);
+  Engine engine("mix6vcf", modelPath, 128, false);
   engine.protocolLoop();
   return 0;
 }
 
 int main_testsearch()
 {
-  Evaluator *eva    = new Evaluator("mix6", "weights/t1e2.txt");
+  Evaluator *eva    = new Evaluator("mix6vcf", "weights/t5.txt");
   PVSsearch *search = new PVSsearch(eva);
   TT.resize(128);
   /*
@@ -60,21 +60,21 @@ int main_testsearch()
     */
 
   const char boardstr[] = ""
-                          ". . . . . . . . . . . . . . . "
-                          ". . . . . . . . . . . . . . . "
-                          ". . . . . . . . . . . . . . . "
-                          ". . . . . . . . . . . . . . . "
-                          ". . . . . . . . . . . . . . . "
-                          ". . . . . . o o . . . . . . . "
-                          ". . . . . . o . o x . . . . . "
-                          ". . . . . . . x . . . . . . . "
-                          ". . . . . . . . x . . . . . . "
-                          ". . . . . . . . . x . . . . . "
-                          ". . . . . . . . . . . . . . . "
-                          ". . . . . . . . . . . . . . . "
-                          ". . . . . . . . . . . . . . . "
-                          ". . . . . . . . . . . . . . . "
-                          ". . . . . . . . . . . . . . . ";
+    ". . . . . . . . . o . . . . . "
+    ". . . . . . x x x . . . . . . "
+    ". . . . . . x x x o . . . . . "
+    ". . . . . . x o x x . . . . . "
+    ". . . . . x o . o . o . . . . "
+    ". . . . o o x . x . . . . . . "
+    ". . . . x o x o o o . . . . . "
+    ". . . . . o x x o x x . . . . "
+    ". . . . . . o x o o o . . . . "
+    ". . . . . x o o o x o . . . . "
+    ". . . . . . o . x . . x . . . "
+    ". . . . . x . o . . . . . . . "
+    ". . . . . . x . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . ";
   for (int y = 0; y < BS; y++)
     for (int x = 0; x < BS; x++) {
       char  colorchar = boardstr[2 * (x + y * BS)];
@@ -90,7 +90,7 @@ int main_testsearch()
   Time tic = now();
   for (int depth = 0; depth < 100; depth++) {
     Loc    loc;
-    double value = search->fullsearch(C_BLACK, depth, loc);
+    double value = search->fullsearch(C_WHITE, depth, loc);
     Time   toc   = now();
     // search->evaluator->recalculate();
     cout << "Depth = " << depth << " Value = " << valueText(value)
@@ -438,8 +438,8 @@ int main_testvcf()
 }
 int main(int argc, const char **argv)
 {
-  //return maingtp(argc, argv);
+  return maingtp(argc, argv);
   // return main_testeval();
-  main_testvcf();
+  //main_testsearch();
   return 0;
 }
