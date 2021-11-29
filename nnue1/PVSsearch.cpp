@@ -40,19 +40,20 @@ float PVSsearch::search(Color me,
   if (ply > selDepth)
     selDepth = ply;
 
+  // 为己方算杀 VCF
+  if (value < beta
+      && vcfSolver[me - 1].fullSearch(10000, bestmove, false) == VCF::SR_Win) {
+    if (PV && vcfSolver[me - 1].getPVlen() > 0) {
+      std::vector<Loc> vcfPv = vcfSolver[me - 1].getPV();
+      vcfPv.push_back(LOC_NULL);
+      copyPV(plyInfos[ply].pv, vcfPv[0], vcfPv.data() + 1);
+    }
+
+    return mateValue(ply + vcfSolver[me - 1].getPVlen());
+  }
+
   // 叶子节点估值
   if (depth <= 0 || ply >= MAX_PLY) {
-    // 为对方算杀
-    if (value >= beta) {
-      if (vcfSolver[oppo - 1].fullSearch(10000, bestmove, false) == VCF::SR_Win)
-        return -mateValue(ply + vcfSolver[oppo - 1].getPVlen());
-    }
-    // 为己方算杀
-    else {
-      if (vcfSolver[me - 1].fullSearch(10000, bestmove, false) == VCF::SR_Win)
-        return mateValue(ply + vcfSolver[me - 1].getPVlen());
-    }
-    
     return value;
   }
 
