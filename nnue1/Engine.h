@@ -30,8 +30,8 @@ public:
   uint64_t max_nodes;
   int      max_depth;
 
-  static constexpr int ReservedTime          = 50;
-  static constexpr int AsyncWaitReservedTime = 100;
+  static constexpr int ReservedTime          = 30;
+  static constexpr int AsyncWaitReservedTime = 70;
 
   void        writeLog(std::string str);
   std::string genmove();
