@@ -37,7 +37,7 @@ int maingtp(int argc, const char **argv)
 
 int main_testsearch()
 {
-  Evaluator *eva    = new Evaluator("mix6vcf", "weights/t5.txt");
+  Evaluator *eva    = new Evaluator("mix6", "weights/t5.txt");
   PVSsearch *search = new PVSsearch(eva);
   TT.resize(128);
   /*
@@ -60,20 +60,20 @@ int main_testsearch()
     */
 
   const char boardstr[] = ""
-    ". . . . . . . . . o . . . . . "
-    ". . . . . . x x x . . . . . . "
-    ". . . . . . x x x o . . . . . "
-    ". . . . . . x o x x . . . . . "
-    ". . . . . x o . o . o . . . . "
-    ". . . . o o x . x . . . . . . "
-    ". . . . x o x o o o . . . . . "
-    ". . . . . o x x o x x . . . . "
-    ". . . . . . o x o o o . . . . "
-    ". . . . . x o o o x o . . . . "
-    ". . . . . . o . x . . x . . . "
-    ". . . . . x . o . . . . . . . "
-    ". . . . . . x . . . . . . . . "
     ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . x o . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . x . . . . . . . . . "
     ". . . . . . . . . . . . . . . ";
   for (int y = 0; y < BS; y++)
     for (int x = 0; x < BS; x++) {
@@ -438,8 +438,9 @@ int main_testvcf()
 }
 int main(int argc, const char **argv)
 {
+  //main_testvcf();
   return maingtp(argc, argv);
   // return main_testeval();
-  // main_testsearch();
+   //main_testsearch();
   return 0;
 }

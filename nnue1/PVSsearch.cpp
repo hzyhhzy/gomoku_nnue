@@ -192,10 +192,10 @@ expand_node:
       bool fullDepthSearch = !PV || moveCount > 1;
 
       // 延伸: 估值显著增加
-      newDepth += evalDelta >= 150;
+      //newDepth += evalDelta >= 150;
 
       // 延伸: 该步的policy集中度很高
-      newDepth += policy[move] >= 0.8;
+      newDepth += policy[move] >= 0.85;
 
       evaluator->play(me, move);
       vcfSolver[0].playOutside(move, me, 1, true);

@@ -27,10 +27,22 @@ namespace VCF {
   };
   //无眠三扣NoThreeDecrease分，无眠二扣NoTwoDecrease分
   //初始分是InitialBound，之后每次搜索加BoundIncrease分
-  static const int NoThreeDecrease = 1;
-  static const int NoTwoDecrease = 3;
-  static const int InitialBound = 1;
-  static const int BoundIncrease = 2;
+  static const int NormalDecrease = 1;
+  static const int NoThreeDecrease = 5;
+  static const int NoTwoDecrease = 20;
+
+  //fullsearch中第n次搜索使用的bound
+  static inline int bound_n(int n)
+  {
+    if (n <= 2)return n;
+    else return 2 + 6 * (n - 2);
+  }
+  //fullsearch中第n次搜索使用的searchFactor
+  static inline float searchFactor(int n)
+  {
+    if (n <= 2)return 10000;
+    else return pow(0.6,n-2);
+  }
 
   enum SearchResult : int16_t {
     SR_Win = -1,//有解
