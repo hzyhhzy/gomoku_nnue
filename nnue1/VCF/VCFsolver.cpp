@@ -92,7 +92,7 @@ VCF::SearchResult VCFsolver::fullSearch(float factor, Loc& bestmove, bool katago
   {
     nodeNumThisSearch = 0;
     SearchResult sr = search(maxNoThree, onlyLoc);
-    std::cout << maxNoThree << " " << nodeNumThisSearch << std::endl;
+    //std::cout << maxNoThree << " " << nodeNumThisSearch << std::endl;
     if (sr == SR_Win)
     {
       Loc winMove = PV[0];
@@ -109,7 +109,7 @@ VCF::SearchResult VCFsolver::fullSearch(float factor, Loc& bestmove, bool katago
       bestmove = LOC_NULL;
       return sr;
     }
-//    factor = factor * 0.5;
+    factor = factor * 0.5;
   }
 }
 

@@ -148,6 +148,7 @@
     <ClCompile Include="EngineDev.cpp" />
     <ClCompile Include="Evaluator.cpp" />
     <ClCompile Include="EvaluatorOneSide.cpp" />
+    <ClCompile Include="Eva_mix6VCF.cpp" />
     <ClCompile Include="Eva_mix6_avx2.cpp" />
     <ClCompile Include="nnue1.cpp" />
     <ClCompile Include="PVSsearch.cpp" />
@@ -168,6 +169,7 @@
     <ClInclude Include="EngineDev.h" />
     <ClInclude Include="Evaluator.h" />
     <ClInclude Include="EvaluatorOneSide.h" />
+    <ClInclude Include="Eva_mix6VCF.h" />
     <ClInclude Include="Eva_mix6_avx2.h" />
     <ClInclude Include="global.h" />
     <ClInclude Include="TT.h" />

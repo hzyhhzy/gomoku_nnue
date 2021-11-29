@@ -3,7 +3,7 @@
 #include "VCFHashTable.h"
 namespace VCF {
 
-  struct alignas(64) PT
+  struct alignas(int64_t) PT
   {
     int16_t shapeDir;
     Loc shapeLoc,loc1, loc2;
@@ -78,6 +78,7 @@ public:
   Loc PV[BS * BS];//¼ÇÂ¼Â·Ïß
   int PVlen;
 
+  VCFsolver() :VCFsolver(C_BLACK) {}
   VCFsolver(Color pla) :VCFsolver(BS, BS,pla) {}
   VCFsolver(int h, int w,Color pla);
   void reset();
