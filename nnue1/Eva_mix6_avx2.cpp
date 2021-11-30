@@ -370,8 +370,10 @@ bool Eva_mix6_avx2::loadParam(std::string filepath)
   if (exists(cachePath)) {
     std::ifstream cacheStream(cachePath, std::ios::binary);
     cacheStream.read(reinterpret_cast<char *>(&weights), sizeof(weights));
-    if (cacheStream.good())
+    if (cacheStream.good()) {
+      buf.emptyboard(weights);
       return true;
+    }
   }
 
   bool suc = weights.loadParam(filepath);
