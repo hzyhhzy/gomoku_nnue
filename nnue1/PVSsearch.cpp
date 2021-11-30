@@ -42,7 +42,7 @@ float PVSsearch::search(Color me,
 
   // 为己方算杀 VCF
   if (value < beta
-      && vcfSolver[me - 1].fullSearch(10000, bestmove, false) == VCF::SR_Win) {
+      && vcfSolver[me - 1].fullSearch(2000, bestmove, false) == VCF::SR_Win) {
     if (PV && vcfSolver[me - 1].getPVlen() > 0) {
       std::vector<Loc> vcfPv = vcfSolver[me - 1].getPV();
       vcfPv.push_back(LOC_NULL);
@@ -183,8 +183,8 @@ expand_node:
           continue;
 
         // 剪枝: trivial policy pruning
-        if (1 - policySum < trivialPolicyResidual(depth))
-          continue;
+        //if (1 - policySum < trivialPolicyResidual(depth))
+        //  continue;
       }
 
       Loc  nextBestMove    = LOC_NULL;
