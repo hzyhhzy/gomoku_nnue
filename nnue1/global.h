@@ -13,24 +13,24 @@ const int BS = 15;
 
 typedef uint64_t Key;
 
-typedef int8_t Color;
+typedef int8_t         Color;
 static constexpr Color C_EMPTY = 0;
 static constexpr Color C_BLACK = 1;
 static constexpr Color C_WHITE = 2;
-static constexpr Color C_WALL = 3;
-static constexpr Color C_MY= 1;
-static constexpr Color C_OPP = 2;
+static constexpr Color C_WALL  = 3;
+static constexpr Color C_MY    = 1;
+static constexpr Color C_OPP   = 2;
 
-static inline Color getOpp(Color c){return c ^ 3;}
+static inline Color getOpp(Color c) { return c ^ 3; }
 
-typedef int16_t Loc;
+typedef int16_t      Loc;
 static constexpr Loc LOC_ZERO = 0;
 static constexpr Loc LOC_NULL = BS * BS + 1;
 static constexpr Loc LOC_PASS = BS * BS;
 inline Loc           MakeLoc(int x, int y) { return Loc(x + y * BS); }
-inline std::string locstr(Loc loc)
+inline std::string   locstr(Loc loc)
 {
-  return std::string(1,char('A' + loc % BS))+ std::to_string(int(BS - loc / BS));
+  return std::string(1, char('A' + loc % BS)) + std::to_string(int(BS - loc / BS));
 }
 inline std::ostream &operator<<(std::ostream &os, std::vector<Loc> pv)
 {
@@ -44,7 +44,7 @@ const PolicyType MIN_POLICY     = -5e8;
 const PolicyType MYFIVE_POLICY  = 1e8;
 const PolicyType OPPFOUR_POLICY = 1e7;
 const PolicyType MYFOUR_POLICY  = 1e6;
-const PolicyType VCF_POLICY  = 1e5;
+const PolicyType VCF_POLICY     = 1e5;
 
 const double WIN_VALUE  = 1;
 const double LOSE_VALUE = -1;
