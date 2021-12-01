@@ -39,7 +39,7 @@ ValueType Eva_mix6VCF::evaluateFull(PolicyType* policy)
 void Eva_mix6VCF::evaluatePolicy(PolicyType* policy)
 {
   if (vcfResult == VCF::SR_Uncertain) {
-    vcfResult = vcfsolver.fullSearch(1000, vcfWinLoc, false);
+    vcfResult = vcfsolver.fullSearch(1000, 0,vcfWinLoc, false);
   }
   if (vcfResult == VCF::SR_Win)
   {
@@ -52,7 +52,7 @@ void Eva_mix6VCF::evaluatePolicy(PolicyType* policy)
 ValueType Eva_mix6VCF::evaluateValue()
 {
   if (vcfResult == VCF::SR_Uncertain) {
-    vcfResult = vcfsolver.fullSearch(1000, vcfWinLoc, false);
+    vcfResult = vcfsolver.fullSearch(1000,0, vcfWinLoc, false);
   }
   if (vcfResult == VCF::SR_Win)return ValueType(0, -100, -100);
   else return Eva_mix6_avx2::evaluateValue();

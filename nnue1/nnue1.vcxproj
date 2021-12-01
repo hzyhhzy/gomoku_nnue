@@ -152,6 +152,7 @@
     <ClCompile Include="Eva_mix6_avx2.cpp" />
     <ClCompile Include="nnue1.cpp" />
     <ClCompile Include="PVSsearch.cpp" />
+    <ClCompile Include="PVSsearchVCT.cpp" />
     <ClCompile Include="Search.cpp" />
     <ClCompile Include="Eva_sum1.cpp" />
     <ClCompile Include="TT.cpp" />
@@ -172,6 +173,7 @@
     <ClInclude Include="Eva_mix6VCF.h" />
     <ClInclude Include="Eva_mix6_avx2.h" />
     <ClInclude Include="global.h" />
+    <ClInclude Include="PVSsearchVCT.h" />
     <ClInclude Include="TT.h" />
     <ClInclude Include="PVSsearch.h" />
     <ClInclude Include="Search.h" />

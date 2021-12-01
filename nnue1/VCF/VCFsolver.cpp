@@ -74,8 +74,9 @@ void VCFsolver::setBoard(Color* b, bool katagoType, bool colorType)
 }
 
 
-VCF::SearchResult VCFsolver::fullSearch(float factor, Loc& bestmove, bool katagoType )
+VCF::SearchResult VCFsolver::fullSearch(float factor, int maxLayer,Loc& bestmove, bool katagoType )
 {
+  if (maxLayer == 0)maxLayer = 10000;
   if (katagoType) {
     std::cout << "Support katago loc in the future";
     return SR_Uncertain;
@@ -89,7 +90,7 @@ VCF::SearchResult VCFsolver::fullSearch(float factor, Loc& bestmove, bool katago
     bestmove = (onlyLoc/(BS+6)-3)*BS+(onlyLoc%(BS+6)-3);
     return SR_beforeSearch;
   }
-  for (int search_n =0;; search_n++)
+  for (int search_n =0;search_n<=maxLayer; search_n++)
   {
     nodeNumThisSearch = 0;
     SearchResult sr = search(bound_n(search_n), onlyLoc);

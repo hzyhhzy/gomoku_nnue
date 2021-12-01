@@ -72,6 +72,9 @@
     <ClCompile Include="Eva_mix6VCF.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="PVSsearchVCT.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Evaluator.h">
@@ -126,6 +129,9 @@
       <Filter>头文件\VCF</Filter>
     </ClInclude>
     <ClInclude Include="Eva_mix6VCF.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="PVSsearchVCT.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

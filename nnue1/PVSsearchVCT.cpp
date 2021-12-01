@@ -1,17 +1,17 @@
-#include "PVSsearch.h"
+#include "PVSsearchVCT.h"
 
 #include "TT.h"
 
-PVSsearch::PVSsearch(Evaluator *e)
-    : Search(e)
-    , nodes(0)
-    , interiorNodes(0)
-    , ttHits(0)
-    , ttCuts(0)
-    , vcfSolver {{BS, BS, C_BLACK}, {BS, BS, C_WHITE}}
+PVSsearchVCT::PVSsearchVCT(Evaluator *e)
+  : Search(e)
+  , nodes(0)
+  , interiorNodes(0)
+  , ttHits(0)
+  , ttCuts(0)
+  , vcfSolver {{BS, BS, C_BLACK}, {BS, BS, C_WHITE}}
 {}
 
-float PVSsearch::fullsearch(Color color, double factor, Loc &bestmove)
+float PVSsearchVCT::fullsearch(Color color, double factor, Loc &bestmove)
 {
   int depth                 = (int)factor;
   selDepth                  = 0;
@@ -22,13 +22,13 @@ float PVSsearch::fullsearch(Color color, double factor, Loc &bestmove)
 }
 
 template <bool PV>
-float PVSsearch::search(Color me,
-                        int   ply,
-                        int   depth,
-                        int   alpha,
-                        int   beta,
-                        bool  isCut,
-                        Loc & bestmove)
+float PVSsearchVCT::search(Color me,
+  int   ply,
+  int   depth,
+  int   alpha,
+  int   beta,
+  bool  isCut,
+  Loc & bestmove)
 {
   const bool  Root  = ply == 0;
   const Color oppo  = getOpp(me);
@@ -40,9 +40,8 @@ float PVSsearch::search(Color me,
   if (ply > selDepth)
     selDepth = ply;
 
-  // ‰∏∫Â∑±ÊñπÁÆóÊùÄ VCF
-  if (value < beta
-      && vcfSolver[me - 1].fullSearch(2000,0, bestmove, false) == VCF::SR_Win) {
+  // Œ™º∫∑ΩÀ„…± VCF
+  if (vcfSolver[me - 1].fullSearch(2000,0, bestmove, false) == VCF::SR_Win) {
     if (PV && vcfSolver[me - 1].getPVlen() > 0) {
       std::vector<Loc> vcfPv = vcfSolver[me - 1].getPV();
       vcfPv.push_back(LOC_NULL);
@@ -52,12 +51,24 @@ float PVSsearch::search(Color me,
     return mateValue(ply + vcfSolver[me - 1].getPVlen());
   }
 
-  // Âè∂Â≠êËäÇÁÇπ‰º∞ÂÄº
+  //»Áπ˚ «∑¿ ÿ∑Ω£¨Œ™∂‘∑ΩÀ„…±VCF
+  //À„≥ˆ…±Àµ√˜Ω¯π•∑Ω…œ“ª ÷”≈œ»º∂ «t£¨∑Ò‘ÚÀµ√˜vct ß∞‹
+  if (oppo == option.VCTside)
+  {
+    Loc vcfloc;
+    VCF::SearchResult sr = vcfSolver[oppo - 1].fullSearch(scoreToVCFfactor(beta), scoreToVCFlayer(beta), vcfloc, false);
+    if(sr==VCF::SR_Lose)return mateValue(ply);//∂‘ ÷…œ“ª ÷“ª∂®≤ª «t
+    if(sr!=VCF::SR_Win)return beta;//∂‘ ÷…œ“ª ÷”¶∏√≤ª «t£¨Ω¯––betaºÙ÷¶
+
+  }
+
+
+  // “∂◊”Ω⁄µ„π¿÷µ
   if (depth <= 0 || ply >= MAX_PLY) {
     return value;
   }
 
-  // Ââ™Êûù: Mate distance pruning
+  // ºÙ÷¶: Mate distance pruning
   alpha = std::max(-mateValue(ply), alpha);
   beta  = std::min(mateValue(ply + 1), beta);
   if (alpha >= beta)
@@ -66,47 +77,47 @@ float PVSsearch::search(Color me,
   if (nodes > option.maxNodes)
     terminate.store(true, std::memory_order_relaxed);
 
-  // ÁΩÆÊç¢Ë°®Êü•Êâæ
+  // ÷√ªª±Ì≤È’“
   auto [tte, ttHit] = TT.probe(evaluator->key);
   int  ttValue      = ttHit ? valueFromTT(tte->value, ply) : 0;
   Loc  ttMove       = ttHit ? tte->best : LOC_NULL;
   bool ttPv         = ttHit ? tte->pv : false;
   ttHits += ttHit;
 
-  // Ââ™Êûù: ÁΩÆÊç¢Ë°®Ââ™Êûù
+  // ºÙ÷¶: ÷√ªª±ÌºÙ÷¶
   if (!PV && ttHit && tte->depth >= depth
-      && (ttValue >= beta ? (tte->bound & BOUND_LOWER) : (tte->bound & BOUND_UPPER))) {
+    && (ttValue >= beta ? (tte->bound & BOUND_LOWER) : (tte->bound & BOUND_UPPER))) {
     ttCuts++;
     return ttValue;
   }
 
-  // ÈùôÊÄÅ‰º∞ÂÄº
+  // æ≤Ã¨π¿÷µ
   int eval = plyInfos[ply].staticEval = value;
   int evalDelta = ply >= 2 ? plyInfos[ply].staticEval - plyInfos[ply - 2].staticEval : 0;
 
-  // Ââ™Êûù: Razoring
+  // ºÙ÷¶: Razoring
   if (!PV && eval + razorMargin(depth) <= alpha) {
     // TODO: do some VCF search to verify!
     int lowAlpha = alpha - razorVerifyMargin(depth);
     value        = search<false>(me,
-                          ply + 1,
-                          depth - RAZOR_DEPTH_REDUCTION,
-                          lowAlpha,
-                          lowAlpha + 1,
-                          !isCut,
-                          bestmove);
+      ply + 1,
+      depth - RAZOR_DEPTH_REDUCTION,
+      lowAlpha,
+      lowAlpha + 1,
+      !isCut,
+      bestmove);
 
     if (value <= alpha)
       return value;
   }
 
-  // Ââ™Êûù: Futility pruning
+  // ºÙ÷¶: Futility pruning
   if (!PV && true && eval - futilityMargin(depth) >= beta)
     return eval;
 
-  // Ââ™Êûù: Null move pruning
+  // ºÙ÷¶: Null move pruning
   if (!PV && true && plyInfos[ply].nullMoveCount == 0
-      && eval - nullMoveMargin(depth) >= beta) {
+    && eval - nullMoveMargin(depth) >= beta) {
     int r                           = nullMoveReduction(depth);
     plyInfos[ply].currentMove       = LOC_NULL;
     plyInfos[ply].currentPolicySum  = 0;
@@ -178,11 +189,11 @@ expand_node:
     }
     else {
       if (!Root && bestValue > -VALUE_MATE_IN_MAX_PLY) {
-        // Ââ™Êûù: Move count based pruning
+        // ºÙ÷¶: Move count based pruning
         if (moveCount >= futilityMoveCount<PV>(depth))
           continue;
 
-        // Ââ™Êûù: trivial policy pruning
+        // ºÙ÷¶: trivial policy pruning
         //if (1 - policySum < trivialPolicyResidual(depth))
         //  continue;
       }
@@ -191,10 +202,10 @@ expand_node:
       int  newDepth        = depth - 1;
       bool fullDepthSearch = !PV || moveCount > 1;
 
-      // Âª∂‰º∏: ‰º∞ÂÄºÊòæËëóÂ¢ûÂä†
+      // —”…Ï: π¿÷µœ‘÷¯‘ˆº”
       //newDepth += evalDelta >= 150;
 
-      // Âª∂‰º∏: ËØ•Ê≠•ÁöÑpolicyÈõÜ‰∏≠Â∫¶ÂæàÈ´ò
+      // —”…Ï: ∏√≤ΩµƒpolicyºØ÷–∂»∫‹∏ﬂ
       newDepth += policy[move] >= 0.85;
 
       evaluator->play(me, move);
@@ -203,7 +214,7 @@ expand_node:
 
       // Do LMR
       if (depth >= LMR_DEPTH && moveCount > 1
-          && (moveCount >= lateMoveCount<PV>(depth) || isCut)) {
+        && (moveCount >= lateMoveCount<PV>(depth) || isCut)) {
         int r = lmrReduction(depth, moveCount) + 2 * isCut;
         r += (plyInfos[ply].currentPolicySum > 0.95);
         r -= (ply > 1 && policySum < 0.75 && plyInfos[ply - 1].currentPolicySum < 0.1);
@@ -211,24 +222,24 @@ expand_node:
 
         int d = std::clamp(newDepth - r, 1, newDepth);
         value =
-            -search<false>(oppo, ply + 1, d, -(alpha + 1), -alpha, true, nextBestMove);
+          -search<false>(oppo, ply + 1, d, -(alpha + 1), -alpha, true, nextBestMove);
         fullDepthSearch = value > alpha && d < newDepth;
       }
 
       // Do full depth non-pv search
       if (fullDepthSearch)
         value = -search<false>(oppo,
-                               ply + 1,
-                               newDepth,
-                               -(alpha + 1),
-                               -alpha,
-                               !isCut,
-                               nextBestMove);
+          ply + 1,
+          newDepth,
+          -(alpha + 1),
+          -alpha,
+          !isCut,
+          nextBestMove);
 
       // Do full PV search
       if (PV && (moveCount == 1 || value > alpha && (Root || value < beta)))
         value =
-            -search<true>(oppo, ply + 1, newDepth, -beta, -alpha, false, nextBestMove);
+        -search<true>(oppo, ply + 1, newDepth, -beta, -alpha, false, nextBestMove);
 
       evaluator->undo(me, move);
       vcfSolver[0].undoOutside(move, 1);
@@ -253,36 +264,36 @@ expand_node:
   }
 
   tte->save(evaluator->key,
-            valueToTT(bestValue, ply),
-            bestValue >= beta            ? BOUND_LOWER
-            : PV && bestmove != LOC_NULL ? BOUND_EXACT
-                                         : BOUND_UPPER,
-            depth,
-            PV,
-            bestmove);
+    valueToTT(bestValue, ply),
+    bestValue >= beta            ? BOUND_LOWER
+    : PV && bestmove != LOC_NULL ? BOUND_EXACT
+    : BOUND_UPPER,
+    depth,
+    PV,
+    bestmove);
 
   return bestValue;
 }
 
-template float PVSsearch::search<true>(Color color,
-                                       int   ply,
-                                       int   depth,
-                                       int   alpha,
-                                       int   beta,
-                                       bool  isCut,
-                                       Loc & bestmove);
-template float PVSsearch::search<false>(Color color,
-                                        int   ply,
-                                        int   depth,
-                                        int   alpha,
-                                        int   beta,
-                                        bool  isCut,
-                                        Loc & bestmove);
+template float PVSsearchVCT::search<true>(Color color,
+  int   ply,
+  int   depth,
+  int   alpha,
+  int   beta,
+  bool  isCut,
+  Loc & bestmove);
+template float PVSsearchVCT::search<false>(Color color,
+  int   ply,
+  int   depth,
+  int   alpha,
+  int   beta,
+  bool  isCut,
+  Loc & bestmove);
 
-bool PVSsearch::isWin(Color color, Loc toplayLoc)
+bool PVSsearchVCT::isWin(Color color, Loc toplayLoc)
 {
   const Color *board = (color == C_BLACK) ? evaluator->blackEvaluator->board
-                                          : evaluator->whiteEvaluator->board;
+    : evaluator->whiteEvaluator->board;
   int          x0 = toplayLoc % BS, y0 = toplayLoc / BS;
   int          dirX[4] = {1, 0, 1, 1};
   int          dirY[4] = {0, 1, 1, -1};
@@ -304,31 +315,31 @@ bool PVSsearch::isWin(Color color, Loc toplayLoc)
   return false;
 }
 
-void PVSsearch::normalizePolicy(const PolicyType *rawPolicy, float *normPolicy) const
+void PVSsearchVCT::normalizePolicy(const PolicyType *rawPolicy, float *normPolicy) const
 {
   PolicyType maxRawPolicy = *std::max_element(rawPolicy, rawPolicy + BS * BS);
   std::transform(rawPolicy, rawPolicy + BS * BS, normPolicy, [=](auto &p) {
     const double invQ = 1.0 / quantFactor;
     return (float)std::exp((p - maxRawPolicy) * invQ);
     // return (float)std::max(p, PolicyType(0));
-  });
+    });
   float policySum = std::reduce(normPolicy, normPolicy + BS * BS);
   float k         = 1 / policySum;
   std::transform(normPolicy, normPolicy + BS * BS, normPolicy, [=](auto &p) {
     return p * k;
-  });
+    });
 }
 
-void PVSsearch::sortPolicy(const float *policy,
-                           Loc *        policyRank) const  // assume policyBuf is ready
+void PVSsearchVCT::sortPolicy(const float *policy,
+  Loc *        policyRank) const  // assume policyBuf is ready
 {
   std::iota(policyRank, policyRank + BS * BS, LOC_ZERO);
   std::sort(policyRank, policyRank + BS * BS, [&](Loc a, Loc b) {
     return policy[a] > policy[b];
-  });
+    });
 }
 
-void PVSsearch::copyPV(Loc *pvDst, Loc bestMove, Loc *pvSrc) const
+void PVSsearchVCT::copyPV(Loc *pvDst, Loc bestMove, Loc *pvSrc) const
 {
   *pvDst++ = bestMove;
   do {
@@ -336,7 +347,7 @@ void PVSsearch::copyPV(Loc *pvDst, Loc bestMove, Loc *pvSrc) const
   } while (*pvSrc++ != LOC_NULL);
 }
 
-std::vector<Loc> PVSsearch::rootPV() const
+std::vector<Loc> PVSsearchVCT::rootPV() const
 {
   std::vector<Loc> pv;
   const Loc *      pvPtr = plyInfos[0].pv;
@@ -345,7 +356,7 @@ std::vector<Loc> PVSsearch::rootPV() const
   return pv;
 }
 
-void PVSsearch::clear()
+void PVSsearchVCT::clear()
 {
   terminate = false;
   nodes = interiorNodes = 0;

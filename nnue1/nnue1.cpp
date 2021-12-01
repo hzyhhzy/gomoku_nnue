@@ -35,6 +35,79 @@ int maingtp(int argc, const char **argv)
   return 0;
 }
 
+int main_testsearchvct()
+{
+  Evaluator *eva    = new Evaluator("mix6", "weights/t5.txt");
+  PVSsearchVCT *search = new PVSsearchVCT(eva);
+  TT.resize(128);
+  /*
+  const char boardstr[] = ""
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . ";
+  */
+
+  const char boardstr[] = ""
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . o . . . o . . . . . . . "
+  ". . . . . o o x o . . . . . . "
+  ". . . . . x o x . . . . . . . "
+  ". . . x . . x x . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . ";
+  for (int y = 0; y < BS; y++)
+    for (int x = 0; x < BS; x++) {
+      char  colorchar = boardstr[2 * (x + y * BS)];
+      Color color     = C_EMPTY;
+      if (colorchar == 'x')
+        color = C_BLACK;
+      else if (colorchar == 'o')
+        color = C_WHITE;
+      if (color != C_EMPTY)
+        eva->play(color, MakeLoc(x, y));
+    }
+
+
+  Color engineColor = C_BLACK;
+  search->setVCTside(engineColor);
+
+
+  Time tic = now();
+  for (int depth = 0; depth < 100; depth++) {
+    Loc    loc;
+    double value = search->fullsearch(engineColor, depth, loc);
+    Time   toc   = now();
+    // search->evaluator->recalculate();
+    cout << "Depth = " << depth << " Value = " << valueText(value)
+      << " Nodes = " << search->nodes << "(" << search->interiorNodes << ")"
+      << " Time = " << toc - tic << " Nps = " << search->nodes * 1000.0 / (toc - tic)
+      << " TT = " << 100.0 * search->ttHits / search->interiorNodes << "("
+      << 100.0 * search->ttCuts / search->ttHits << ")"
+      << " PV = " << search->rootPV() << endl;
+  }
+  return 0;
+}
+
 int main_testsearch()
 {
   Evaluator *eva    = new Evaluator("mix6", "weights/t5.txt");
@@ -427,7 +500,7 @@ int main_testvcf()
   v.setBoard(board, false,true);
   Loc bestloc;
   int result;
-  result = v.fullSearch(1e38, bestloc,false);
+  result = v.fullSearch(1e38,0, bestloc,false);
   cout << "Initial Board:" << endl;
   v.printboard();
   cout <<"Result="<< result << " " << locstr(bestloc) << endl;
@@ -439,8 +512,9 @@ int main_testvcf()
 int main(int argc, const char **argv)
 {
   //main_testvcf();
-  return maingtp(argc, argv);
+  //return maingtp(argc, argv);
   // return main_testeval();
    //main_testsearch();
+  main_testsearchvct();
   return 0;
 }

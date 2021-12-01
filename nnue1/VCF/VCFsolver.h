@@ -102,7 +102,7 @@ public:
   void setBoard(Color* b, bool katagoType, bool colorType);
 
 
-  VCF::SearchResult fullSearch(float factor, Loc& bestmove, bool katagoType);//factor是搜索因数，保证factor正比于节点数。
+  VCF::SearchResult fullSearch(float factor,int maxLayer, Loc& bestmove, bool katagoType);//factor是搜索因数，保证factor正比于节点数。
   inline int getPVlen() { return PVlen; };
   std::vector<Loc> getPV();//比较慢
   std::vector<Loc> getPVreduced();//进攻方的PV
