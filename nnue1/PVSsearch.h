@@ -8,6 +8,22 @@
 
 // -------------------------------------------------
 
+inline int scoreToVCFlayer(float score)
+{
+  if (score < 0)return 3;
+  if (score > 1000)return 10000;
+  return 4 + score / 200;
+
+}
+inline float scoreToVCFfactor(float score)
+{
+  if (score < 0)return 2000;
+  if (score > 1000)return 1e20;
+  return 2000 * exp(score / 200);
+
+}
+// -------------------------------------------------
+
 constexpr int   MAX_PLY               = 128;
 constexpr int   VALUE_NONE            = -30001;
 constexpr int   VALUE_MATE            = 30000;
@@ -118,15 +134,19 @@ public:
   std::vector<Loc> rootPV() const;
   void             clear();
   void             setOptions(size_t maxNodes) { option.maxNodes = maxNodes; }
+  void             setVCTside(Color side) { option.VCTside = side; }
   size_t           nodes, interiorNodes;
   size_t           ttHits, ttCuts;
   int              selDepth;
   struct Option
   {
     size_t maxNodes;
+    Color VCTside;
+    Option() :maxNodes(UINT64_MAX), VCTside(DEFAULT_VCT_SIDE) {}
   } option;
   std::atomic_bool terminate;
 
+  VCFsolver vcfSolver[2];
 private:
   template <bool PV>
   float
@@ -146,5 +166,4 @@ private:
     float currentPolicySum;
   } plyInfos[BS * BS + 1];  // plyInfos[ply]
 
-  VCFsolver vcfSolver[2];
 };

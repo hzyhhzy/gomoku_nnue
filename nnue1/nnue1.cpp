@@ -38,7 +38,7 @@ int maingtp(int argc, const char **argv)
 int main_testsearchvct()
 {
   Evaluator *eva    = new Evaluator("mix6", "weights/t5.txt");
-  PVSsearchVCT *search = new PVSsearchVCT(eva);
+  PVSsearch *search = new PVSsearch(eva);
   TT.resize(128);
   /*
   const char boardstr[] = ""
@@ -89,7 +89,7 @@ int main_testsearchvct()
 
 
   Color engineColor = C_BLACK;
-  search->setVCTside(engineColor);
+  //search->setVCTside(engineColor);
 
 
   Time tic = now();
@@ -512,9 +512,9 @@ int main_testvcf()
 int main(int argc, const char **argv)
 {
   //main_testvcf();
-  //return maingtp(argc, argv);
+  return maingtp(argc, argv);
   // return main_testeval();
    //main_testsearch();
-  main_testsearchvct();
+  //main_testsearchvct();
   return 0;
 }

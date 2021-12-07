@@ -21,6 +21,9 @@ static constexpr Color C_WALL  = 3;
 static constexpr Color C_MY    = 1;
 static constexpr Color C_OPP   = 2;
 
+//¹Ì¶¨VCT·½
+static constexpr Color DEFAULT_VCT_SIDE = C_BLACK;
+
 static inline Color getOpp(Color c) { return c ^ 3; }
 
 typedef int16_t      Loc;

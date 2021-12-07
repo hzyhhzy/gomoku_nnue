@@ -51,9 +51,6 @@
     <ClCompile Include="Eva_mix6_avx2.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="EngineDev.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="utils.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -70,9 +67,6 @@
       <Filter>源文件\VCF</Filter>
     </ClCompile>
     <ClCompile Include="Eva_mix6VCF.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="PVSsearchVCT.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -129,9 +123,6 @@
       <Filter>头文件\VCF</Filter>
     </ClInclude>
     <ClInclude Include="Eva_mix6VCF.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="PVSsearchVCT.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

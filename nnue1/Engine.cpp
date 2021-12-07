@@ -86,10 +86,40 @@ std::string Engine::genmove()
   }
 
   if (bestloc != LOC_NULL)
+  {
     evaluator->play(nextColor, bestloc);
+    search->vcfSolver[0].playOutside( bestloc,nextColor, 1, true);
+    search->vcfSolver[1].playOutside( bestloc, nextColor, 1, true);
+  }
   else
-    bestloc = LOC_PASS;
+
+  {
+    cout << "MESSAGE Resign because no legal move"<<endl;
+    return "RESIGN";
+  }
   nextColor = getOpp(nextColor);
+
+  //check VCT
+  if (getOpp(nextColor) == search->option.VCTside)
+  {
+    //检查一下刚走的这一步是不是t，如果不是，直接resign
+    Loc tmploc;
+    if (search->vcfSolver[getOpp(nextColor) - 1].fullSearch(1e7, 0, tmploc, false) != VCF::SR_Win)
+    {
+      cout << "MESSAGE Resign because no VCT"<<endl;
+      return "RESIGN";
+    }
+  }
+
+  //check opp vcf
+  //如果对手能vcf，直接投。因为最后的vcf阶段的训练数据无意义
+
+  Loc tmploc;
+  if (search->vcfSolver[nextColor - 1].fullSearch(1e6, 0, tmploc, false) == VCF::SR_Win)
+  {
+    cout << "MESSAGE Resign because opponent can VCF"<<endl;
+    return "RESIGN";
+  }
 
   int bestx = bestloc % BS, besty = bestloc / BS;
   return to_string(bestx) + "," + to_string(besty);

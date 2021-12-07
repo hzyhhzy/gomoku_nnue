@@ -52,6 +52,17 @@ float PVSsearch::search(Color me,
     return mateValue(ply + vcfSolver[me - 1].getPVlen());
   }
 
+  //如果是防守方，为对方算杀VCF
+  //算出杀说明进攻方上一手优先级是t，否则说明vct失败
+  if (oppo ==  option.VCTside)
+  {
+    Loc vcfloc;
+    VCF::SearchResult sr = vcfSolver[oppo - 1].fullSearch(scoreToVCFfactor(beta), scoreToVCFlayer(beta), vcfloc, false);
+    if(sr==VCF::SR_Lose)return mateValue(ply);//对手上一手一定不是t
+    if(sr!=VCF::SR_Win)return beta+1;//对手上一手应该不是t，进行beta剪枝
+
+  }
+
   // 叶子节点估值
   if (depth <= 0 || ply >= MAX_PLY) {
     return value;
