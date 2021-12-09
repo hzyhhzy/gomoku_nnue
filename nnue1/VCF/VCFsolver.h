@@ -142,9 +142,11 @@ private:
   inline bool shape_isMyFive(int16_t s) { return (s & 0170777) == 5; }
   inline bool shape_isMyFour(int16_t s) { return (s & 0170777) == 4; }
   inline bool shape_isMyThree(int16_t s) { return (s & 0170777) == 3; }
+  inline int shape_myShape(int s) { return s & 0170777; }
   inline bool shape_isMyTwo(int16_t s) { return (s & 0170777) == 2; }
   inline bool shape_isOppFive(int16_t s) { return (s & 0177707) == 5*64; }
   inline bool shape_isOppFour(int16_t s) { return (s & 0177707) == 4*64; }
+  inline int shape_oppShape(int s) { return s & 0177707; }
 
 
 

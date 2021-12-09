@@ -9,7 +9,8 @@ public:
   Key               zobrist[2][BS * BS];
   Key               key;
 
-  Evaluator(std::string type, std::string filepath);
+  Evaluator(std::string type, std::string filepath):Evaluator(type,filepath,filepath){}
+  Evaluator(std::string type, std::string filepathB, std::string filepathW);
   ~Evaluator() {delete blackEvaluator; delete whiteEvaluator;}
 
   void initZobrist(uint64_t seed);

@@ -32,7 +32,6 @@ float PVSsearch::search(Color me,
 {
   const bool  Root  = ply == 0;
   const Color oppo  = getOpp(me);
-  int         value = valueFromWLR(evaluator->evaluateValue(me).winlossrate(), ply);
 
   plyInfos[ply].pv[0] = bestmove = LOC_NULL;
   nodes++;
@@ -40,29 +39,8 @@ float PVSsearch::search(Color me,
   if (ply > selDepth)
     selDepth = ply;
 
-  // 为己方算杀 VCF
-  if (value < beta
-      && vcfSolver[me - 1].fullSearch(2000,0, bestmove, false) == VCF::SR_Win) {
-    if (PV && vcfSolver[me - 1].getPVlen() > 0) {
-      std::vector<Loc> vcfPv = vcfSolver[me - 1].getPV();
-      vcfPv.push_back(LOC_NULL);
-      copyPV(plyInfos[ply].pv, vcfPv[0], vcfPv.data() + 1);
-    }
 
-    return mateValue(ply + vcfSolver[me - 1].getPVlen());
-  }
-
-  //如果是防守方，为对方算杀VCF
-  //算出杀说明进攻方上一手优先级是t，否则说明vct失败
-  if (oppo ==  option.VCTside)
-  {
-    Loc vcfloc;
-    VCF::SearchResult sr = vcfSolver[oppo - 1].fullSearch(scoreToVCFfactor(beta), scoreToVCFlayer(beta), vcfloc, false);
-    if(sr==VCF::SR_Lose)return mateValue(ply);//对手上一手一定不是t
-    if(sr!=VCF::SR_Win)return beta+1;//对手上一手应该不是t，进行beta剪枝
-
-  }
-
+  int         value = valueFromWLR(evaluator->evaluateValue(me).winlossrate(), ply);
   // 叶子节点估值
   if (depth <= 0 || ply >= MAX_PLY) {
     return value;
@@ -95,6 +73,7 @@ float PVSsearch::search(Color me,
   int eval = plyInfos[ply].staticEval = value;
   int evalDelta = ply >= 2 ? plyInfos[ply].staticEval - plyInfos[ply - 2].staticEval : 0;
 
+  /*
   // 剪枝: Razoring
   if (!PV && eval + razorMargin(depth) <= alpha) {
     // TODO: do some VCF search to verify!
@@ -110,11 +89,11 @@ float PVSsearch::search(Color me,
     if (value <= alpha)
       return value;
   }
-
+  */
   // 剪枝: Futility pruning
   if (!PV && true && eval - futilityMargin(depth) >= beta)
     return eval;
-
+  /*
   // 剪枝: Null move pruning
   if (!PV && true && plyInfos[ply].nullMoveCount == 0
       && eval - nullMoveMargin(depth) >= beta) {
@@ -138,6 +117,7 @@ float PVSsearch::search(Color me,
       }
     }
   }
+  */
 
 expand_node:
   // IID
@@ -183,68 +163,118 @@ expand_node:
     plyInfos[ply].currentPolicySum = (policySum += policy[move]);
     plyInfos[ply].moveCount        = ++moveCount;
 
-    if (isWin(me, move)) {
-      value                   = mateValue(ply);
-      plyInfos[ply + 1].pv[0] = LOC_NULL;
+
+    if (!Root && bestValue > -VALUE_MATE_IN_MAX_PLY) {
+      // 剪枝: Move count based pruning
+      if (moveCount >= futilityMoveCount<PV>(depth))
+        break;
+
+      // 剪枝: trivial policy pruning
+      if (1 - policySum < trivialPolicyResidual(depth))
+        break;
     }
-    else {
-      if (!Root && bestValue > -VALUE_MATE_IN_MAX_PLY) {
-        // 剪枝: Move count based pruning
-        if (moveCount >= futilityMoveCount<PV>(depth))
-          continue;
 
-        // 剪枝: trivial policy pruning
-        //if (1 - policySum < trivialPolicyResidual(depth))
-        //  continue;
+
+    //检查是否有明确的胜负结果
+    bool haveCertainResult = false;
+
+
+    {
+      if (!haveCertainResult&&isWin(me, move)) {
+        value                   = mateValue(ply);
+        haveCertainResult = true;
       }
-
-      Loc  nextBestMove    = LOC_NULL;
-      int  newDepth        = depth - 1;
-      bool fullDepthSearch = !PV || moveCount > 1;
-
-      // 延伸: 估值显著增加
-      //newDepth += evalDelta >= 150;
-
-      // 延伸: 该步的policy集中度很高
-      newDepth += policy[move] >= 0.85;
-
-      evaluator->play(me, move);
+      //checkVCT and VCF
       vcfSolver[0].playOutside(move, me, 1, true);
       vcfSolver[1].playOutside(move, me, 1, true);
-
-      // Do LMR
-      if (depth >= LMR_DEPTH && moveCount > 1
-          && (moveCount >= lateMoveCount<PV>(depth) || isCut)) {
-        int r = lmrReduction(depth, moveCount) + 2 * isCut;
-        r += (plyInfos[ply].currentPolicySum > 0.95);
-        r -= (ply > 1 && policySum < 0.75 && plyInfos[ply - 1].currentPolicySum < 0.1);
-        r += (evalDelta < -120) + (evalDelta < -200);
-
-        int d = std::clamp(newDepth - r, 1, newDepth);
-        value =
-            -search<false>(oppo, ply + 1, d, -(alpha + 1), -alpha, true, nextBestMove);
-        fullDepthSearch = value > alpha && d < newDepth;
+      // 为对方算杀 VCF
+      Loc tmploc;
+      if ( !haveCertainResult && vcfSolver[oppo- 1].fullSearch(2000,0, tmploc, false) == VCF::SR_Win) {
+        //std::cout << 1;
+        value= -mateValue(ply + 1 + vcfSolver[oppo - 1].getPVlen());
+        haveCertainResult = true;
       }
 
-      // Do full depth non-pv search
-      if (fullDepthSearch)
-        value = -search<false>(oppo,
-                               ply + 1,
-                               newDepth,
-                               -(alpha + 1),
-                               -alpha,
-                               !isCut,
-                               nextBestMove);
+      //如果是进攻方，为自己算杀VCF
+      //算出杀说明进攻方上一手优先级是t，否则说明vct失败
+      if (!haveCertainResult && me ==  option.VCTside)
+      {
+        VCF::SearchResult sr = vcfSolver[me- 1].fullSearch(scoreToVCFfactor(-alpha), scoreToVCFlayer(-alpha), tmploc, false);
+        if(sr==VCF::SR_Lose)value= - mateValue(ply+1);//这一手一定不是t
+        else if(sr!=VCF::SR_Win)value= std::max(alpha-50,-mateValue(ply+1));//这一手应该不是t，进行剪枝
 
-      // Do full PV search
-      if (PV && (moveCount == 1 || value > alpha && (Root || value < beta)))
-        value =
-            -search<true>(oppo, ply + 1, newDepth, -beta, -alpha, false, nextBestMove);
+        if (sr != VCF::SR_Win)
+        {
+          //std::cout << 2;
+          haveCertainResult = true;
+        }
 
-      evaluator->undo(me, move);
+      }
+
       vcfSolver[0].undoOutside(move, 1);
       vcfSolver[1].undoOutside(move, 1);
+
+
     }
+
+    if (haveCertainResult)
+    {
+
+      plyInfos[ply + 1].pv[0] = LOC_NULL;
+    }
+    else 
+
+      {
+        Loc  nextBestMove = LOC_NULL;
+        int  newDepth = depth - 1;
+        bool fullDepthSearch = !PV || moveCount > 1;
+
+        // 延伸: 估值显著增加
+        //newDepth += evalDelta >= 150;
+
+        // 延伸: 该步的policy集中度很高
+        //newDepth += policy[move] >= 0.95;
+
+        evaluator->play(me, move);
+        vcfSolver[0].playOutside(move, me, 1, true);
+        vcfSolver[1].playOutside(move, me, 1, true);
+
+
+        // Do LMR
+        /*
+        if (depth >= LMR_DEPTH && moveCount > 1
+          && (moveCount >= lateMoveCount<PV>(depth) || isCut)) {
+          int r = lmrReduction(depth, moveCount) + 2 * isCut;
+          r += (plyInfos[ply].currentPolicySum > 0.95);
+          r -= (ply > 1 && policySum < 0.75 && plyInfos[ply - 1].currentPolicySum < 0.1);
+          r += (evalDelta < -120) + (evalDelta < -200);
+
+          int d = std::clamp(newDepth - r, 1, newDepth);
+          value =
+            -search<false>(oppo, ply + 1, d, -(alpha + 1), -alpha, true, nextBestMove);
+          fullDepthSearch = value > alpha && d < newDepth;
+        }*/
+
+        // Do full depth non-pv search
+        if (fullDepthSearch)
+          value = -search<false>(oppo,
+            ply + 1,
+            newDepth,
+            -(alpha + 1),
+            -alpha,
+            !isCut,
+            nextBestMove);
+
+        // Do full PV search
+        if (PV && (moveCount == 1 || value > alpha && (Root || value < beta)))
+          value =
+          -search<true>(oppo, ply + 1, newDepth, -beta, -alpha, false, nextBestMove);
+
+        evaluator->undo(me, move);
+        vcfSolver[0].undoOutside(move, 1);
+        vcfSolver[1].undoOutside(move, 1);
+      }
+    
 
     if (terminate.load(std::memory_order_relaxed))
       return VALUE_NONE;
@@ -271,6 +301,8 @@ expand_node:
             depth,
             PV,
             bestmove);
+
+  //if (ply == 3 && evaluator->board()[9 + 15 * 7] == 1)std::cout << bestValue << " ";
 
   return bestValue;
 }

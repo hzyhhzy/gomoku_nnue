@@ -30,7 +30,7 @@ constexpr int   VALUE_MATE            = 30000;
 constexpr int   VALUE_MATE_IN_MAX_PLY = 30000 - MAX_PLY;
 constexpr int   VALUE_MAX_EVAL        = 10000;
 constexpr int   VALUE_DRAW            = 0;
-constexpr float WLR_MATE_VALUE        = 0.99;
+constexpr float WLR_MATE_VALUE        = 0.999;
 constexpr float WLR_VALUE_K           = 1 / (2 * 0.0025);
 constexpr int   mateValue(int ply) { return VALUE_MATE - ply; }
 

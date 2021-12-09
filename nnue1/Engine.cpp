@@ -6,31 +6,32 @@
 using namespace std;
 
 Engine::Engine(std::string evaluator_type,
-               std::string weightfile,
-               int         TTsize,
-               bool        writeLogEnable)
-    : writeLogEnable(writeLogEnable)
+  std::string weightfileB,
+  std::string weightfileW,
+  int         TTsize,
+  bool        writeLogEnable)
+  : writeLogEnable(writeLogEnable)
 {
-  evaluator = new Evaluator(evaluator_type, weightfile);
-  search    = new PVSsearch(evaluator);
+  evaluator = new Evaluator(evaluator_type, weightfileB, weightfileW);
+  search = new PVSsearch(evaluator);
   TT.resize(TTsize);
   nextColor = C_BLACK;
 
   if (writeLogEnable) {
-    string logfilepath = weightfile;
+    string logfilepath = weightfileB;
     while (logfilepath[logfilepath.length() - 1] != '/'
-           && logfilepath[logfilepath.length() - 1] != '\\' && logfilepath.length() > 0)
+      && logfilepath[logfilepath.length() - 1] != '\\' && logfilepath.length() > 0)
       logfilepath.pop_back();
     logfilepath = logfilepath + "log.txt";
 
     logfile = ofstream(logfilepath, ios::app | ios::out);
   }
 
-  timeout_turn  = 1000;
+  timeout_turn = 1000;
   timeout_match = 10000000;
-  time_left     = 10000000;
-  max_nodes     = UINT64_MAX;
-  max_depth     = 64;
+  time_left = 10000000;
+  max_nodes = UINT64_MAX;
+  max_depth = 64;
 }
 
 void Engine::writeLog(std::string str)
@@ -41,13 +42,13 @@ void Engine::writeLog(std::string str)
 
 std::string Engine::genmove()
 {
-  Time   tic         = now();
-  double bestvalue   = VALUE_NONE;
-  Loc    bestloc     = LOC_NULL;
+  Time   tic = now();
+  double bestvalue = VALUE_NONE;
+  Loc    bestloc = LOC_NULL;
   int    maxTurnTime = min(timeout_turn - ReservedTime, time_left / 7);
   int    maxWaitTime = max(maxTurnTime - AsyncWaitReservedTime, 0);
   int    optimalTime = maxTurnTime * 2 / 5;
-  int    maxDepth    = min(max_depth, 64);
+  int    maxDepth = min(max_depth, 64);
 
   search->clear();
   search->setOptions(max_nodes);
@@ -56,11 +57,11 @@ std::string Engine::genmove()
       Loc    loc;
       double value = search->fullsearch(nextColor, depth, loc);
       return std::make_pair(value, loc);
-    });
+      });
 
     if (result.wait_for(chrono::milliseconds(
-            max(maxWaitTime + tic - now(), depth == 1 ? 1000LL : 0LL)))
-        == future_status::timeout) {
+      max(maxWaitTime + tic - now(), depth == 1 ? 1000LL : 0LL)))
+      == future_status::timeout) {
       search->stop();
       break;
     }
@@ -69,16 +70,16 @@ std::string Engine::genmove()
     }
 
     std::tie(bestvalue, bestloc) = result.get();
-    Time toc                     = now();
+    Time toc = now();
     // search->evaluator->recalculate();
     cout << "MESSAGE Depth = " << depth << "-" << search->selDepth
-         << " Value = " << valueText(bestvalue) << " Nodes = " << search->nodes << "("
-         << search->interiorNodes << ")"
-         << " Time = " << toc - tic << " Nps = "
-         << search->nodes * 1000.0 / (toc - tic)
-         //<< " TT = " << 100.0 * search->ttHits / search->interiorNodes << "("
-         //<< 100.0 * search->ttCuts / search->ttHits << ")"
-         << " PV = " << search->rootPV() << endl;
+      << " Value = " << valueText(bestvalue) << " Nodes = " << search->nodes << "("
+      << search->interiorNodes << ")"
+      << " Time = " << toc - tic << " Nps = "
+      << search->nodes * 1000.0 / (toc - tic)
+      //<< " TT = " << 100.0 * search->ttHits / search->interiorNodes << "("
+      //<< 100.0 * search->ttCuts / search->ttHits << ")"
+      << " PV = " << search->rootPV() << endl;
 
     // Reach time limit
     if (toc - tic > optimalTime)
@@ -88,13 +89,13 @@ std::string Engine::genmove()
   if (bestloc != LOC_NULL)
   {
     evaluator->play(nextColor, bestloc);
-    search->vcfSolver[0].playOutside( bestloc,nextColor, 1, true);
-    search->vcfSolver[1].playOutside( bestloc, nextColor, 1, true);
+    search->vcfSolver[0].playOutside(bestloc, nextColor, 1, true);
+    search->vcfSolver[1].playOutside(bestloc, nextColor, 1, true);
   }
   else
 
   {
-    cout << "MESSAGE Resign because no legal move"<<endl;
+    cout << "MESSAGE Resign because no legal move" << endl;
     return "RESIGN";
   }
   nextColor = getOpp(nextColor);
@@ -104,9 +105,9 @@ std::string Engine::genmove()
   {
     //检查一下刚走的这一步是不是t，如果不是，直接resign
     Loc tmploc;
-    if (search->vcfSolver[getOpp(nextColor) - 1].fullSearch(1e7, 0, tmploc, false) != VCF::SR_Win)
+    if (search->vcfSolver[getOpp(nextColor) - 1].fullSearch(1e6, 0, tmploc, false) != VCF::SR_Win)
     {
-      cout << "MESSAGE Resign because no VCT"<<endl;
+      cout << "MESSAGE Resign because no VCT" << endl;
       return "RESIGN";
     }
   }
@@ -115,9 +116,9 @@ std::string Engine::genmove()
   //如果对手能vcf，直接投。因为最后的vcf阶段的训练数据无意义
 
   Loc tmploc;
-  if (search->vcfSolver[nextColor - 1].fullSearch(1e6, 0, tmploc, false) == VCF::SR_Win)
+  if (search->vcfSolver[nextColor - 1].fullSearch(1e5, 0, tmploc, false) == VCF::SR_Win)
   {
-    cout << "MESSAGE Resign because opponent can VCF"<<endl;
+    cout << "MESSAGE Resign because opponent can VCF" << endl;
     return "RESIGN";
   }
 
@@ -132,7 +133,7 @@ void Engine::protocolLoop()
   while (getline(cin, line)) {
     writeLog(line);
     bool           print_endl = true;
-    string         response   = "";
+    string         response = "";
     string         command;
     vector<string> pieces;
     {
@@ -177,13 +178,13 @@ void Engine::protocolLoop()
     else if (command == "TURN") {
       int oppx, oppy;
       if (pieces.size() != 2 || !strOp::tryStringToInt(pieces[0], oppx)
-          || !strOp::tryStringToInt(pieces[1], oppy))
+        || !strOp::tryStringToInt(pieces[1], oppy))
         response = "ERROR Bad command";
       else {
         Loc opploc = MakeLoc(oppx, oppy);
         evaluator->play(nextColor, opploc);
         nextColor = getOpp(nextColor);
-        response  = genmove();
+        response = genmove();
       }
     }
     else if (command == "BOARD") {
@@ -215,7 +216,7 @@ void Engine::protocolLoop()
           break;
         }
         else if (pieces2.size() != 3 || !strOp::tryStringToInt(pieces2[0], x)
-                 || !strOp::tryStringToInt(pieces2[1], y)) {
+          || !strOp::tryStringToInt(pieces2[1], y)) {
           cout << "ERROR Bad command";
         }
         else {  // normal move
@@ -228,10 +229,10 @@ void Engine::protocolLoop()
     else if (command == "BEGIN") {
       evaluator->clear();
       nextColor = C_BLACK;
-      response  = genmove();
+      response = genmove();
     }
     else if (command == "INFO") {
-      print_endl        = false;
+      print_endl = false;
       string subcommand = "";
       if (pieces.size() != 0) {
         subcommand = pieces[0];
@@ -264,7 +265,7 @@ void Engine::protocolLoop()
         if (pieces.size() != 1 || !strOp::tryStringToInt(pieces[0], tmp))
           cout << "ERROR Bad command" << endl;
         else {
-          constexpr int ReversedMemMb   = 132;  // 估算的内存消耗
+          constexpr int ReversedMemMb = 132;  // 估算的内存消耗
           size_t        useableMemoryMb = max(tmp - ReversedMemMb, 0);
           TT.resize(1 + useableMemoryMb / 2 / (1024 * 1024));
         }

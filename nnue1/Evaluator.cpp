@@ -3,26 +3,20 @@
 
 #include <random>
 
-Evaluator::Evaluator(std::string type, std::string filepath)
+Evaluator::Evaluator(std::string type, std::string filepathB, std::string filepathW)
 {
   initZobrist(0x114514AA114514AA);
   if (type == "sum1")//¼òµ¥ÇóºÍ
   {
     blackEvaluator = new Eva_sum1();
     whiteEvaluator = new Eva_sum1();
-    loadParam(filepath, filepath);
+    loadParam(filepathB, filepathW);
   }
   else if (type == "mix6")
   {
     blackEvaluator = new Eva_mix6_avx2();
     whiteEvaluator = new Eva_mix6_avx2();
-    loadParam(filepath, filepath);
-  }
-  else if (type == "mix6vcf")
-  {
-    blackEvaluator = new Eva_mix6VCF();
-    whiteEvaluator = new Eva_mix6VCF();
-    loadParam(filepath, filepath);
+    loadParam(filepathB, filepathW);
   }
   else
   {

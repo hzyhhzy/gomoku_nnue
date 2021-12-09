@@ -66,9 +66,6 @@
     <ClCompile Include="VCF\hash.cpp">
       <Filter>源文件\VCF</Filter>
     </ClCompile>
-    <ClCompile Include="Eva_mix6VCF.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Evaluator.h">
@@ -121,9 +118,6 @@
     </ClInclude>
     <ClInclude Include="VCF\hash.h">
       <Filter>头文件\VCF</Filter>
-    </ClInclude>
-    <ClInclude Include="Eva_mix6VCF.h">
-      <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -91,7 +91,7 @@ def read_entry(f):
 
 # ------------------------------------------------
 
-def process_bin(index, result, ply, boardsize, rule, move, position):
+def process_bin(index, result, ply, boardsize, rule, move, position,usefulColor):
     #print('-' * 50)
     if(index%10000==0):
         print(f'index: {index}')
@@ -103,13 +103,18 @@ def process_bin(index, result, ply, boardsize, rule, move, position):
     #print(f'position: {position}')
 
 
+
+    nextPlayer=1 if (len(position)%2==0) else 2
+    if(usefulColor!=0 and nextPlayer!=usefulColor):
+        return False,None,None,None,None
+
+
     # Add process logic here......
     bf=np.zeros((2,boardsize,boardsize),dtype=np.int8)
     gf=np.zeros((1),dtype=np.float32)
     pt=np.zeros((boardsize,boardsize),dtype=np.int8)
     vt=np.zeros((3),dtype=np.float32)
 
-    nextPlayer=1 if (len(position)%2==0) else 2
     #bf
     color=0
     for loc in position:
@@ -129,7 +134,7 @@ def process_bin(index, result, ply, boardsize, rule, move, position):
         vt[2]=1
     #print(vt)
 
-    return bf,gf,pt,vt
+    return True,bf,gf,pt,vt
 
 
 
@@ -143,9 +148,18 @@ def read_bin():
     parser.add_argument('output',
                         type=str,
                         help="Output npz file name")
+    parser.add_argument('-side',
+                        type=str,default='',
+                        help="Which side of data to use.b is black, w is white. If empty, use both")
     #parser.add_argument('--compress', action='store_true',
     #                    help="Input is compressed with lz4")
     args = parser.parse_args()
+
+    usefulColor=0
+    if(args.side=='b' or args.side=='B'):
+        usefulColor=1
+    elif(args.side=='w' or args.side=='W'):
+        usefulColor=2
 
     def open_file(fn, mode):
         #if args.compress:
@@ -162,12 +176,13 @@ def read_bin():
         try:
             while input_f.peek() != b'':
                 data = read_entry(input_f)
-                bf,gf,pt,vt=process_bin(total, *data)
-                bfs.append(bf)
-                gfs.append(gf)
-                pts.append(pt)
-                vts.append(vt)
-                total += 1
+                useful,bf,gf,pt,vt=process_bin(total, *data,usefulColor=usefulColor)
+                if(useful):
+                    bfs.append(bf)
+                    gfs.append(gf)
+                    pts.append(pt)
+                    vts.append(vt)
+                    total += 1
 
             print(f'Finished, total read: {total}')
         except Exception:

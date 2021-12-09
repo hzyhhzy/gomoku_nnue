@@ -12,9 +12,14 @@ public:
   const bool    writeLogEnable;
   std::ofstream logfile;
   Engine(std::string evaluator_type,
-         std::string weightfile,
-         int         TTsize,
-         bool        writeLogEnable);
+    std::string weightfileB,
+    std::string weightfileW,
+    int         TTsize,
+    bool        writeLogEnable);
+  Engine(std::string evaluator_type,
+    std::string weightfile,
+    int         TTsize,
+    bool        writeLogEnable):Engine(evaluator_type,weightfile,weightfile,TTsize,writeLogEnable){}
   Engine(const Engine &e) = delete;
   Engine(Engine &&e)      = delete;
   ~Engine()

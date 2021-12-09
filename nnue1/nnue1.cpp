@@ -24,20 +24,27 @@ std::string appPath(int argc, const char **argv)
 
 int maingtp(int argc, const char **argv)
 {
-  std::string modelPath = appPath(argc, argv) + "model.txt";
+  std::string modelPathB = appPath(argc, argv) + "modelB.txt";
+  std::string modelPathW = appPath(argc, argv) + "modelW.txt";
   // 如果有第二个参数，认为是model path
-  if (argc > 1) {
-    modelPath = argv[1];
+  if (argc ==2) {
+    modelPathB = argv[1];
+    modelPathW = argv[1];
+  }
+  if (argc ==3) {
+    modelPathB = argv[1];
+    modelPathW = argv[2];
   }
 
-  Engine engine("mix6", modelPath, 128, false);
+  Engine engine("mix6", modelPathB,modelPathW, 128, false);
   engine.protocolLoop();
   return 0;
 }
 
 int main_testsearchvct()
 {
-  Evaluator *eva    = new Evaluator("mix6", "weights/t5.txt");
+  Evaluator *eva    = new Evaluator("mix6", "weights/modelB.txt", "weights/modelW.txt");
+  //Evaluator *eva    = new Evaluator("mix6", "weights/t5.txt", "weights/t5.txt");
   PVSsearch *search = new PVSsearch(eva);
   TT.resize(128);
   /*
@@ -59,6 +66,23 @@ int main_testsearchvct()
   ". . . . . . . . . . . . . . . ";
   */
 
+  const char boardstr2[] = ""
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . o . . . . . . . . . "
+  ". . . o . x . . . . . . . . . "
+  ". . . x o o o o x . . . . . . "
+  ". . . . x o x . o . . . . . . "
+  ". . . x x o x . . x . . . . . "
+  ". . . . o . . . . . . . . . . "
+  ". . . . . x . . . . . . . . . "
+  ". . . . . . . . . . . . . . . ";
+
   const char boardstr[] = ""
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "
@@ -66,15 +90,31 @@ int main_testsearchvct()
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "
+  ". . . . . . o x o o . . . . . "
+  ". . . . . . . x . . . . . . . "
+  ". . . . . . . o x x . . . . . "
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "
-  ". . . o . . . o . . . . . . . "
-  ". . . . . o o x o . . . . . . "
-  ". . . . . x o x . . . . . . . "
-  ". . . x . . x x . . . . . . . "
+  ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . ";
+  const char boardstr1[] = ""
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . o . . . o . . . . . . . "
+    ". . . . . o o x o . . . . . . "
+    ". . . . . x o x . . . . . . . "
+    ". . . x . . x x . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . ";
   for (int y = 0; y < BS; y++)
     for (int x = 0; x < BS; x++) {
       char  colorchar = boardstr[2 * (x + y * BS)];
@@ -512,9 +552,9 @@ int main_testvcf()
 int main(int argc, const char **argv)
 {
   //main_testvcf();
-  return maingtp(argc, argv);
+ // return maingtp(argc, argv);
   // return main_testeval();
    //main_testsearch();
-  //main_testsearchvct();
+  main_testsearchvct();
   return 0;
 }
