@@ -512,9 +512,9 @@ int main_testvcf()
 int main(int argc, const char **argv)
 {
   //main_testvcf();
-  //return maingtp(argc, argv);
+  return maingtp(argc, argv);
   // return main_testeval();
    //main_testsearch();
-  main_testsearchvct();
+  //main_testsearchvct();
   return 0;
 }
