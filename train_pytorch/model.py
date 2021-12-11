@@ -91,12 +91,13 @@ class Conv1dResnetBlock(nn.Module):
         return y
 
 class channelwiseLeakyRelu(nn.Module):
-    def __init__(self,c,bias=True):
+    def __init__(self,c,bias=True,bound6=False):
         super().__init__()
         self.c=c
         self.slope = nn.Parameter(torch.ones((c))*0.5,True)
         self.bias = nn.Parameter(torch.zeros((c)),True)
         self.useBias=bias
+        self.useBound6=bound6
 
 
     def forward(self, x):
@@ -109,7 +110,12 @@ class channelwiseLeakyRelu(nn.Module):
             wshape = (1,-1,1,1)
         elif(dim==5):
             wshape = (1,-1,1,1,1)
-        res=-torch.relu(-x)*(self.slope.view(wshape)-1)+x
+
+        slope = self.slope.view(wshape)
+        if(self.useBound6):
+            slope=torch.tanh(self.slope.view(wshape)/6)*6
+
+        res=-torch.relu(-x)*(slope-1)+x
         if(self.useBias):
             res+=self.bias.view(wshape)
         return res
@@ -739,7 +745,7 @@ class Model_mix6(nn.Module):
         self.mapmax=mapmax
 
         self.mapping = Mapping1(midc, pc+vc)
-        self.map_leakyrelu=channelwiseLeakyRelu(pc+vc)
+        self.map_leakyrelu=channelwiseLeakyRelu(pc+vc,bound6=True)
         self.policy_conv=nn.Conv2d(pc,pc,kernel_size=3,padding=1,bias=True,groups=pc)
         self.policy_linear=nn.Conv2d(pc,1,kernel_size=1,padding=0,bias=False)
         self.policy_leakyrelu=channelwiseLeakyRelu(1,bias=False)
@@ -852,5 +858,5 @@ ModelDic = {
     "mix4noconv": Model_mix4noconv,#实验
     "mix4": Model_mix4, #sumrelu1的改进版，性价比较高
     "mix4convep": Model_mix4convep, #实验
-    "mix6": Model_mix6
+    "mix6": Model_mix6 #目前正在用的，最终版
 }

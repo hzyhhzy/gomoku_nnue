@@ -179,6 +179,7 @@ if __name__ == '__main__':
 
 
     map_lr_slope=model.map_leakyrelu.slope.data.cpu().numpy()
+    map_lr_slope=np.tanh(map_lr_slope / 6) * 6
     map_lr_bias=model.map_leakyrelu.bias.data.cpu().numpy()
 
     #calculate max
@@ -369,11 +370,11 @@ if __name__ == '__main__':
 
 
 
-    # #copy txt file
-    # if(args.copy):
-    #     #modeldir='export/'+modelname
-    #     exportCopyDestPath=modeldir+'/'+str(totalstep)+'.txt'
-    #     shutil.copy(exportPath,exportCopyDestPath)
+    #copy txt file
+    if(args.copy):
+        #modeldir='export/'+modelname
+        exportCopyDestPath=modeldir+'/'+str(totalstep)+'.txt'
+        shutil.copy(exportPath,exportCopyDestPath)
 
 
     print("success")
