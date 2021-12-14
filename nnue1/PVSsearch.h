@@ -114,7 +114,6 @@ class PVSsearch : public Search
 public:
   PVSsearch(Evaluator *e);
   virtual float    fullsearch(Color color, double factor, Loc &bestmove);
-  virtual void     stop() { terminate.store(true, std::memory_order_relaxed); }
   std::vector<Loc> rootPV() const;
   void             clear();
   void             setOptions(size_t maxNodes) { option.maxNodes = maxNodes; }
@@ -125,7 +124,6 @@ public:
   {
     size_t maxNodes;
   } option;
-  std::atomic_bool terminate;
 
 private:
   template <bool PV>

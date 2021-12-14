@@ -58,7 +58,7 @@ void VCFsolver::reset()
   ptNum = 0;
 }
 
-void VCFsolver::setBoard(Color* b, bool katagoType, bool colorType)
+void VCFsolver::setBoard(const Color* b, bool katagoType, bool colorType)
 {
   reset();
   for (int x = 0; x < W; x++)

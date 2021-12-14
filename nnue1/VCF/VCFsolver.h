@@ -99,7 +99,7 @@ public:
   //b是外部的棋盘，pla是进攻方
   //katagoType是否是katago的棋盘，false对应loc=x+y*BS，true对应loc=x+1+(y+1)*(W+1)
   //colorType是源棋盘的表达形式，=false 己方对方，=true 黑色白色
-  void setBoard(Color* b, bool katagoType, bool colorType);
+  void setBoard(const Color* b, bool katagoType, bool colorType);
 
 
   VCF::SearchResult fullSearch(float factor,int maxLayer, Loc& bestmove, bool katagoType);//factor是搜索因数，保证factor正比于节点数。

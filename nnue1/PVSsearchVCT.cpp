@@ -241,7 +241,7 @@ expand_node:
         value =
         -search<true>(oppo, ply + 1, newDepth, -beta, -alpha, false, nextBestMove);
 
-      evaluator->undo(me, move);
+      evaluator->undo(move);
       vcfSolver[0].undoOutside(move, 1);
       vcfSolver[1].undoOutside(move, 1);
     }

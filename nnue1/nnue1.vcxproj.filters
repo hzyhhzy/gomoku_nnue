@@ -75,6 +75,9 @@
     <ClCompile Include="PVSsearchVCT.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="MCTSsearch.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Evaluator.h">
@@ -132,6 +135,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="PVSsearchVCT.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MCTSsearch.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
