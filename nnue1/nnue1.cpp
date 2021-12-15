@@ -176,6 +176,69 @@ int main_testsearch()
   return 0;
 }
 
+int main_testMCTS()
+{
+  Evaluator *eva    = new Evaluator("mix6", "weights/t5.txt");
+  MCTSsearch *search = new MCTSsearch(eva);
+  /*
+  const char boardstr[] = ""
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . ";
+  */
+
+  const char boardstr[] = ""
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . o . o . . . . . . "
+  ". . . . . . . x . . . . . . . "
+  ". . . . . . . . x . . . . . . "
+  ". . . . . . . . . x . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . ";
+  for (int y = 0; y < BS; y++)
+    for (int x = 0; x < BS; x++) {
+      char  colorchar = boardstr[2 * (x + y * BS)];
+      Color color     = C_EMPTY;
+      if (colorchar == 'x')
+        color = C_BLACK;
+      else if (colorchar == 'o')
+        color = C_WHITE;
+      if (color != C_EMPTY)
+        eva->play(color, MakeLoc(x, y));
+    }
+
+  Time tic = now();
+  for (int depth = 0; depth < 100000; depth++) {
+    Loc    loc;
+    double value = search->fullsearch(C_WHITE, 100000, loc);
+    Time   toc   = now();
+    // search->evaluator->recalculate();
+    cout << "Depth = " << depth << " Value = " << value
+      << " Nodes = " << search->rootNode->visits 
+      << " Time = " << toc - tic << " Nps = " << search->rootNode->visits  * 1000.0 / (toc - tic) << " BestLoc = "<<locstr(loc)<< endl;
+  }
+  return 0;
+}
 int main1_play()  // play a game
 {
   Evaluator *eva = new Evaluator("mix6", "weights/t1e2.txt");
@@ -512,7 +575,8 @@ int main_testvcf()
 int main(int argc, const char **argv)
 {
   //main_testvcf();
-  return maingtp(argc, argv);
+  main_testMCTS();
+  //return maingtp(argc, argv);
   // return main_testeval();
    //main_testsearch();
   //main_testsearchvct();

@@ -6,11 +6,10 @@
 #include <future>
 using namespace std;
 
-EngineDev::EngineDev(std::string evaluator_type, std::string weightfile, int TTsize)
+EngineDev::EngineDev(std::string evaluator_type, std::string weightfile)
 {
   evaluator = new Evaluator(evaluator_type, weightfile);
-  search    = new ABsearch(evaluator);
-  TT.resize(TTsize);
+  search    = new MCTSsearch(evaluator);
   nextColor = C_BLACK;
 
   string logfilepath = weightfile;

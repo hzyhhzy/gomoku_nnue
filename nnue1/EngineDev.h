@@ -12,7 +12,7 @@ public:
   Search *      search;
   Color         nextColor;
   std::ofstream logfile;
-  EngineDev(std::string evaluator_type, std::string weightfile, int TTsize);
+  EngineDev(std::string evaluator_type, std::string weightfile);
   EngineDev(const EngineDev &e) = delete;
   EngineDev(EngineDev &&e)      = delete;
   ~EngineDev()

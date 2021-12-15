@@ -85,8 +85,17 @@ MCTSsearch::MCTSsearch(Evaluator* e) :Search(e), rootNode(NULL), vcfSolver{ {BS,
 
 float MCTSsearch::fullsearch(Color color, double factor, Loc& bestmove)
 {
+  vcfSolver[0].setBoard(boardPointer, false, true);
+  vcfSolver[1].setBoard(boardPointer, false, true);
+
   if (factor != 0)option.maxNodes = factor;
   terminate = false;
+
+  //if root node is NULL, create root node
+  if (rootNode == NULL)
+  {
+    rootNode=new MCTSnode(evaluator, color, locbuf, pbuf1, pbuf2, pbuf3);
+  }
   search(rootNode, option.maxNodes, true);
   bestmove = bestRootMove();
   return rootValue();
@@ -177,6 +186,7 @@ MCTSsearch::SearchResult MCTSsearch::search(MCTSnode* node, uint64_t remainVisit
     SearchResult childSR;
     if (nextChildID >= node->childrennum)//new child
     {
+      node->childrennum++;
       MCTSsureResult sr=checkSureResult(nextChildLoc, color);
       if (sr != MC_UNCERTAIN)node->children[nextChildID].ptr = new MCTSnode(sr, opp);
       else
@@ -197,6 +207,7 @@ MCTSsearch::SearchResult MCTSsearch::search(MCTSnode* node, uint64_t remainVisit
     }
     //update stats
     remainVisits -= childSR.newVisits;
+    //std::cout << "debug: " << childSR.newVisits << " " << childSR.WRchange<<"\n";
     node->visits += childSR.newVisits;
     node->WRtotal -= childSR.WRchange;
     SR.newVisits += childSR.newVisits;
@@ -222,7 +233,47 @@ MCTSsureResult MCTSsearch::checkSureResult(Loc nextMove, Color color)
 
 int MCTSsearch::selectChildIDToSearch(MCTSnode* node)
 {
-  static_assert(0);
+  int childrennum = node->childrennum;
+  if (childrennum == 0)return 0;
+
+  double bestSelectionValue = -1e20;
+  int bestChildID = -1;
+
+  double totalVisit = node->visits;
+  double puctFactor = MCTSpuctFactor(totalVisit, params.puct, params.puctpow);
+  
+  double totalChildPolicy=0;
+  for (int i = 0; i < childrennum; i++)
+  {
+    const MCTSnode* child = node->children[i].ptr;
+    double visit = child->visits;
+    double value = -child->WRtotal / visit;
+    double policy = double(node->children[i].policy) *policyQuantInv ;
+    totalChildPolicy += policy;
+
+    double selectionValue = MCTSselectionValue(puctFactor, value, visit, policy);
+    if (selectionValue > bestSelectionValue)
+    {
+      bestSelectionValue = selectionValue;
+      bestChildID = i;
+    }
+
+
+  }
+
+  //check new child
+  if(childrennum<MAX_MCTS_CHILDREN)
+  {
+    double value = node->WRtotal / totalVisit - sqrt(totalChildPolicy) * params.fpuReduction;
+    double policy = double(node->children[childrennum].policy) * policyQuantInv;
+    double visit = 0;
+    double selectionValue = MCTSselectionValue(puctFactor, value, visit, policy);
+    if (selectionValue > bestSelectionValue)bestChildID = childrennum;
+  }
+
+  return bestChildID;
+
+
 }
 
 Loc MCTSsearch::bestRootMove()

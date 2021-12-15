@@ -3,6 +3,7 @@
 #include "VCF/VCFsolver.h"
 const int MAX_MCTS_CHILDREN = 50;
 const double policyQuant = 50000;
+const double policyQuantInv = 1/policyQuant;
 
 enum MCTSsureResult : int16_t {
   MC_Win = 1,
@@ -15,6 +16,16 @@ inline double sureResultWR(MCTSsureResult sr)
   if (sr == MC_Win)return 1;
   else if (sr == MC_LOSE)return -1;
   else return 0;
+}
+
+inline double MCTSpuctFactor(double totalVisit, double puct, double puctpow)
+{
+  return  puct * pow(totalVisit, puctpow);
+}
+
+inline double MCTSselectionValue(double puctFactor, double value,double childVisit,double childPolicy)
+{
+  return value + puctFactor * childPolicy / (childVisit + 1);
 }
 
 struct MCTSnode;
@@ -58,8 +69,10 @@ public:
   } option;
   struct Param
   {
-    float expandFactor = 0.7;
-    float puct = 1.0;
+    double expandFactor = 0.7;
+    double puct = 0.6;
+    double puctpow = 0.7;//传统的mcts对应0.5
+    double fpuReduction = 0.2;
 
   }params;
 
