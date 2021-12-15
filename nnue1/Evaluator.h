@@ -9,6 +9,8 @@ public:
   Key               zobrist[2][BS * BS];
   Key               key;
 
+
+
   Evaluator(std::string type, std::string filepath);
   ~Evaluator() {delete blackEvaluator; delete whiteEvaluator;}
 
@@ -54,5 +56,21 @@ public:
       whiteEvaluator->undo(loc); 
   }
   Color* board() const { return blackEvaluator->board; }
+
+private:
+
+  //每次调用play或者undo时，先不在EvaluatorOneSide里面走，因为开销很大。先缓存。
+  //MCTS的时候，经常“走回头路”，使用cache可以大幅提速。
+  struct MoveCache
+  {
+    bool isUndo;
+    Color color;
+    Loc loc;
+    MoveCache() :isUndo(false), color(C_EMPTY), loc(LOC_NULL){}
+    MoveCache(bool isUndo,Color color,Loc loc) :isUndo(isUndo), color(color), loc(loc){}
+  };
+
+  MoveCache moveCacheB[BS * BS], moveCacheW[BS * BS];
+  int moveCacheBlength, moveCacheWlength;
 };
 
