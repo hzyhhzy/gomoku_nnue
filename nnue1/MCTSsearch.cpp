@@ -11,7 +11,7 @@ MCTSnode::MCTSnode(Evaluator* evaluator, Color nextColor,double policyTemp, Loc*
   WRtotal = evaluator->evaluateFull(nextColor, pbuf1).winlossrate();
   for (Loc loc = 0; loc < BS * BS; loc++)
   {
-    if (evaluator->board()[loc] != C_EMPTY)pbuf1[loc] = MIN_POLICY;
+    if (evaluator->board[loc] != C_EMPTY)pbuf1[loc] = MIN_POLICY;
   }
 
   //policy sort
@@ -25,7 +25,7 @@ MCTSnode::MCTSnode(Evaluator* evaluator, Color nextColor,double policyTemp, Loc*
   for (int i = 0; i < MAX_MCTS_CHILDREN; i++)
   {
     pbuf2[i] = pbuf1[locbuf[i]];
-    if (evaluator->board()[locbuf[i]] != C_EMPTY)
+    if (evaluator->board[locbuf[i]] != C_EMPTY)
     {
       legalChildrennum = i;
       break;
@@ -87,6 +87,15 @@ float MCTSsearch::fullsearch(Color color, double factor, Loc& bestmove)
   vcfSolver[0].setBoard(boardPointer, false, true);
   vcfSolver[1].setBoard(boardPointer, false, true);
 
+  //check VCF
+  VCF::SearchResult VCFresult=vcfSolver[color - 1].fullSearch(10000, 0, bestmove, false);
+  if (VCFresult == VCF::SR_Win)
+  {
+    //直接vcf，不需要mcts
+    return 1;
+  }
+
+
   if (factor != 0)option.maxNodes = factor;
   terminate = false;
 
@@ -97,7 +106,7 @@ float MCTSsearch::fullsearch(Color color, double factor, Loc& bestmove)
   }
   search(rootNode, option.maxNodes, true);
   bestmove = bestRootMove();
-  return rootValue();
+  return getRootValue();
 }
 
 void MCTSsearch::play(Color color, Loc loc)
@@ -298,7 +307,7 @@ MCTSsureResult MCTSsearch::checkSureResult(Loc nextMove, Color color)
   Color opp = getOpp(color);
   vcfSolver[opp-1].playOutside(nextMove, color, 1, true);
   Loc vcfloc;
-  VCF::SearchResult sr=vcfSolver[opp - 1].fullSearch(1000, 0, vcfloc, false);
+  VCF::SearchResult sr=vcfSolver[opp - 1].fullSearch(2000, 0, vcfloc, false);
   vcfSolver[opp-1].undoOutside(nextMove, 1);
 
   if (sr == VCF::SR_Win)return MC_Win;
@@ -351,7 +360,7 @@ int MCTSsearch::selectChildIDToSearch(MCTSnode* node)
 
 }
 
-Loc MCTSsearch::bestRootMove()
+Loc MCTSsearch::bestRootMove() const
 {
   if (rootNode == NULL)return LOC_NULL;
   if (rootNode->legalChildrennum <= 0)return LOC_NULL;
@@ -370,8 +379,14 @@ Loc MCTSsearch::bestRootMove()
   return bestLoc;
 }
 
-float MCTSsearch::rootValue()
+float MCTSsearch::getRootValue() const
 {
   if (rootNode == NULL)return 0;
   return rootNode->WRtotal / double(rootNode->visits);
+}
+
+int64_t MCTSsearch::getRootVisit() const
+{
+  if (rootNode == NULL)return 0;
+  return rootNode->visits;
 }

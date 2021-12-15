@@ -1,7 +1,7 @@
 #include "VCFsolver.h"
 #include <random>
 using namespace VCF;
-VCFHashTable VCFsolver::hashtable(24, 5);//如果要多线程，可以把第二个数改大
+VCFHashTable VCFsolver::hashtable(20, 5);//如果要多线程，可以把第二个数改大
 VCF::zobristTable VCFsolver::zobrist(1919810);
 
 VCF::zobristTable::zobristTable(int64_t seed)

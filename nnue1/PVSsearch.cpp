@@ -16,8 +16,8 @@ float PVSsearch::fullsearch(Color color, double factor, Loc &bestmove)
   int depth                 = (int)factor;
   selDepth                  = 0;
   plyInfos[0].nullMoveCount = 0;
-  vcfSolver[0].setBoard(evaluator->board(), false, true);
-  vcfSolver[1].setBoard(evaluator->board(), false, true);
+  vcfSolver[0].setBoard(evaluator->board, false, true);
+  vcfSolver[1].setBoard(evaluator->board, false, true);
   return search<true>(color, 0, depth, -VALUE_MATE, VALUE_MATE, false, bestmove);
 }
 
@@ -281,6 +281,7 @@ template float PVSsearch::search<false>(Color color,
 
 bool PVSsearch::isWin(Color color, Loc toplayLoc)
 {
+  std::cout << "下面这一行需要改，因为evaluator->blackEvaluator->board不一定与evaluator->board相同";
   const Color *board = (color == C_BLACK) ? evaluator->blackEvaluator->board
                                           : evaluator->whiteEvaluator->board;
   int          x0 = toplayLoc % BS, y0 = toplayLoc / BS;

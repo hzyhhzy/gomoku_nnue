@@ -91,6 +91,10 @@ public:
   virtual void undo( Loc loc);
   virtual void clearBoard(); 
 
+  Loc bestRootMove() const;
+  float getRootValue() const;
+  int64_t getRootVisit() const;
+
   void             setOptions(size_t maxNodes) { option.maxNodes = maxNodes; }
   void loadParamFile(std::string filename);
   ~MCTSsearch() { if(rootNode!=NULL)delete rootNode; }
@@ -108,9 +112,6 @@ private:
   MCTSsureResult checkSureResult(Loc nextMove, Color color);//check VCF
   int selectChildIDToSearch(MCTSnode* node);
 
-
-  Loc bestRootMove();
-  float rootValue();
 
 
 };

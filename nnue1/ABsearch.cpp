@@ -71,6 +71,8 @@ int ABsearch::minExploreChildren(int depth)
 
 bool ABsearch::isWin(Color color, Loc toplayLoc)
 {
+  std::cout << "下面这一行需要改，因为evaluator->blackEvaluator->board不一定与evaluator->board相同";
+
     const Color *board =
         (color == C_BLACK) ? evaluator->blackEvaluator->board : evaluator->whiteEvaluator->board;
     int x0 = toplayLoc % BS, y0 = toplayLoc / BS;

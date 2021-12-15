@@ -322,7 +322,7 @@ int main1_play()  // play a game
 
     for (int y = 0; y < BS; y++) {
       for (int x = 0; x < BS; x++) {
-        Color c = eva->board()[y * BS + x];
+        Color c = eva->board[y * BS + x];
         if (y * BS + x == bestloc)
           cout << "@ ";
         else if (c == C_EMPTY)
@@ -579,8 +579,8 @@ int main_testvcf()
 int main(int argc, const char **argv)
 {
   //main_testvcf();
-  //main_testMCTS();
-  return maingtp(argc, argv);
+  main_testMCTS();
+  //return maingtp(argc, argv);
   // return main_testeval();
    //main_testsearch();
   //main_testsearchvct();

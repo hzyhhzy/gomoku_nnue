@@ -60,10 +60,10 @@ std::string EngineDev::genmove()
     std::tie(bestvalue, bestloc) = result.get();
     Time toc                     = now();
     // search->evaluator->recalculate();
-    std::cout << "MESSAGE Nodes = " << search->rootNode->visits
+    std::cout << "MESSAGE Nodes = " << search->getRootVisit()
       << " Value = " << bestvalue
       << " Time = " << toc - tic << " Nps = "
-      << search->rootNode->visits * 1000.0 / (toc - tic)
+      << search->getRootVisit() * 1000.0 / (toc - tic)
       //<< " TT = " << 100.0 * search->ttHits / search->interiorNodes << "("
       //<< 100.0 * search->ttCuts / search->ttHits << ")"
       << " BestMove = " << locstr(bestloc)
