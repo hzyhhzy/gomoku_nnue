@@ -25,12 +25,16 @@ std::string appPath(int argc, const char **argv)
 int maingtp(int argc, const char **argv)
 {
   std::string modelPath = appPath(argc, argv) + "model.txt";
+  std::string configPath = appPath(argc, argv) + "config.txt";
   // 如果有第二个参数，认为是model path
   if (argc > 1) {
     modelPath = argv[1];
   }
+  if (argc > 2) {
+    configPath = argv[2];
+  }
 
-  EngineDev engine("mix6", modelPath);
+  EngineDev engine("mix6", modelPath,configPath,false);
   engine.protocolLoop();
   return 0;
 }
@@ -205,11 +209,11 @@ int main_testMCTS()
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "
-  ". . . . . . . . . . . . . . . "
-  ". . . . . . o x o o . . . . . "
+  ". . . . . . o . . . . . . . . "
+  ". . . . . . o . . . . . . . . "
   ". . . . . . . x . . . . . . . "
-  ". . . . . . . o x x . . . . "
   ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . x . . . . . "
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "

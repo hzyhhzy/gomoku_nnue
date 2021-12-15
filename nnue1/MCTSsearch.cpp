@@ -1,6 +1,6 @@
 #include "MCTSsearch.h"
 
-MCTSnode::MCTSnode(Evaluator* evaluator, Color nextColor, Loc* locbuf, PolicyType* pbuf1, PolicyType* pbuf2, float* pbuf3) :nextColor(nextColor)
+MCTSnode::MCTSnode(Evaluator* evaluator, Color nextColor,double policyTemp, Loc* locbuf, PolicyType* pbuf1, PolicyType* pbuf2, float* pbuf3) :nextColor(nextColor)
 {
   sureResult = MC_UNCERTAIN;
   childrennum = 0;
@@ -43,8 +43,7 @@ MCTSnode::MCTSnode(Evaluator* evaluator, Color nextColor, Loc* locbuf, PolicyTyp
 
   PolicyType maxRawPolicy = *std::max_element(pbuf2, pbuf2 + legalChildrennum);
   std::transform(pbuf2, pbuf2 + legalChildrennum, pbuf3, [=](auto& p) {
-    const double temp = 1.2;
-    const double invQ = 1.0 / quantFactor / temp;
+    const double invQ = 1.0 / quantFactor / policyTemp;
     return (float)std::exp((p - maxRawPolicy) * invQ);
     // return (float)std::max(p, PolicyType(0));
     });
@@ -94,7 +93,7 @@ float MCTSsearch::fullsearch(Color color, double factor, Loc& bestmove)
   //if root node is NULL, create root node
   if (rootNode == NULL)
   {
-    rootNode=new MCTSnode(evaluator, color, locbuf, pbuf1, pbuf2, pbuf3);
+    rootNode=new MCTSnode(evaluator, color,params.policyTemp, locbuf, pbuf1, pbuf2, pbuf3);
   }
   search(rootNode, option.maxNodes, true);
   bestmove = bestRootMove();
@@ -164,6 +163,63 @@ void MCTSsearch::clearBoard()
   rootNode = NULL;
 }
 
+void MCTSsearch::loadParamFile(std::string filename)
+{
+  using namespace std;
+  ifstream fs(filename);
+  if (!fs.good())return;
+
+  string varname;
+
+  fs >> varname;
+  if (varname != "expandFactor") {
+    cout << "Wrong parameter name 1:" << varname << endl;
+    return;
+  }
+  fs >> params.expandFactor;
+
+
+  fs >> varname;
+  if (varname != "puct") {
+    cout << "Wrong parameter name 2:" << varname << endl;
+    return;
+  }
+  fs >> params.puct;
+
+
+
+  fs >> varname;
+  if (varname != "puctPow") {
+    cout << "Wrong parameter name 3:" << varname << endl;
+    return;
+  }
+  fs >> params.puctPow;
+
+
+  fs >> varname;
+  if (varname != "puctBase") {
+    cout << "Wrong parameter name 4:" << varname << endl;
+    return;
+  }
+  fs >> params.puctBase;
+
+
+  fs >> varname;
+  if (varname != "fpuReduction") {
+    cout << "Wrong parameter name 5:" << varname << endl;
+    return;
+  }
+  fs >> params.fpuReduction;
+
+
+  fs >> varname;
+  if (varname != "policyTemp") {
+    cout << "Wrong parameter name 6:" << varname << endl;
+    return;
+  }
+  fs >> params.policyTemp;
+}
+
 void MCTSsearch::playForSearch(Color color, Loc loc)
 {
   evaluator->play(color, loc);
@@ -211,7 +267,7 @@ MCTSsearch::SearchResult MCTSsearch::search(MCTSnode* node, uint64_t remainVisit
       else
       {
         playForSearch(color, nextChildLoc);
-        node->children[nextChildID].ptr = new MCTSnode(evaluator, opp, locbuf, pbuf1, pbuf2, pbuf3);
+        node->children[nextChildID].ptr = new MCTSnode(evaluator, opp,params.policyTemp, locbuf, pbuf1, pbuf2, pbuf3);
         undoForSearch(nextChildLoc);
       }
 
@@ -259,7 +315,7 @@ int MCTSsearch::selectChildIDToSearch(MCTSnode* node)
   int bestChildID = -1;
 
   double totalVisit = node->visits;
-  double puctFactor = MCTSpuctFactor(totalVisit, params.puct, params.puctpow);
+  double puctFactor = MCTSpuctFactor(totalVisit, params.puct, params.puctPow,params.puctBase);
   
   double totalChildPolicy=0;
   for (int i = 0; i < childrennum; i++)

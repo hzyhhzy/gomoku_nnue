@@ -11,8 +11,9 @@ public:
   Evaluator *   evaluator;
   MCTSsearch *      search;
   Color         nextColor;
+  const bool    writeLogEnable;
   std::ofstream logfile;
-  EngineDev(std::string evaluator_type, std::string weightfile);
+  EngineDev(std::string evaluator_type, std::string weightfile, std::string configfile,bool writeLogEnable);
   EngineDev(const EngineDev &e) = delete;
   EngineDev(EngineDev &&e)      = delete;
   ~EngineDev()
@@ -31,6 +32,8 @@ public:
   static constexpr int AsyncWaitReservedTime = 70;
 
   std::string genmove();
+
+  void        writeLog(std::string str);
 
   void protocolLoop();
 };

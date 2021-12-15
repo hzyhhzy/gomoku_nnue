@@ -18,9 +18,9 @@ inline double sureResultWR(MCTSsureResult sr)
   else return 0;
 }
 
-inline double MCTSpuctFactor(double totalVisit, double puct, double puctpow)
+inline double MCTSpuctFactor(double totalVisit, double puct, double puctPow, double puctBase)
 {
-  return  puct * pow(totalVisit, puctpow);
+  return  puct * pow((totalVisit+puctBase)/puctBase, puctPow);
 }
 
 inline double MCTSselectionValue(double puctFactor, double value,double childVisit,double childPolicy)
@@ -51,7 +51,7 @@ struct MCTSnode
 
   Color nextColor;
   
-  MCTSnode(Evaluator* evaluator,  Color nextColor,Loc* locbuf,PolicyType* pbuf1,PolicyType* pbuf2,float* pbuf3);
+  MCTSnode(Evaluator* evaluator,  Color nextColor,double policyTemp,Loc* locbuf,PolicyType* pbuf1,PolicyType* pbuf2,float* pbuf3);
   MCTSnode(MCTSsureResult sureResult, Color nextColor);
   ~MCTSnode();
   
@@ -69,10 +69,12 @@ public:
   } option;
   struct Param
   {
-    double expandFactor = 0.7;
+    double expandFactor = 0.4;
     double puct = 0.6;
-    double puctpow = 0.7;//传统的mcts对应0.5
-    double fpuReduction = 0.2;
+    double puctPow = 0.7;//传统的mcts对应0.5
+    double puctBase = 1.0;
+    double fpuReduction = 0.1;
+    double policyTemp = 1.1;
 
   }params;
 
@@ -90,6 +92,7 @@ public:
   virtual void clearBoard(); 
 
   void             setOptions(size_t maxNodes) { option.maxNodes = maxNodes; }
+  void loadParamFile(std::string filename);
   ~MCTSsearch() { if(rootNode!=NULL)delete rootNode; }
 
 private:
