@@ -88,7 +88,7 @@ float MCTSsearch::fullsearch(Color color, double factor, Loc& bestmove)
   vcfSolver[1].setBoard(boardPointer, false, true);
 
   //check VCF
-  VCF::SearchResult VCFresult=vcfSolver[color - 1].fullSearch(10000, 0, bestmove, false);
+  VCF::SearchResult VCFresult=vcfSolver[color - 1].fullSearch(10000, 10, bestmove, false);
   if (VCFresult == VCF::SR_Win)
   {
     //直接vcf，不需要mcts
@@ -303,11 +303,13 @@ MCTSsearch::SearchResult MCTSsearch::search(MCTSnode* node, uint64_t remainVisit
 
 MCTSsureResult MCTSsearch::checkSureResult(Loc nextMove, Color color)
 {
+  //return MC_UNCERTAIN;//to disable VCF
+  
   //evaluator没有play，因为evaluator play的开销较大
   Color opp = getOpp(color);
   vcfSolver[opp-1].playOutside(nextMove, color, 1, true);
   Loc vcfloc;
-  VCF::SearchResult sr=vcfSolver[opp - 1].fullSearch(2000, 0, vcfloc, false);
+  VCF::SearchResult sr=vcfSolver[opp - 1].fullSearch(5000, 4, vcfloc, false);
   vcfSolver[opp-1].undoOutside(nextMove, 1);
 
   if (sr == VCF::SR_Win)return MC_Win;
