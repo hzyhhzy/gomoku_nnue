@@ -109,6 +109,12 @@ void MCTSsearch::play(Color color, Loc loc)
 
 
   //树重用
+
+  //if (rootNode != NULL)delete rootNode;
+  //rootNode = NULL;
+  //return;
+
+
   if (rootNode != NULL)
   {
     //VCF没保存后续招法，所以删掉根节点重新计算
@@ -128,10 +134,16 @@ void MCTSsearch::play(Color color, Loc loc)
           rootNode->children[i].ptr = NULL;//防止被rootNode的析构函数删除。
           delete rootNode;
           rootNode = nextRootNode;
+          //新的rootNode可能是叶子节点，所以检查一下
+          if (rootNode->sureResult != MC_UNCERTAIN) { haveThisChild=false; }
           break;
         }
       }
-      if (!haveThisChild)delete rootNode;
+      if (!haveThisChild)
+      {
+        delete rootNode;
+        rootNode = NULL;
+      }
     }
   }
 }
@@ -142,6 +154,13 @@ void MCTSsearch::undo(Loc loc)
   vcfSolver[0].undoOutside(loc, 1);
   vcfSolver[1].undoOutside(loc, 1);
   delete rootNode;
+  rootNode = NULL;
+}
+
+void MCTSsearch::clearBoard()
+{
+  evaluator->clear();
+  if (rootNode != NULL)delete rootNode;
   rootNode = NULL;
 }
 
@@ -262,7 +281,7 @@ int MCTSsearch::selectChildIDToSearch(MCTSnode* node)
   }
 
   //check new child
-  if(childrennum<MAX_MCTS_CHILDREN)
+  if(childrennum<node->legalChildrennum)
   {
     double value = node->WRtotal / totalVisit - sqrt(totalChildPolicy) * params.fpuReduction;
     double policy = double(node->children[childrennum].policy) * policyQuantInv;

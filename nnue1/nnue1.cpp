@@ -30,7 +30,7 @@ int maingtp(int argc, const char **argv)
     modelPath = argv[1];
   }
 
-  Engine engine("mix6", modelPath, 128, false);
+  EngineDev engine("mix6", modelPath);
   engine.protocolLoop();
   return 0;
 }
@@ -206,10 +206,10 @@ int main_testMCTS()
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "
-  ". . . . . . o . o . . . . . . "
+  ". . . . . . o x o o . . . . . "
   ". . . . . . . x . . . . . . . "
-  ". . . . . . . . x . . . . . . "
-  ". . . . . . . . . x . . . . . "
+  ". . . . . . . o x x . . . . "
+  ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "
@@ -230,7 +230,7 @@ int main_testMCTS()
   Time tic = now();
   for (int depth = 0; depth < 100000; depth++) {
     Loc    loc;
-    double value = search->fullsearch(C_WHITE, 100000, loc);
+    double value = search->fullsearch(C_BLACK, 100000, loc);
     Time   toc   = now();
     // search->evaluator->recalculate();
     cout << "Depth = " << depth << " Value = " << value
@@ -575,8 +575,8 @@ int main_testvcf()
 int main(int argc, const char **argv)
 {
   //main_testvcf();
-  main_testMCTS();
-  //return maingtp(argc, argv);
+  //main_testMCTS();
+  return maingtp(argc, argv);
   // return main_testeval();
    //main_testsearch();
   //main_testsearchvct();

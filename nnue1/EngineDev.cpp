@@ -27,26 +27,61 @@ EngineDev::EngineDev(std::string evaluator_type, std::string weightfile)
 
 std::string EngineDev::genmove()
 {
-  Time tic = now();
+  
+  Time   tic         = now();
+  double bestvalue   = VALUE_NONE;
+  Loc    bestloc     = LOC_NULL;
+  int    maxTurnTime = min(timeout_turn - ReservedTime, time_left / 7);
+  int    maxWaitTime = max(maxTurnTime - AsyncWaitReservedTime, 0);
+  int    optimalTime = maxTurnTime * 2 / 5;
 
-  Loc bestloc = LOC_NULL;
-  for (int depth = 1; depth < 100; depth++) {
-    double value = search->fullsearch(nextColor, depth, bestloc);
-    Time   toc   = now();
+    auto result = std::async(std::launch::async, [&]() {
+      Loc    loc;
+      double value = search->fullsearch(nextColor, 0, loc);
+      return std::make_pair(value, loc);
+    });
+
+    if (result.wait_for(chrono::milliseconds(
+            max(maxWaitTime + tic - now(), 10LL)))
+        == future_status::timeout) {
+      search->stop();
+    }
+
+    std::tie(bestvalue, bestloc) = result.get();
+    Time toc                     = now();
     // search->evaluator->recalculate();
-    cout << "MESSAGE Depth = " << depth << " Value = " << value << " Time = " << toc - tic
-         << endl;
+    std::cout << "MESSAGE Nodes = " << search->rootNode->visits
+      << " Value = " << bestvalue
+      << " Time = " << toc - tic << " Nps = "
+      << search->rootNode->visits * 1000.0 / (toc - tic)
+      //<< " TT = " << 100.0 * search->ttHits / search->interiorNodes << "("
+      //<< 100.0 * search->ttCuts / search->ttHits << ")"
+      << " BestMove = " << locstr(bestloc)
+      //<< " PV = " << search->rootPV()
+      << endl;
 
-    // TODO : time limit
-    if (toc - tic > timeout_turn / 2)
-      break;
-  }
+  
 
-  evaluator->play(nextColor, bestloc);
+  if (bestloc != LOC_NULL)
+    search->play(nextColor, bestloc);
+  else
+    bestloc = LOC_PASS;
   nextColor = getOpp(nextColor);
 
   int bestx = bestloc % BS, besty = bestloc / BS;
   return to_string(bestx) + "," + to_string(besty);
+
+
+
+
+
+
+
+
+
+
+
+
 }
 
 void EngineDev::protocolLoop()
@@ -95,7 +130,7 @@ void EngineDev::protocolLoop()
         response = "ERROR This engine only support boardsize " + to_string(BS);
       else
         response = "OK";
-      evaluator->clear();
+      search->clearBoard();
       nextColor = C_BLACK;
     }
     else if (command == "TURN") {
@@ -105,13 +140,13 @@ void EngineDev::protocolLoop()
         response = "ERROR Bad command";
       else {
         Loc opploc = MakeLoc(oppx, oppy);
-        evaluator->play(nextColor, opploc);
+        search->play(nextColor, opploc);
         nextColor = getOpp(nextColor);
         response  = genmove();
       }
     }
     else if (command == "BOARD") {
-      evaluator->clear();
+      search->clearBoard();
       nextColor = C_BLACK;
 
       string line2;
@@ -144,13 +179,13 @@ void EngineDev::protocolLoop()
         }
         else {  // normal move
           Loc loc = MakeLoc(x, y);
-          evaluator->play(nextColor, loc);
+          search->play(nextColor, loc);
           nextColor = getOpp(nextColor);
         }
       }
     }
     else if (command == "BEGIN") {
-      evaluator->clear();
+      search->clearBoard();
       nextColor = C_BLACK;
       response  = genmove();
     }

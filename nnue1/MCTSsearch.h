@@ -87,6 +87,7 @@ public:
   virtual float    fullsearch(Color color, double factor, Loc &bestmove);
   virtual void play(Color color, Loc loc);
   virtual void undo( Loc loc);
+  virtual void clearBoard(); 
 
   void             setOptions(size_t maxNodes) { option.maxNodes = maxNodes; }
   ~MCTSsearch() { if(rootNode!=NULL)delete rootNode; }

@@ -9,7 +9,7 @@ class EngineDev
 {
 public:
   Evaluator *   evaluator;
-  Search *      search;
+  MCTSsearch *      search;
   Color         nextColor;
   std::ofstream logfile;
   EngineDev(std::string evaluator_type, std::string weightfile);
@@ -25,6 +25,10 @@ public:
   int timeout_turn;
   int timeout_match;
   int time_left;
+
+
+  static constexpr int ReservedTime          = 30;
+  static constexpr int AsyncWaitReservedTime = 70;
 
   std::string genmove();
 
