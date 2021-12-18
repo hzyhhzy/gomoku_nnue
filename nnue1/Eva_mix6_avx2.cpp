@@ -365,7 +365,20 @@ void Mix6buf_int16::emptyboard(const Mix6weight_int16 &weights)
 bool Eva_mix6_avx2::loadParam(std::string filepath)
 {
   using namespace std::filesystem;
-  path cachePath = path(filepath).replace_extension("cache.bin");
+  path ext = path(filepath).extension();
+  if (ext.string() == ".bin")
+  {
+    std::ifstream cacheStream(path(filepath), std::ios::binary);
+    cacheStream.read(reinterpret_cast<char *>(&weights), sizeof(weights));
+    if (cacheStream.good()) {
+      buf.emptyboard(weights);
+      return true;
+    }
+    else return false;
+  }
+
+
+  path cachePath = path(filepath).replace_extension("bin");
   // Read parameter cache if exists
   if (exists(cachePath)) {
     std::ifstream cacheStream(cachePath, std::ios::binary);

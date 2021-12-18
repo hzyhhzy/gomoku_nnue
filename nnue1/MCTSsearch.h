@@ -1,7 +1,7 @@
 #pragma once
 #include "Search.h"
 #include "VCF/VCFsolver.h"
-const int MAX_MCTS_CHILDREN = 50;
+const int MAX_MCTS_CHILDREN = 30;
 const double policyQuant = 50000;
 const double policyQuantInv = 1/policyQuant;
 
@@ -69,7 +69,7 @@ public:
   } option;
   struct Param
   {
-    double expandFactor = 0.4;
+    double expandFactor = 0.7;//传统的mcts对应0.0, 也就是每次playout固定新增1个叶子节点
     double puct = 0.6;
     double puctPow = 0.7;//传统的mcts对应0.5
     double puctBase = 1.0;

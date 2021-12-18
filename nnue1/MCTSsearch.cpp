@@ -16,7 +16,7 @@ MCTSnode::MCTSnode(Evaluator* evaluator, Color nextColor,double policyTemp, Loc*
 
   //policy sort
   std::iota(locbuf, locbuf + BS * BS, LOC_ZERO);
-  std::sort(locbuf, locbuf + BS * BS, [&](Loc a, Loc b) {
+  std::partial_sort(locbuf,locbuf+MAX_MCTS_CHILDREN, locbuf + BS * BS, [&](Loc a, Loc b) {
     return pbuf1[a] > pbuf1[b];
     });
 

@@ -123,17 +123,21 @@ if __name__ == '__main__':
 
     #lowl2param是一些密集型神经网络参数，对lr和weightdecay更敏感
     #另外，otherparam因为在c++代码中需要用int16计算，容易溢出，所以需要高的weightdecay控制范围
-    lowl2param = list(map(id, model.mapping.parameters()))+\
-                 list(map(id, model.value_leakyrelu.parameters()))+\
-                 list(map(id, model.value_linear1.parameters()))+\
-                 list(map(id, model.value_linear2.parameters()))+\
-                 list(map(id, model.value_linearfinal.parameters()))
-    otherparam=list(filter(lambda p:id(p) not in lowl2param,model.parameters()))
-    lowl2param=list(filter(lambda p:id(p) in lowl2param,model.parameters()))
+    # lowl2param = list(map(id, model.mapping.parameters()))+\
+    #              list(map(id, model.value_leakyrelu.parameters()))+\
+    #              list(map(id, model.value_linear1.parameters()))+\
+    #              list(map(id, model.value_linear2.parameters()))+\
+    #              list(map(id, model.value_linearfinal.parameters()))
+    # otherparam=list(filter(lambda p:id(p) not in lowl2param,model.parameters()))
+    # lowl2param=list(filter(lambda p:id(p) in lowl2param,model.parameters()))
+    #
+    # optimizer = optim.Adam([{'params':otherparam},
+    #                         {'params': lowl2param,'lr':lr,'weight_decay':1e-7}],
+    #                         lr=lr,weight_decay=args.wd)
 
-    optimizer = optim.Adam([{'params':otherparam},
-                            {'params': lowl2param,'lr':lr,'weight_decay':1e-7}],
+    optimizer = optim.Adam(model.parameters(),
                             lr=lr,weight_decay=args.wd)
+
     model.train()
 
 

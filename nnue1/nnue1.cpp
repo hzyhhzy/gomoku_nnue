@@ -26,6 +26,20 @@ int maingtp(int argc, const char **argv)
 {
   std::string modelPath = appPath(argc, argv) + "model.txt";
   std::string configPath = appPath(argc, argv) + "config.txt";
+
+
+  //把txt权重转换成二进制文件，不对弈
+  bool convertOnly = argc > 1 && std::string(argv[1]) == "convertonly";
+  if (convertOnly)
+  {
+    if (argc > 2) {
+      modelPath = argv[2];
+    }
+    Eva_mix6_avx2* eva=new Eva_mix6_avx2();
+    eva->loadParam(modelPath);
+    return 0;
+  }
+
   // 如果有第二个参数，认为是model path
   if (argc > 1) {
     modelPath = argv[1];
@@ -579,8 +593,8 @@ int main_testvcf()
 int main(int argc, const char **argv)
 {
   //main_testvcf();
-  main_testMCTS();
-  //return maingtp(argc, argv);
+  //main_testMCTS();
+  return maingtp(argc, argv);
   // return main_testeval();
    //main_testsearch();
   //main_testsearchvct();
