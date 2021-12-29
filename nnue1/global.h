@@ -25,7 +25,7 @@ static inline Color getOpp(Color c) { return c ^ 3; }
 
 typedef int16_t      Loc;
 static constexpr Loc LOC_ZERO = 0;
-static constexpr Loc LOC_NULL = BS * BS + 1;
+static constexpr Loc LOC_NULL = -1;
 static constexpr Loc LOC_PASS = BS * BS;
 inline Loc           MakeLoc(int x, int y) { return Loc(x + y * BS); }
 inline std::string   locstr(Loc loc)

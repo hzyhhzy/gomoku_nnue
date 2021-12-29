@@ -1,6 +1,7 @@
 #pragma once
 #include "..\global.h"
 #include "VCFHashTable.h"
+static_assert(LOC_NULL >= (BS + 6)* (BS + 6)+1||LOC_NULL<0);//保证loc_null不是棋盘上的点
 namespace VCF {
 
   struct alignas(int64_t) PT
