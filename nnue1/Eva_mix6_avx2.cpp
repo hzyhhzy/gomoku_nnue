@@ -1,7 +1,9 @@
 #include "Eva_mix6_avx2.h"
 
+#include "external/simde_avx2.h"
+#include "external/simde_fma.h"
+
 #include <filesystem>
-#include <immintrin.h>  //avx2
 
 void Mix6buf_int16::update(Color                   oldcolor,
                            Color                   newcolor,
@@ -47,32 +49,29 @@ void Mix6buf_int16::update(Color                   oldcolor,
 
     for (int i = 0; i < mix6::featureBatch; i++) {
       // mapsum
-      auto oldw = _mm256_loadu_si256(
-          reinterpret_cast<const __m256i *>(weights.map[c.oldshape] + i * 16));
-      auto neww = _mm256_loadu_si256(
-          reinterpret_cast<const __m256i *>(weights.map[c.newshape] + i * 16));
-      __m256i *wp   = reinterpret_cast<__m256i *>(mapsum[c.loc] + i * 16);
-      auto     sumw = _mm256_loadu_si256(wp);
-      sumw          = _mm256_sub_epi16(sumw, oldw);
-      sumw          = _mm256_add_epi16(sumw, neww);
-      _mm256_storeu_si256(wp, sumw);
+      auto  oldw = simde_mm256_loadu_si256(weights.map[c.oldshape] + i * 16);
+      auto  neww = simde_mm256_loadu_si256(weights.map[c.newshape] + i * 16);
+      void *wp   = mapsum[c.loc] + i * 16;
+      auto  sumw = simde_mm256_loadu_si256(wp);
+      sumw       = simde_mm256_sub_epi16(sumw, oldw);
+      sumw       = simde_mm256_add_epi16(sumw, neww);
+      simde_mm256_storeu_si256(wp, sumw);
 
       // leaky relu
-      auto lrw = _mm256_loadu_si256(
-          reinterpret_cast<const __m256i *>(weights.map_lr_slope_sub1div8 + i * 16));
-      auto lrb = _mm256_loadu_si256(
-          reinterpret_cast<const __m256i *>(weights.map_lr_bias + i * 16));
-      neww = _mm256_add_epi16(
-          _mm256_add_epi16(                // 0.25leakyrelu(x)=
-              _mm256_srai_epi16(sumw, 2),  // 0.25x
-              _mm256_slli_epi16(
-                  _mm256_mulhrs_epi16(lrw,
-                                      _mm256_min_epi16(_mm256_setzero_si256(), sumw)),
+      auto lrw = simde_mm256_loadu_si256(weights.map_lr_slope_sub1div8 + i * 16);
+      auto lrb = simde_mm256_loadu_si256(weights.map_lr_bias + i * 16);
+      neww     = simde_mm256_add_epi16(
+          simde_mm256_add_epi16(                // 0.25leakyrelu(x)=
+              simde_mm256_srai_epi16(sumw, 2),  // 0.25x
+              simde_mm256_slli_epi16(
+                  simde_mm256_mulhrs_epi16(
+                      lrw,
+                      simde_mm256_min_epi16(simde_mm256_setzero_si256(), sumw)),
                   1)),  //+2*slopeSub1Div8*-relu(-x)
           lrb);         //+bias
-      wp   = reinterpret_cast<__m256i *>(mapAfterLR[c.loc] + i * 16);
-      oldw = _mm256_loadu_si256(wp);
-      _mm256_storeu_si256(wp, neww);
+      wp   = mapAfterLR[c.loc] + i * 16;
+      oldw = simde_mm256_loadu_si256(wp);
+      simde_mm256_storeu_si256(wp, neww);
 
       // policy conv
       if (i < mix6::policyBatch) {
@@ -85,13 +84,13 @@ void Mix6buf_int16::update(Color                   oldcolor,
             if (x < 0 || x >= BS)
               continue;
             Loc  thisloc = MakeLoc(x, y);
-            auto convw   = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(
-                weights.policyConvWeight[4 - dy * 3 - dx] + i * 16));
-            wp           = reinterpret_cast<__m256i *>(policyAfterConv[thisloc] + i * 16);
-            sumw         = _mm256_loadu_si256(wp);
-            sumw         = _mm256_sub_epi16(sumw, _mm256_mulhrs_epi16(oldw, convw));
-            sumw         = _mm256_add_epi16(sumw, _mm256_mulhrs_epi16(neww, convw));
-            _mm256_storeu_si256(wp, sumw);
+            auto convw = simde_mm256_loadu_si256(weights.policyConvWeight[4 - dy * 3 - dx]
+                                                 + i * 16);
+            wp         = policyAfterConv[thisloc] + i * 16;
+            sumw       = simde_mm256_loadu_si256(wp);
+            sumw = simde_mm256_sub_epi16(sumw, simde_mm256_mulhrs_epi16(oldw, convw));
+            sumw = simde_mm256_add_epi16(sumw, simde_mm256_mulhrs_epi16(neww, convw));
+            simde_mm256_storeu_si256(wp, sumw);
           }
         }
       }
@@ -99,23 +98,23 @@ void Mix6buf_int16::update(Color                   oldcolor,
       {
         // lower
         int valueBatchID = 2 * (i - mix6::policyBatch);
-        wp               = reinterpret_cast<__m256i *>(valueSumBoard + valueBatchID * 8);
-        auto oldw32      = _mm256_cvtepi16_epi32(_mm256_extracti128_si256(oldw, 0));
-        auto neww32      = _mm256_cvtepi16_epi32(_mm256_extracti128_si256(neww, 0));
-        sumw             = _mm256_loadu_si256(wp);
-        sumw             = _mm256_sub_epi32(sumw, oldw32);
-        sumw             = _mm256_add_epi32(sumw, neww32);
-        _mm256_storeu_si256(wp, sumw);
+        wp               = valueSumBoard + valueBatchID * 8;
+        auto oldw32 = simde_mm256_cvtepi16_epi32(simde_mm256_extracti128_si256(oldw, 0));
+        auto neww32 = simde_mm256_cvtepi16_epi32(simde_mm256_extracti128_si256(neww, 0));
+        sumw        = simde_mm256_loadu_si256(wp);
+        sumw        = simde_mm256_sub_epi32(sumw, oldw32);
+        sumw        = simde_mm256_add_epi32(sumw, neww32);
+        simde_mm256_storeu_si256(wp, sumw);
 
         // upper
         valueBatchID++;
-        wp     = reinterpret_cast<__m256i *>(valueSumBoard + valueBatchID * 8);
-        oldw32 = _mm256_cvtepi16_epi32(_mm256_extracti128_si256(oldw, 1));
-        neww32 = _mm256_cvtepi16_epi32(_mm256_extracti128_si256(neww, 1));
-        sumw   = _mm256_loadu_si256(wp);
-        sumw   = _mm256_sub_epi32(sumw, oldw32);
-        sumw   = _mm256_add_epi32(sumw, neww32);
-        _mm256_storeu_si256(wp, sumw);
+        wp     = valueSumBoard + valueBatchID * 8;
+        oldw32 = simde_mm256_cvtepi16_epi32(simde_mm256_extracti128_si256(oldw, 1));
+        neww32 = simde_mm256_cvtepi16_epi32(simde_mm256_extracti128_si256(neww, 1));
+        sumw   = simde_mm256_loadu_si256(wp);
+        sumw   = simde_mm256_sub_epi32(sumw, oldw32);
+        sumw   = simde_mm256_add_epi32(sumw, neww32);
+        simde_mm256_storeu_si256(wp, sumw);
       }
     }
   }
@@ -126,53 +125,54 @@ ValueType Mix6buf_int16::calculateValue(const Mix6weight_int16 &weights)
   // layer 0 leakyrelu
   float layer0[mix6::valueNum];
   for (int i = 0; i < mix6::valueBatch32; i++) {
-    auto x =
-        _mm256_loadu_si256(reinterpret_cast<__m256i *>(valueSumBoard + i * 8));  // load
-    auto y = _mm256_cvtepi32_ps(x);
-    y      = _mm256_mul_ps(y, _mm256_set1_ps(weights.scale_beforemlp));  // scale
-    auto w = _mm256_loadu_ps(weights.value_lr_slope_sub1 + i * 8);       // load
-    y      = _mm256_add_ps(y, _mm256_mul_ps(w, _mm256_min_ps(_mm256_setzero_ps(), y)));
-    _mm256_storeu_ps(layer0 + i * 8, y);
+    auto x = simde_mm256_loadu_si256(valueSumBoard + i * 8);  // load
+    auto y = simde_mm256_cvtepi32_ps(x);
+    y = simde_mm256_mul_ps(y, simde_mm256_set1_ps(weights.scale_beforemlp));  // scale
+    auto w = simde_mm256_loadu_ps(weights.value_lr_slope_sub1 + i * 8);       // load
+    y      = simde_mm256_fmadd_ps(w,
+                             simde_mm256_min_ps(simde_mm256_setzero_ps(), y),
+                             y);  // leaky relu
+    simde_mm256_storeu_ps(layer0 + i * 8, y);
   }
 
   // linear 1
   float layer1[mix6::valueNum];
   for (int i = 0; i < mix6::valueBatch32; i++) {
-    auto sum = _mm256_loadu_ps(weights.mlp_b1 + i * 8);
+    auto sum = simde_mm256_loadu_ps(weights.mlp_b1 + i * 8);
     for (int inc = 0; inc < mix6::valueNum; inc++) {
-      auto x = _mm256_set1_ps(layer0[inc]);
-      auto w = _mm256_loadu_ps(weights.mlp_w1[inc] + i * 8);
-      sum    = _mm256_add_ps(sum, _mm256_mul_ps(w, x));
+      auto x = simde_mm256_set1_ps(layer0[inc]);
+      auto w = simde_mm256_loadu_ps(weights.mlp_w1[inc] + i * 8);
+      sum    = simde_mm256_fmadd_ps(w, x, sum);
     }
-    sum = _mm256_max_ps(_mm256_setzero_ps(), sum);  // relu
-    _mm256_storeu_ps(layer1 + i * 8, sum);
+    sum = simde_mm256_max_ps(simde_mm256_setzero_ps(), sum);  // relu
+    simde_mm256_storeu_ps(layer1 + i * 8, sum);
   }
 
   // linear 2
   float layer2[mix6::valueNum];
   for (int i = 0; i < mix6::valueBatch32; i++) {
-    auto sum = _mm256_loadu_ps(weights.mlp_b2 + i * 8);
+    auto sum = simde_mm256_loadu_ps(weights.mlp_b2 + i * 8);
     for (int inc = 0; inc < mix6::valueNum; inc++) {
-      auto x = _mm256_set1_ps(layer1[inc]);
-      auto w = _mm256_loadu_ps(weights.mlp_w2[inc] + i * 8);
-      sum    = _mm256_add_ps(sum, _mm256_mul_ps(w, x));
+      auto x = simde_mm256_set1_ps(layer1[inc]);
+      auto w = simde_mm256_loadu_ps(weights.mlp_w2[inc] + i * 8);
+      sum    = simde_mm256_fmadd_ps(w, x, sum);
     }
-    sum      = _mm256_max_ps(_mm256_setzero_ps(), sum);  // relu
-    auto res = _mm256_loadu_ps(layer0 + i * 8);          // resnet
-    sum      = _mm256_add_ps(sum, res);
-    _mm256_storeu_ps(layer2 + i * 8, sum);
+    sum      = simde_mm256_max_ps(simde_mm256_setzero_ps(), sum);  // relu
+    auto res = simde_mm256_loadu_ps(layer0 + i * 8);               // resnet
+    sum      = simde_mm256_add_ps(sum, res);
+    simde_mm256_storeu_ps(layer2 + i * 8, sum);
   }
 
   // final linear
 
-  auto v = _mm256_loadu_ps(weights.mlp_b3);
+  auto v = simde_mm256_loadu_ps(weights.mlp_b3);
   for (int inc = 0; inc < mix6::valueNum; inc++) {
-    auto x = _mm256_set1_ps(layer2[inc]);
-    auto w = _mm256_loadu_ps(weights.mlp_w3[inc]);
-    v      = _mm256_add_ps(v, _mm256_mul_ps(w, x));
+    auto x = simde_mm256_set1_ps(layer2[inc]);
+    auto w = simde_mm256_loadu_ps(weights.mlp_w3[inc]);
+    v      = simde_mm256_fmadd_ps(w, x, v);
   }
   float value[8];
-  _mm256_storeu_ps(value, v);
+  simde_mm256_storeu_ps(value, v);
   return ValueType(value[0], value[1], value[2]);
 }
 
@@ -184,22 +184,19 @@ void Mix6buf_int16::calculatePolicy(PolicyType *policy, const Mix6weight_int16 &
   if (policy == NULL)
     return;
   for (Loc loc = LOC_ZERO; loc < BS * BS; ++loc) {
-    __m256i *wp = reinterpret_cast<__m256i *>(policyAfterConv[loc]);
-    auto     t  = _mm256_loadu_si256(wp);
-    t           = _mm256_max_epi16(_mm256_setzero_si256(), t);  // relu
-    auto convw =
-        _mm256_loadu_si256(reinterpret_cast<const __m256i *>(weights.policyFinalConv));
-    t = _mm256_mulhrs_epi16(t, convw);
+    void *wp   = policyAfterConv[loc];
+    auto  t    = simde_mm256_loadu_si256(wp);
+    t          = simde_mm256_max_epi16(simde_mm256_setzero_si256(), t);  // relu
+    auto convw = simde_mm256_loadu_si256(weights.policyFinalConv);
+    t          = simde_mm256_mulhrs_epi16(t, convw);
 
-    t = _mm256_hadds_epi16(t, t);
-    t = _mm256_hadds_epi16(t, t);
-    t = _mm256_hadds_epi16(t, t);
+    t = simde_mm256_hadds_epi16(t, t);
+    t = simde_mm256_hadds_epi16(t, t);
+    t = simde_mm256_hadds_epi16(t, t);
 
-    auto p1 =
-        _mm_adds_epi16(_mm256_extractf128_si256(t, 0), _mm256_extractf128_si256(t, 1));
-    int16_t p2;
-    _mm_storeu_si16(&p2, p1);
-    float p = p2;
+    auto  p1 = _mm_adds_epi16(simde_mm256_extractf128_si256(t, 0),
+                             simde_mm256_extractf128_si256(t, 1));
+    float p  = (int16_t)_mm_extract_epi16(p1, 0);
 
     if (p < 0)
       p = p * weights.policy_neg_slope;
@@ -271,17 +268,14 @@ void Mix6buf_int16::emptyboard(const Mix6weight_int16 &weights)
 
   // clear policyAfterConv and valueSumBoard
   for (int i = 0; i < mix6::policyBatch; i++) {
-    auto bias = _mm256_loadu_si256(
-        reinterpret_cast<const __m256i *>(weights.policyConvBias + i * 16));
+    auto bias = simde_mm256_loadu_si256(weights.policyConvBias + i * 16);
     for (Loc loc = LOC_ZERO; loc < BS * BS; ++loc) {
-      _mm256_storeu_si256(reinterpret_cast<__m256i *>(policyAfterConv[loc] + i * 16),
-                          bias);
+      simde_mm256_storeu_si256(policyAfterConv[loc] + i * 16, bias);
     }
   }
 
   for (int i = 0; i < mix6::valueBatch32; i++) {
-    _mm256_storeu_si256(reinterpret_cast<__m256i *>(valueSumBoard + i * 8),
-                        _mm256_setzero_si256());
+    simde_mm256_storeu_si256(valueSumBoard + i * 8, simde_mm256_setzero_si256());
   }
 
   // mapsum,mapAfterLR,policyAfterConv,valueSumBoard
@@ -291,34 +285,32 @@ void Mix6buf_int16::emptyboard(const Mix6weight_int16 &weights)
 
     for (int i = 0; i < mix6::featureBatch; i++) {
       // mapsum
-      auto sumw = _mm256_setzero_si256();
+      auto sumw = simde_mm256_setzero_si256();
       for (int dir = 0; dir < 4; dir++) {
-        auto dw = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(
-            weights.map[shapeTable[loc][dir]] + i * 16));
-        sumw    = _mm256_add_epi16(sumw, dw);
-        // std::cout << _mm256_extract_epi16(sumw, 0) << " " << std::endl;
+        auto dw = simde_mm256_loadu_si256(weights.map[shapeTable[loc][dir]] + i * 16);
+        sumw    = simde_mm256_add_epi16(sumw, dw);
+        // std::cout << simde_mm256_extract_epi16(sumw, 0) << " " << std::endl;
       }
-      // std::cout << _mm256_extract_epi16(sumw, 0) <<" " << std::endl;
-      __m256i *wp = reinterpret_cast<__m256i *>(mapsum[loc] + i * 16);
-      _mm256_storeu_si256(wp, sumw);
+      // std::cout << simde_mm256_extract_epi16(sumw, 0) <<" " << std::endl;
+      void *wp = mapsum[loc] + i * 16;
+      simde_mm256_storeu_si256(wp, sumw);
 
       // leaky relu
       // leaky relu
-      auto lrw = _mm256_loadu_si256(
-          reinterpret_cast<const __m256i *>(weights.map_lr_slope_sub1div8 + i * 16));
-      auto lrb = _mm256_loadu_si256(
-          reinterpret_cast<const __m256i *>(weights.map_lr_bias + i * 16));
-      sumw = _mm256_add_epi16(
-          _mm256_add_epi16(                // 0.25leakyrelu(x)=
-              _mm256_srai_epi16(sumw, 2),  // 0.25x
-              _mm256_slli_epi16(
-                  _mm256_mulhrs_epi16(lrw,
-                                      _mm256_min_epi16(_mm256_setzero_si256(), sumw)),
+      auto lrw = simde_mm256_loadu_si256(weights.map_lr_slope_sub1div8 + i * 16);
+      auto lrb = simde_mm256_loadu_si256(weights.map_lr_bias + i * 16);
+      sumw     = simde_mm256_add_epi16(
+          simde_mm256_add_epi16(                // 0.25leakyrelu(x)=
+              simde_mm256_srai_epi16(sumw, 2),  // 0.25x
+              simde_mm256_slli_epi16(
+                  simde_mm256_mulhrs_epi16(
+                      lrw,
+                      simde_mm256_min_epi16(simde_mm256_setzero_si256(), sumw)),
                   1)),  //+2*slopeSub1Div8*-relu(-x)
           lrb);         //+bias
 
-      wp = reinterpret_cast<__m256i *>(mapAfterLR[loc] + i * 16);
-      _mm256_storeu_si256(wp, sumw);
+      wp = mapAfterLR[loc] + i * 16;
+      simde_mm256_storeu_si256(wp, sumw);
 
       // policy conv
       if (i < mix6::policyBatch) {
@@ -331,12 +323,12 @@ void Mix6buf_int16::emptyboard(const Mix6weight_int16 &weights)
             if (x < 0 || x >= BS)
               continue;
             Loc  thisloc = MakeLoc(x, y);
-            auto convw   = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(
-                weights.policyConvWeight[4 - dy * 3 - dx] + i * 16));
-            wp           = reinterpret_cast<__m256i *>(policyAfterConv[thisloc] + i * 16);
-            auto oldw    = _mm256_loadu_si256(wp);
-            oldw         = _mm256_add_epi16(oldw, _mm256_mulhrs_epi16(sumw, convw));
-            _mm256_storeu_si256(wp, oldw);
+            auto convw = simde_mm256_loadu_si256(weights.policyConvWeight[4 - dy * 3 - dx]
+                                                 + i * 16);
+            wp         = policyAfterConv[thisloc] + i * 16;
+            auto oldw  = simde_mm256_loadu_si256(wp);
+            oldw = simde_mm256_add_epi16(oldw, simde_mm256_mulhrs_epi16(sumw, convw));
+            simde_mm256_storeu_si256(wp, oldw);
           }
         }
       }
@@ -344,19 +336,19 @@ void Mix6buf_int16::emptyboard(const Mix6weight_int16 &weights)
       {
         // lower
         int valueBatchID = 2 * (i - mix6::policyBatch);
-        wp               = reinterpret_cast<__m256i *>(valueSumBoard + valueBatchID * 8);
-        auto neww32      = _mm256_cvtepi16_epi32(_mm256_extracti128_si256(sumw, 0));
-        auto oldw        = _mm256_loadu_si256(wp);
-        oldw             = _mm256_add_epi32(oldw, neww32);
-        _mm256_storeu_si256(wp, oldw);
+        wp               = valueSumBoard + valueBatchID * 8;
+        auto neww32 = simde_mm256_cvtepi16_epi32(simde_mm256_extracti128_si256(sumw, 0));
+        auto oldw   = simde_mm256_loadu_si256(wp);
+        oldw        = simde_mm256_add_epi32(oldw, neww32);
+        simde_mm256_storeu_si256(wp, oldw);
 
         // upper
         valueBatchID++;
-        wp     = reinterpret_cast<__m256i *>(valueSumBoard + valueBatchID * 8);
-        neww32 = _mm256_cvtepi16_epi32(_mm256_extracti128_si256(sumw, 1));
-        oldw   = _mm256_loadu_si256(wp);
-        oldw   = _mm256_add_epi32(oldw, neww32);
-        _mm256_storeu_si256(wp, oldw);
+        wp     = valueSumBoard + valueBatchID * 8;
+        neww32 = simde_mm256_cvtepi16_epi32(simde_mm256_extracti128_si256(sumw, 1));
+        oldw   = simde_mm256_loadu_si256(wp);
+        oldw   = simde_mm256_add_epi32(oldw, neww32);
+        simde_mm256_storeu_si256(wp, oldw);
       }
     }
   }
@@ -366,17 +358,16 @@ bool Eva_mix6_avx2::loadParam(std::string filepath)
 {
   using namespace std::filesystem;
   path ext = path(filepath).extension();
-  if (ext.string() == ".bin")
-  {
+  if (ext.string() == ".bin") {
     std::ifstream cacheStream(path(filepath), std::ios::binary);
     cacheStream.read(reinterpret_cast<char *>(&weights), sizeof(weights));
     if (cacheStream.good()) {
       buf.emptyboard(weights);
       return true;
     }
-    else return false;
+    else
+      return false;
   }
-
 
   path cachePath = path(filepath).replace_extension("bin");
   // Read parameter cache if exists

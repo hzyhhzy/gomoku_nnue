@@ -19,6 +19,9 @@
     <Filter Include="源文件\VCF">
       <UniqueIdentifier>{c9a7e839-02b2-40ab-b223-c968774fd989}</UniqueIdentifier>
     </Filter>
+    <Filter Include="头文件\external">
+      <UniqueIdentifier>{6bf99659-dc7d-436c-9877-7400a91b61f7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="nnue1.cpp">
@@ -139,6 +142,12 @@
     </ClInclude>
     <ClInclude Include="MCTSsearch.h">
       <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="external\simde_avx2.h">
+      <Filter>头文件\external</Filter>
+    </ClInclude>
+    <ClInclude Include="external\simde_fma.h">
+      <Filter>头文件\external</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
