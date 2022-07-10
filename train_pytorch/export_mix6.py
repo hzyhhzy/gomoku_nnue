@@ -49,16 +49,16 @@ if __name__ == '__main__':
     file_path = f'saved_models/{modelname}.pth'
     model_type=None
     if os.path.exists(file_path):
-        data = torch.load(file_path)
-        model_type=data['model_name']
-        model_param=data['model_size']
+        data = torch.load(file_path, map_location=device)
+        model_type = data['model_type']
+        model_param = data['model_param']
         model = ModelDic[model_type](*model_param).to(device)
 
         model.load_state_dict(data['state_dict'])
-        totalstep = data['step']
-        print(f"loaded model: type={data['model_name']}, size={model.model_size}, totalstep={totalstep}")
+        totalstep = data['totalstep']
+        print(f"loaded model: type={model_type}, param={model.model_param}, totalstep={totalstep}")
     else:
-        print("Invalid Model Path")
+        print(f"Invalid Model Path: {file_path}")
         exit(0)
 
 
@@ -80,21 +80,16 @@ if __name__ == '__main__':
 
 
 
-
-
     time0=time.time()
-    print("Start")
+    _, pc, vc, _ = model_param
+    print(f"Start: pc={pc}, vc={vc}")
     exportPath='export/'+exportname+'.txt'
     exportfile=open(exportPath,'w')
 
-    pc=model.pc
-    vc=model.vc
-
-
-    scale_now=1
 
 #export featuremap
 #-------------------------------------------------------------
+    scale_now=1
     print("Exporting FeatureMap")
     print("featuremap",file=exportfile)
     #prepare data

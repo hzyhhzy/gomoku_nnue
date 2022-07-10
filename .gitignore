@@ -371,3 +371,7 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 /nnue1/weights
+
+
+export/**
+saved_models/**

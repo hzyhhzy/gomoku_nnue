@@ -737,8 +737,8 @@ class Model_mix6(nn.Module):
 
     def __init__(self, midc=128, pc=16, vc=32, mapmax=30):  # 1d卷积通道，policy通道，胜负和通道
         super().__init__()
-        self.model_name = "mix6"
-        self.model_size = (midc, pc, vc, mapmax)
+        self.model_type = "mix6"
+        self.model_param = (midc, pc, vc, mapmax)
         self.pc=pc
         self.vc=vc
 
