@@ -81,6 +81,9 @@
     <ClCompile Include="MCTSsearch.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Eva_nnuev2.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Evaluator.h">
@@ -148,6 +151,9 @@
     </ClInclude>
     <ClInclude Include="external\simde_fma.h">
       <Filter>头文件\external</Filter>
+    </ClInclude>
+    <ClInclude Include="Eva_nnuev2.h">
+      <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

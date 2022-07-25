@@ -1,0 +1,5 @@
+分离tdata和vdata.bat
+python cut_split.py
+python merge_shuffle.py
+python choose_blackNormal.py
+python choose_whiteNormal.py

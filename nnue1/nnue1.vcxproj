@@ -29,26 +29,26 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -152,6 +152,7 @@
     <ClCompile Include="EvaluatorOneSide.cpp" />
     <ClCompile Include="Eva_mix6VCF.cpp" />
     <ClCompile Include="Eva_mix6_avx2.cpp" />
+    <ClCompile Include="Eva_nnuev2.cpp" />
     <ClCompile Include="MCTSsearch.cpp" />
     <ClCompile Include="nnue1.cpp" />
     <ClCompile Include="PVSsearch.cpp" />
@@ -175,6 +176,7 @@
     <ClInclude Include="EvaluatorOneSide.h" />
     <ClInclude Include="Eva_mix6VCF.h" />
     <ClInclude Include="Eva_mix6_avx2.h" />
+    <ClInclude Include="Eva_nnuev2.h" />
     <ClInclude Include="external\simde_avx2.h" />
     <ClInclude Include="external\simde_fma.h" />
     <ClInclude Include="global.h" />
