@@ -13,7 +13,7 @@ import time
 import random
 import copy
 
-backup_checkpoints=[20000*i for i in range(500)]
+backup_checkpoints=[50000*i for i in range(500)]
 
 
 if not os.path.exists("../saved_models"):
@@ -45,17 +45,17 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     #data settings
-    parser.add_argument('--tdatadir', type=str, default='../data/tdata_blackNormal', help='train dataset path: dir include dataset files or single dataset file')
-    parser.add_argument('--vdatadir', type=str, default='../data/vdata_blackNormal/part_0.npz', help='validation dataset path: dir include dataset files or single dataset file')
+    parser.add_argument('--tdatadir', type=str, default='../data/renju100b/tdata_blackNormal', help='train dataset path: dir include dataset files or single dataset file')
+    parser.add_argument('--vdatadir', type=str, default='../data/renju100b/vdata_blackNormal/part_0.npz', help='validation dataset path: dir include dataset files or single dataset file')
     parser.add_argument('--maxstep', type=int, default=5000000000, help='max step to train')
     parser.add_argument('--savestep', type=int, default=10000, help='step to save and validation')
-    parser.add_argument('--infostep', type=int, default=100, help='step to logger')
+    parser.add_argument('--infostep', type=int, default=500, help='step to logger')
 
     parser.add_argument('--sampling', type=float, default=1, help='sampling rate(to avoid overfitting)')
     parser.add_argument('--valuesampling', type=float, default=1, help='value sampling rate(to avoid overfitting)')
 
     #model parameters
-    parser.add_argument('--modeltype', type=str, default='v2bc',help='model type defined in model.py')
+    parser.add_argument('--modeltype', type=str, default='v2',help='model type defined in model.py')
     parser.add_argument('--modelparam', nargs='+',type=int,
                         default=(5,256), help='model size')
 
@@ -68,7 +68,7 @@ if __name__ == '__main__':
     parser.add_argument('--batchsize', type=int,
                         default=128, help='batch size')
     parser.add_argument('--lr', type=float, default=5e-4, help='learning rate')
-    parser.add_argument('--weightdecay', type=float, default=1e-7, help='weight decay')
+    parser.add_argument('--weightdecay', type=float, default=2e-6, help='weight decay')
     parser.add_argument('--rollbackthreshold', type=float, default=0.08, help='if loss increased this value, roll back 2*infostep steps')
     args = parser.parse_args()
 
@@ -125,7 +125,7 @@ if __name__ == '__main__':
     print("Building model..............................................................................................")
     modelpath=os.path.join(basepath,"model.pth")
     if os.path.exists(modelpath) and (not args.new) and (args.savename != 'null'):
-        modeldata = torch.load(modelpath)
+        modeldata = torch.load(modelpath,map_location="cpu")
         model_type=modeldata['model_type']
         model_param=modeldata['model_param']
         model = ModelDic[model_type](*model_param).to(device)
@@ -141,13 +141,25 @@ if __name__ == '__main__':
 
     startstep=totalstep
 
-    if model_type=='mix6':
+    if model_type=='mix6' or model_type=='v1':
         #lowl2param是一些密集型神经网络参数(mlp,cnn等)，对lr和weightdecay更敏感，使用float32计算，几乎不需要weightdecay
         #otherparam因为在c++代码中需要用int16计算，容易溢出，所以需要高的weightdecay控制范围
         lowl2param = list(map(id, model.mapping.parameters()))+\
                      list(map(id, model.value_leakyrelu.parameters()))+\
                      list(map(id, model.value_linear1.parameters()))+\
                      list(map(id, model.value_linear2.parameters()))+\
+                     list(map(id, model.value_linearfinal.parameters()))
+        otherparam=list(filter(lambda p:id(p) not in lowl2param,model.parameters()))
+        lowl2param=list(filter(lambda p:id(p) in lowl2param,model.parameters()))
+
+        optimizer = optim.Adam([{'params':otherparam},
+                                {'params': lowl2param,'lr':args.lr,'weight_decay':1e-7}],
+                                lr=args.lr,weight_decay=args.weightdecay)
+    elif model_type[0:1]=='v2':
+        lowl2param = list(map(id, model.mapping.parameters()))+\
+                     list(map(id, model.value_linear1.parameters()))+\
+                     list(map(id, model.value_linear2.parameters()))+\
+                     list(map(id, model.value_linear3.parameters()))+\
                      list(map(id, model.value_linearfinal.parameters()))
         otherparam=list(filter(lambda p:id(p) not in lowl2param,model.parameters()))
         lowl2param=list(filter(lambda p:id(p) in lowl2param,model.parameters()))

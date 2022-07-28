@@ -31,7 +31,7 @@ if __name__ == '__main__':
     file_path = f'../saved_models/{modelname}/model.pth'
     model_type=None
     if os.path.exists(file_path):
-        data = torch.load(file_path)
+        data = torch.load(file_path,map_location="cpu")
         model_type=data['model_type']
         model_param=data['model_param']
         model = ModelDic[model_type](*model_param)
@@ -51,10 +51,10 @@ if __name__ == '__main__':
              '. . . . . . . . . . . . . . . '\
              '. . . . . . . . . . . . . . . '\
              '. . . . . . . . . . . . . . . '\
-             '. . . . . . . . . . . . . . . '\
-             '. . . . . . . . x . . . . . . '\
-             '. . . . . . . x . o . . . . . '\
-             '. . . . . . o . . . . . . . . '\
+             '. . . . . . . o x x . . . . . '\
+             '. . . . . . x o o . . . . . . '\
+             '. . . . . . . x . x o . . . . '\
+             '. . . . . . . . o . . . . . . '\
              '. . . . . . . . . . . . . . . '\
              '. . . . . . . . . . . . . . . '\
              '. . . . . . . . . . . . . . . '\
@@ -72,5 +72,11 @@ if __name__ == '__main__':
             if(c=='o'):
                 board[0,1,y,x]=1
     v,p=model(board)
-    print(v,p)
-    model.testeval(board,7*15+7)
+    v=v.detach().cpu().numpy()
+    p=p.detach().cpu().numpy()
+    v=np.exp(v)
+    v=v/np.sum(v)
+    np.set_printoptions(linewidth=256,threshold=1000000)
+    print(v)
+    print(np.array(p*32,dtype=np.int32))
+    #model.testeval(board,7*15+7)

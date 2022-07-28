@@ -9,6 +9,7 @@
 #include "VCF/VCFsolver.h"
 
 #include <chrono>
+#include <random>
 #include <iostream>
 
 using namespace std;
@@ -441,43 +442,43 @@ int main_testABsearch()
 
 int main_testeval()
 {
-  Eva_sum1 *eva = new Eva_sum1();
-  eva->loadParam("weights/sum1.txt");
+  Eva_nnuev2 *eva = new Eva_nnuev2();
+  eva->loadParam("D:/gomtrain/renju100b/export/v2t1.txt");
   /*
   const char boardstr[] = ""
-    ". . . . . . . . . . . . . . . "
-    ". . . . . . . . . . . . . . . "
-    ". . . . . . . . . . . . . . . "
-    ". . . . . . . . . . . . . . . "
-    ". . . . . . . . . . . . . . . "
-    ". . . . . . . . . . . . . . . "
-    ". . . . . . . . . . . . . . . "
-    ". . . . . . . . . . . . . . . "
-    ". . . . . . . . . . . . . . . "
-    ". . . . . . . . . . . . . . . "
-    ". . . . . . . . . . . . . . . "
-    ". . . . . . . . . . . . . . . "
-    ". . . . . . . . . . . . . . . "
-    ". . . . . . . . . . . . . . . "
-    ". . . . . . . . . . . . . . . ";
-    */
-
-  const char boardstr[] = ""
                           ". . . . . . . . . . . . . . . "
                           ". . . . . . . . . . . . . . . "
                           ". . . . . . . . . . . . . . . "
                           ". . . . . . . . . . . . . . . "
-                          ". . . . . . o . . . . . . . . "
-                          ". . . . . . o . . . . . . . . "
-                          ". . . . . . o . o o . . . . . "
-                          ". . . . . . . x . . . . . . . "
-                          ". . . . . . . . x . . . . . . "
-                          ". . . . . . . . . x . . . . . "
+                          ". . . . . . . . . . . . . . . "
+                          ". . . . . . . . . . . . . . . "
+                          ". . . . . . . . . . . . . . . "
+                          ". . . . . . . . . . . . . . . "
+                          ". . . . . . . . . . . . . . . "
+                          ". . . . . . . . . . . . . . . "
+                          ". . . . . . . . . . . . . . . "
                           ". . . . . . . . . . . . . . . "
                           ". . . . . . . . . . . . . . . "
                           ". . . . . . . . . . . . . . . "
                           ". . . . . . . . . . . . . . . "
                           ". . . . . . . . . . . . . . . ";
+    */
+
+  const char boardstr[] = ""
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . o x x . . . . . "
+    ". . . . . . x o o . . . . . . "
+    ". . . . . . . x . x o . . . . "
+    ". . . . . . . . o . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . "
+    ". . . . . . . . . . . . . . . ";
   for (int y = 0; y < BS; y++)
     for (int x = 0; x < BS; x++) {
       char  colorchar = boardstr[2 * (x + y * BS)];
@@ -491,6 +492,43 @@ int main_testeval()
     }
 
   eva->debug_print();
+  return 0;
+}
+int main_benchmark()
+{
+  EvaluatorOneSide *eva = new Eva_mix6_avx2();
+  eva->loadParam("mix6.bin");
+
+  int64_t testnum = 500000;
+
+  std::mt19937_64 prng {uint64_t(now())};
+  prng();
+  prng();
+
+  PolicyType p[BS * BS];
+  int64_t time_start=now();
+
+  // 平均每play和undo两次，然后eval一次
+  for (int64_t i = 0; i < testnum; i++) {
+    for (int j = 0; j < 3; j++) {
+      uint64_t rand  = prng();
+      Loc      loc   = rand % (BS * BS);
+      rand           = rand / (BS * BS);
+      Color newcolor = (eva->board[loc] + 1 + rand % 2) % 3;
+      if (eva->board[loc] != C_EMPTY)
+        eva->undo(loc);
+      if (newcolor != C_EMPTY)
+        eva->play(newcolor, loc);
+    }
+
+    auto v = eva->evaluateFull(p);
+
+  }
+
+  int64_t time_end = now();
+  double  time_used = time_end - time_start;
+  cout << "NNevals = " << testnum << " Time = " << time_used / 1000 << " s" << endl;
+  cout << "Speed = " << testnum/time_used * 1000 << " eval/s" << endl;
   return 0;
 }
 int main_testvcf()
@@ -594,9 +632,10 @@ int main(int argc, const char **argv)
 {
   //main_testvcf();
   //main_testMCTS();
-  return maingtp(argc, argv);
-  // return main_testeval();
+  //return maingtp(argc, argv);
+   //return main_testeval();
    //main_testsearch();
   //main_testsearchvct();
+   return main_benchmark();
   return 0;
 }

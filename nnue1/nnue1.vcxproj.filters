@@ -84,6 +84,9 @@
     <ClCompile Include="Eva_nnuev2.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Eva_nnuev2VCF.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Evaluator.h">
@@ -153,6 +156,9 @@
       <Filter>头文件\external</Filter>
     </ClInclude>
     <ClInclude Include="Eva_nnuev2.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Eva_nnuev2VCF.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

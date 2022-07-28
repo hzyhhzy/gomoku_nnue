@@ -5,13 +5,13 @@
 
 namespace NNUEV2 {
     const int shapeNum     = 708588;
-    const int groupSize    = 48;
+    const int groupSize    = 64;
     const int groupBatch   = groupSize / 16;
     const int featureNum   = groupSize*2;
     const int featureBatch = featureNum / 16;
     const int trunkconv1GroupSize = 4;
 
-    const int mlpChannel= 32;
+    const int mlpChannel = 64;
     const int mlpBatch32 = mlpChannel / 8;
 
     /*
@@ -31,7 +31,6 @@ namespace NNUEV2 {
 
       // 3  h1 = self.g1lr(g1.mean(1)) #四线求和再leakyrelu
       int16_t g1lr_w[ groupSize];
-      int16_t g1lr_b[ groupSize];  
 
       // 4  h1 = torch.stack(self.h1conv(h1), dim = 1) #沿着一条线卷积
 
@@ -40,9 +39,7 @@ namespace NNUEV2 {
 
       // 5  h2 = self.h1lr2(self.h1lr1(h1, dim = 2) + g2, dim = 2)
       int16_t h1lr1_w[ groupSize];
-      int16_t h1lr1_b[ groupSize];
       int16_t h1lr2_w[ groupSize];
-      int16_t h1lr2_b[ groupSize];  
 
       // 6  h3 = h2.mean(1) #最后把四条线整合起来
 
@@ -55,12 +52,10 @@ namespace NNUEV2 {
       int16_t trunkconv1_b[ groupSize];
 
       // 9  trunk = self.trunklr1(trunk) 
-      int16_t trunklr1[ groupSize];
-      int16_t trunklr1[ groupSize]; 
+      int16_t trunklr1_w[ groupSize];
 
       // 10 trunk = self.trunkconv2(trunk)
-      int16_t trunkconv1_w[3*3][ groupSize];
-      int16_t trunkconv1_b[ groupSize];
+      int16_t trunkconv2_w[3][ groupSize];//对称的3x3卷积
 
       // 11 p = self.trunklr2p(trunk) 
       //    v = self.trunklr2v(trunk)
@@ -70,10 +65,11 @@ namespace NNUEV2 {
       int16_t trunklr2v_b[ groupSize]; 
 
       // 12 p = self.policy_linear(p)
-      int16_t policy_linear_w[ groupSize];
+      int16_t policy_linear_w[groupSize];
+      float   scale_policyInv;
 
       // 13  v=v.mean((2,3))
-      float scale_beforemlp;
+      float scale_beforemlpInv;
       float valuelr_w[ groupSize];
       float valuelr_b[ groupSize]; 
 
@@ -106,24 +102,29 @@ namespace NNUEV2 {
       // 1 convert board to shape
       uint32_t shapeTable[BS * BS][4];  // 4个方向，BS*BS个位置
 
-      // 2  g1sum=g1.sum(1), shape=H*W*4*g
+      // 2  shape到vector  g1无需提取，只缓存g2
+      int16_t g2[BS * BS][4][groupSize];
+
+      // 3  g1sum=g1.sum(1), shape=H*W*g
       int16_t g1sum[BS * BS][groupSize];
 
-      // 3  h1=self.g1lr(g1sum), shape=HWc
-      int16_t h1[BS * BS][groupSize];
+      // 4  h1=self.g1lr(g1sum), shape=HWc
+      //int16_t h1[BS * BS][groupSize];
 
       // 后面的部分几乎没法增量计算
+
+
+      // value头和policy头共享trunk，所以也放在缓存里
       bool    trunkUpToDate;
-      int16_t trunk[BS * BS][groupSize];  //value头和policy头共享trunk，所以也放在缓存里
+      int16_t trunk[BS * BS][groupSize];  
 
       void update(Color oldcolor, Color newcolor, Loc loc, const ModelWeight &weights);
-      ValueType calculateTrunk(const ModelWeight &weights);
 
       void emptyboard(const ModelWeight &weights);  // init
     };
 
 }  // namespace NNUEV2
-class Eva_mix6_avx2 : public EvaluatorOneSide
+class Eva_nnuev2 : public EvaluatorOneSide
 {
 public:
   uint64_t         TotalEvalNum;
@@ -143,4 +144,7 @@ public:
   virtual void undo(Loc loc);  // play的逆过程
 
   virtual void debug_print();
+
+private:
+  void calculateTrunk();
 };

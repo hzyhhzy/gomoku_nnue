@@ -153,6 +153,7 @@
     <ClCompile Include="Eva_mix6VCF.cpp" />
     <ClCompile Include="Eva_mix6_avx2.cpp" />
     <ClCompile Include="Eva_nnuev2.cpp" />
+    <ClCompile Include="Eva_nnuev2VCF.cpp" />
     <ClCompile Include="MCTSsearch.cpp" />
     <ClCompile Include="nnue1.cpp" />
     <ClCompile Include="PVSsearch.cpp" />
@@ -177,6 +178,7 @@
     <ClInclude Include="Eva_mix6VCF.h" />
     <ClInclude Include="Eva_mix6_avx2.h" />
     <ClInclude Include="Eva_nnuev2.h" />
+    <ClInclude Include="Eva_nnuev2VCF.h" />
     <ClInclude Include="external\simde_avx2.h" />
     <ClInclude Include="external\simde_fma.h" />
     <ClInclude Include="global.h" />

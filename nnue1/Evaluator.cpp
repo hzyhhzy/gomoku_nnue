@@ -18,10 +18,19 @@ Evaluator::Evaluator(std::string type, std::string filepath):moveCacheBlength(0)
     whiteEvaluator = new Eva_mix6_avx2();
     loadParam(filepath, filepath);
   }
-  else if (type == "mix6vcf")
-  {
+  else if (type == "mix6vcf") {
     blackEvaluator = new Eva_mix6VCF();
     whiteEvaluator = new Eva_mix6VCF();
+    loadParam(filepath, filepath);
+  }
+  else if (type == "nnuev2") {
+    blackEvaluator = new Eva_nnuev2();
+    whiteEvaluator = new Eva_nnuev2();
+    loadParam(filepath, filepath);
+  }
+  else if (type == "nnuev2vcf") {
+    blackEvaluator = new Eva_nnuev2VCF();
+    whiteEvaluator = new Eva_nnuev2VCF();
     loadParam(filepath, filepath);
   }
   else
