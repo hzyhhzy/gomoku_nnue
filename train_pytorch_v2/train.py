@@ -45,8 +45,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     #data settings
-    parser.add_argument('--tdatadir', type=str, default='../data/renju100b/tdata_blackNormal', help='train dataset path: dir include dataset files or single dataset file')
-    parser.add_argument('--vdatadir', type=str, default='../data/renju100b/vdata_blackNormal/part_0.npz', help='validation dataset path: dir include dataset files or single dataset file')
+    parser.add_argument('--tdatadir', type=str, default='../data/gomf1/tdata_choosed', help='train dataset path: dir include dataset files or single dataset file')
+    parser.add_argument('--vdatadir', type=str, default='../data/gomf1/vdata_choosed/part_0.npz', help='validation dataset path: dir include dataset files or single dataset file')
     parser.add_argument('--maxstep', type=int, default=5000000000, help='max step to train')
     parser.add_argument('--savestep', type=int, default=10000, help='step to save and validation')
     parser.add_argument('--infostep', type=int, default=500, help='step to logger')
@@ -68,7 +68,7 @@ if __name__ == '__main__':
     parser.add_argument('--batchsize', type=int,
                         default=128, help='batch size')
     parser.add_argument('--lr', type=float, default=5e-4, help='learning rate')
-    parser.add_argument('--weightdecay', type=float, default=2e-6, help='weight decay')
+    parser.add_argument('--weightdecay', type=float, default=3e-5, help='weight decay')
     parser.add_argument('--rollbackthreshold', type=float, default=0.08, help='if loss increased this value, roll back 2*infostep steps')
     args = parser.parse_args()
 
@@ -155,17 +155,15 @@ if __name__ == '__main__':
         optimizer = optim.Adam([{'params':otherparam},
                                 {'params': lowl2param,'lr':args.lr,'weight_decay':1e-7}],
                                 lr=args.lr,weight_decay=args.weightdecay)
-    elif model_type[0:1]=='v2':
-        lowl2param = list(map(id, model.mapping.parameters()))+\
-                     list(map(id, model.value_linear1.parameters()))+\
-                     list(map(id, model.value_linear2.parameters()))+\
-                     list(map(id, model.value_linear3.parameters()))+\
-                     list(map(id, model.value_linearfinal.parameters()))
-        otherparam=list(filter(lambda p:id(p) not in lowl2param,model.parameters()))
-        lowl2param=list(filter(lambda p:id(p) in lowl2param,model.parameters()))
+    elif model_type[0:2]=='v2':
+        highl2param = list(map(id,[model.h1conv.w,
+                     model.trunkconv1.weight,
+                     model.trunkconv2.w]))
+        otherparam=list(filter(lambda p:id(p) not in highl2param,model.parameters()))
+        highl2param=list(filter(lambda p:id(p) in highl2param,model.parameters()))
 
-        optimizer = optim.Adam([{'params':otherparam},
-                                {'params': lowl2param,'lr':args.lr,'weight_decay':1e-7}],
+        optimizer = optim.Adam([{'params':highl2param},
+                                {'params': otherparam,'lr':args.lr,'weight_decay':3e-7}],
                                 lr=args.lr,weight_decay=args.weightdecay)
     else:
         optimizer = optim.Adam(model.parameters(),lr=args.lr,weight_decay=args.weightdecay)

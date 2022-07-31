@@ -151,10 +151,10 @@ if __name__ == '__main__':
     print(usefulcount,file=exportfile)
 
 
-    map_maxint=3000
-    g2extrascale=0.5
-    trunkconv1_extrabound=3 #允许少量超越bound
-    trunkconv2_extrabound=9
+    map_maxint=5000
+    g2extrascale=0.8
+    trunkconv1_extrabound=10 #允许少量超越bound
+    trunkconv2_extrabound=30
 
     w_scale=map_maxint/bound #w_scale表示这一步的倍数
 
@@ -325,7 +325,7 @@ if __name__ == '__main__':
     bound = (np.abs(trunkconv1_w).sum(1) * bound + np.abs(trunkconv1_b)).max()
 
     maxint = max(np.abs(trunkconv1_w).max() * 2 ** 15, np.abs(trunkconv1_b).max())
-    w_scale = min(32700*trunkconv1_extrabound/bound,32700/maxint)
+    w_scale = min(32700*trunkconv1_extrabound/bound,32700/maxint,200/scale_now)
     print("trunkconv1_w_scale = ",w_scale)
     scale_now *= w_scale
     bound *= w_scale
@@ -397,7 +397,7 @@ if __name__ == '__main__':
     bound = (np.maximum(np.abs(trunklr2p_b),np.abs(trunklr2v_b))+bound*(np.abs(trunkconv2_w[0])+4*np.abs(trunkconv2_w[1])+4*np.abs(trunkconv2_w[2]))).max()
 
     maxint = np.abs(trunkconv2_w).max() * 2 ** 15
-    w_scale = min(32700*trunkconv2_extrabound / bound ,32700/maxint)
+    w_scale = min(32700*trunkconv2_extrabound / bound ,32700/maxint,200/scale_now)
     print("trunkconv2_w_scale = ", w_scale)
     scale_now *= w_scale
     bound *= w_scale

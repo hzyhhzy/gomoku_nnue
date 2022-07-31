@@ -159,10 +159,10 @@ if __name__ == '__main__':
     bound = np.abs(buf).max()  #这个变量存储上界，时刻注意int16溢出
     print("Max=", bound)
 
-    map_maxint = 3000
-    g2extrascale = 0.5
-    trunkconv1_extrabound = 3  #允许少量超越bound
-    trunkconv2_extrabound = 9
+    map_maxint = 5000
+    g2extrascale = 0.8
+    trunkconv1_extrabound = 10  #允许少量超越bound
+    trunkconv2_extrabound = 30
 
     w_scale = map_maxint / bound  #w_scale表示这一步的倍数
 
