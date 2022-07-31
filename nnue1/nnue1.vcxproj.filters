@@ -22,6 +22,9 @@
     <Filter Include="头文件\external">
       <UniqueIdentifier>{6bf99659-dc7d-436c-9877-7400a91b61f7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="源文件\external">
+      <UniqueIdentifier>{15c98c25-14ee-4cdd-8e54-c67c0af3d5f8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="nnue1.cpp">
@@ -85,6 +88,12 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Eva_nnuev2VCF.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="external\cnpy\cnpy.cpp">
+      <Filter>源文件\external</Filter>
+    </ClCompile>
+    <ClCompile Include="validation.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -159,6 +168,15 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Eva_nnuev2VCF.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="external\cnpy\cnpy.h">
+      <Filter>头文件\external</Filter>
+    </ClInclude>
+    <ClInclude Include="external\zlib\include\zlib.h">
+      <Filter>头文件\external</Filter>
+    </ClInclude>
+    <ClInclude Include="validation.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

@@ -154,6 +154,7 @@
     <ClCompile Include="Eva_mix6_avx2.cpp" />
     <ClCompile Include="Eva_nnuev2.cpp" />
     <ClCompile Include="Eva_nnuev2VCF.cpp" />
+    <ClCompile Include="external\cnpy\cnpy.cpp" />
     <ClCompile Include="MCTSsearch.cpp" />
     <ClCompile Include="nnue1.cpp" />
     <ClCompile Include="PVSsearch.cpp" />
@@ -162,6 +163,7 @@
     <ClCompile Include="Eva_sum1.cpp" />
     <ClCompile Include="TT.cpp" />
     <ClCompile Include="utils.cpp" />
+    <ClCompile Include="validation.cpp" />
     <ClCompile Include="VCF\hash.cpp" />
     <ClCompile Include="VCF\mutexpool.cpp" />
     <ClCompile Include="VCF\VCFHashTable.cpp" />
@@ -179,8 +181,10 @@
     <ClInclude Include="Eva_mix6_avx2.h" />
     <ClInclude Include="Eva_nnuev2.h" />
     <ClInclude Include="Eva_nnuev2VCF.h" />
+    <ClInclude Include="external\cnpy\cnpy.h" />
     <ClInclude Include="external\simde_avx2.h" />
     <ClInclude Include="external\simde_fma.h" />
+    <ClInclude Include="external\zlib\include\zlib.h" />
     <ClInclude Include="global.h" />
     <ClInclude Include="MCTSsearch.h" />
     <ClInclude Include="PVSsearchVCT.h" />
@@ -188,6 +192,7 @@
     <ClInclude Include="PVSsearch.h" />
     <ClInclude Include="Search.h" />
     <ClInclude Include="Eva_sum1.h" />
+    <ClInclude Include="validation.h" />
     <ClInclude Include="VCF\hash.h" />
     <ClInclude Include="VCF\mutexpool.h" />
     <ClInclude Include="VCF\VCFHashTable.h" />

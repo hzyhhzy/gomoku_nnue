@@ -7,10 +7,12 @@
 #include "EngineDev.h"
 #include "TT.h"
 #include "VCF/VCFsolver.h"
+#include "validation.h"
 
 #include <chrono>
 #include <random>
 #include <iostream>
+
 
 using namespace std;
 
@@ -36,7 +38,7 @@ int maingtp(int argc, const char **argv)
     if (argc > 2) {
       modelPath = argv[2];
     }
-    Eva_mix6_avx2* eva=new Eva_mix6_avx2();
+    Eva_nnuev2* eva=new Eva_nnuev2();
     eva->loadParam(modelPath);
     return 0;
   }
@@ -49,7 +51,7 @@ int maingtp(int argc, const char **argv)
     configPath = argv[2];
   }
 
-  EngineDev engine("mix6", modelPath,configPath,false);
+  EngineDev engine("nnuev2", modelPath,configPath,false);
   engine.protocolLoop();
   return 0;
 }
@@ -197,7 +199,7 @@ int main_testsearch()
 
 int main_testMCTS()
 {
-  Evaluator *eva    = new Evaluator("mix6", "weights/t5.txt");
+  Evaluator *eva    = new Evaluator("nnuev2vcf", "weights/fs1.txt");
   MCTSsearch *search = new MCTSsearch(eva);
   /*
   const char boardstr[] = ""
@@ -224,16 +226,16 @@ int main_testMCTS()
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "
-  ". . . . . . o . . . . . . . . "
-  ". . . . . . o . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . o . o . . . . . . "
   ". . . . . . . x . . . . . . . "
-  ". . . . . . . . . . . . . . . "
-  ". . . . . . . . . x . . . . . "
-  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . x . . . . . . "
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "
-    ". . . . . . . . . . . . . . . ";
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . "
+  ". . . . . . . . . . . . . . . ";
   for (int y = 0; y < BS; y++)
     for (int x = 0; x < BS; x++) {
       char  colorchar = boardstr[2 * (x + y * BS)];
@@ -636,6 +638,7 @@ int main(int argc, const char **argv)
    //return main_testeval();
    //main_testsearch();
   //main_testsearchvct();
-   return main_benchmark();
+   //return main_benchmark();
+  main_validation("D:/gomtrain/export/gomf1.txt", "D:/gomtrain/data/gomf1/vdata.npz");
   return 0;
 }
