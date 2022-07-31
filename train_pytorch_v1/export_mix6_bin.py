@@ -287,7 +287,7 @@ if __name__ == '__main__':
     exportfile.write(np.array([policy_neg_slope, policy_pos_slope], dtype='<f4').tobytes())
 
     #scale_beforemlp
-    scale_beforemlp = 1 / scale_maplr / boardH / boardW
+    scale_beforemlp = 1 / scale_maplr # / boardH / boardW
     print("scale_beforemlp", scale_beforemlp)
     exportfile.write(np.array([scale_beforemlp], dtype='<f4').tobytes())
 
