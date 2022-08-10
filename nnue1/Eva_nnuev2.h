@@ -5,13 +5,13 @@
 
 namespace NNUEV2 {
     const int shapeNum     = 708588;
-    const int groupSize    = 64;
+    const int groupSize    = 16;
     const int groupBatch   = groupSize / 16;
     const int featureNum   = groupSize*2;
     const int featureBatch = featureNum / 16;
     const int trunkconv1GroupSize = 4;
 
-    const int mlpChannel = 64;
+    const int mlpChannel = 32;
     const int mlpBatch32 = mlpChannel / 8;
 
     /*

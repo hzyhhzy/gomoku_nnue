@@ -73,6 +73,20 @@ struct ValueType
   float winlossrate() { return win - loss; }
 };
 
+struct ValueSum
+{
+  double win, loss, draw;
+  ValueSum();
+  ValueSum(double win, double loss, double draw);
+  ValueSum(ValueType vt);
+  ValueSum inverse();
+};
+ValueSum operator+(ValueSum a, ValueSum b);
+ValueSum operator-(ValueSum a, ValueSum b);
+ValueSum operator*(ValueSum a, double b);
+ValueSum operator*(double b, ValueSum a);
+
+
 inline std::string dbg_board(const Color *board)
 {
   std::ostringstream os;

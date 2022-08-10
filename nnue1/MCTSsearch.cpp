@@ -8,7 +8,7 @@ MCTSnode::MCTSnode(Evaluator* evaluator, Color nextColor,double policyTemp, Loc*
   visits = 1;
 
   //calculate policy
-  WRtotal = evaluator->evaluateFull(nextColor, pbuf1).winlossrate();
+  WRtotal = ValueSum(evaluator->evaluateFull(nextColor, pbuf1));
   for (Loc loc = 0; loc < BS * BS; loc++)
   {
     if (evaluator->board[loc] != C_EMPTY)pbuf1[loc] = MIN_POLICY;
@@ -250,14 +250,14 @@ MCTSsearch::SearchResult MCTSsearch::search(MCTSnode* node, uint64_t remainVisit
   //正常情况是一次playout一个visit，为了降低开销直接让visit变成（1+expandFactor）倍，新增expandFactor倍的visit
   if (!isRoot)remainVisits = std::min(remainVisits, uint64_t(params.expandFactor * double(node->visits))+1);
 
-  SearchResult SR = { 0,0 };
+  SearchResult SR = {0, {0, 0, 0}};
 
   if (node->sureResult != MC_UNCERTAIN)
   {
     node->visits += remainVisits;
     SR.newVisits = remainVisits;
     SR.WRchange = sureResultWR(node->sureResult) * remainVisits;
-    node->WRtotal += SR.WRchange;
+    node->WRtotal = node->WRtotal+SR.WRchange;
     return SR;
   }
 
@@ -293,9 +293,9 @@ MCTSsearch::SearchResult MCTSsearch::search(MCTSnode* node, uint64_t remainVisit
     remainVisits -= childSR.newVisits;
     //std::cout << "debug: " << childSR.newVisits << " " << childSR.WRchange<<"\n";
     node->visits += childSR.newVisits;
-    node->WRtotal -= childSR.WRchange;
+    node->WRtotal = node->WRtotal + childSR.WRchange.inverse();
     SR.newVisits += childSR.newVisits;
-    SR.WRchange -= childSR.WRchange;
+    SR.WRchange = SR.WRchange + childSR.WRchange.inverse();
   }
 
   return SR;
@@ -326,18 +326,22 @@ int MCTSsearch::selectChildIDToSearch(MCTSnode* node)
   int bestChildID = -1;
 
   double totalVisit = node->visits;
-  double puctFactor = MCTSpuctFactor(totalVisit, params.puct, params.puctPow,params.puctBase);
+  double puctFactor =
+      MCTSpuctFactor(totalVisit, params.puct, params.puctPow, params.puctBase);
+  double parentdraw = node->WRtotal.draw / node->visits;
   
   double totalChildPolicy=0;
   for (int i = 0; i < childrennum; i++)
   {
     const MCTSnode* child = node->children[i].ptr;
-    double visit = child->visits;
-    double value = -child->WRtotal / visit;
-    double policy = double(node->children[i].policy) *policyQuantInv ;
+    double          visit  = child->visits;
+    double          value  = -(child->WRtotal.win - child->WRtotal.loss) / visit;
+    double          draw   = child->WRtotal.draw / visit;
+    double          policy = double(node->children[i].policy) * policyQuantInv;
     totalChildPolicy += policy;
 
-    double selectionValue = MCTSselectionValue(puctFactor, value, visit, policy);
+    double selectionValue =
+        MCTSselectionValue(puctFactor, value, draw, parentdraw, visit, policy);
     if (selectionValue > bestSelectionValue)
     {
       bestSelectionValue = selectionValue;
@@ -350,10 +354,12 @@ int MCTSsearch::selectChildIDToSearch(MCTSnode* node)
   //check new child
   if(childrennum<node->legalChildrennum)
   {
-    double value = node->WRtotal / totalVisit - sqrt(totalChildPolicy) * params.fpuReduction;
+    double value = (node->WRtotal.win - node->WRtotal.loss) / totalVisit
+                   - sqrt(totalChildPolicy) * params.fpuReduction;
     double policy = double(node->children[childrennum].policy) * policyQuantInv;
     double visit = 0;
-    double selectionValue = MCTSselectionValue(puctFactor, value, visit, policy);
+    double selectionValue =
+        MCTSselectionValue(puctFactor, value, parentdraw, parentdraw, visit, policy);
     if (selectionValue > bestSelectionValue)bestChildID = childrennum;
   }
 
@@ -384,7 +390,7 @@ Loc MCTSsearch::bestRootMove() const
 float MCTSsearch::getRootValue() const
 {
   if (rootNode == NULL)return 0;
-  return rootNode->WRtotal / double(rootNode->visits);
+  return (rootNode->WRtotal.win - rootNode->WRtotal.loss)/ double(rootNode->visits);
 }
 
 int64_t MCTSsearch::getRootVisit() const

@@ -199,7 +199,7 @@ int main_testsearch()
 
 int main_testMCTS()
 {
-  Evaluator *eva    = new Evaluator("nnuev2vcf", "weights/fs1.txt");
+  Evaluator *eva    = new Evaluator("nnuev2", "D:/gomtrain/export/gomf1.txt");
   MCTSsearch *search = new MCTSsearch(eva);
   /*
   const char boardstr[] = ""
@@ -227,13 +227,13 @@ int main_testMCTS()
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "
-  ". . . . . . o . o . . . . . . "
-  ". . . . . . . x . . . . . . . "
-  ". . . . . . . . x . . . . . . "
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "
-  ". . . . . . . . . . . . . . . "
+  ". . . o . . . . . . . . . . . "
+  ". . . . . o o x . . . . . . . "
+  ". . . . . x o x . . . . . . . "
+  ". . . x . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . ";
   for (int y = 0; y < BS; y++)
@@ -252,11 +252,18 @@ int main_testMCTS()
   for (int depth = 0; depth < 100000; depth++) {
     Loc    loc;
     double value = search->fullsearch(C_BLACK, 100000, loc);
-    Time   toc   = now();
-    // search->evaluator->recalculate();
+    Time      toc   = now();
+    MCTSnode *rootNode = search->rootNode;
     cout << "Depth = " << depth << " Value = " << value
-      << " Nodes = " << search->rootNode->visits 
-      << " Time = " << toc - tic << " Nps = " << search->rootNode->visits  * 1000.0 / (toc - tic) << " BestLoc = "<<locstr(loc)<< endl;
+         << " Draw = " << rootNode->WRtotal.draw / rootNode->visits
+      << " Nodes = " << rootNode->visits 
+      << " Time = " << toc - tic << " Nps = " << rootNode->visits  * 1000.0 / (toc - tic) << " BestLoc = "<<locstr(loc)<< endl;
+    for (int i = 0; i < rootNode->childrennum; i++) {
+      MCTSnode *c = rootNode->children[i].ptr;
+      cout << locstr(rootNode->children[i].loc) << " visits=" << c->visits
+           << " wr=" << (c->WRtotal.loss - c->WRtotal.win) / c->visits
+           << " draw=" << c->WRtotal.draw / c->visits << endl;
+    }
   }
   return 0;
 }
@@ -498,8 +505,8 @@ int main_testeval()
 }
 int main_benchmark()
 {
-  EvaluatorOneSide *eva = new Eva_mix6_avx2();
-  eva->loadParam("mix6.bin");
+  EvaluatorOneSide *eva = new Eva_nnuev2();
+  eva->loadParam("v2_c16.txt");
 
   int64_t testnum = 500000;
 
@@ -634,11 +641,11 @@ int main(int argc, const char **argv)
 {
   //main_testvcf();
   //main_testMCTS();
-  //return maingtp(argc, argv);
+  return maingtp(argc, argv);
    //return main_testeval();
    //main_testsearch();
   //main_testsearchvct();
    //return main_benchmark();
-  main_validation("D:/gomtrain/export/gomf1.txt", "D:/gomtrain/data/gomf1/vdata.npz");
+  //main_validation("D:/gomtrain/export/gomf1.txt", "D:/gomtrain/data/gomf1/vdata.npz");
   return 0;
 }

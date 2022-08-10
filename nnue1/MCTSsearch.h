@@ -1,7 +1,7 @@
 #pragma once
 #include "Search.h"
 #include "VCF/VCFsolver.h"
-const int MAX_MCTS_CHILDREN = 50;
+const int MAX_MCTS_CHILDREN = 30;
 const double policyQuant = 50000;
 const double policyQuantInv = 1/policyQuant;
 
@@ -11,11 +11,16 @@ enum MCTSsureResult : int16_t {
   MC_DRAW = 2,
   MC_UNCERTAIN = 0
 };
-inline double sureResultWR(MCTSsureResult sr)
+inline ValueSum sureResultWR(MCTSsureResult sr)
 {
-  if (sr == MC_Win)return 1;
-  else if (sr == MC_LOSE)return -1;
-  else return 0;
+  if (sr == MC_Win)
+    return ValueSum(1, 0, 0);
+  else if (sr == MC_LOSE)
+    return ValueSum(0, 1, 0);
+  else if (sr == MC_DRAW)
+    return ValueSum(0, 0, 1);
+  else
+    return ValueSum(-1e100, -1e100, -1e100);
 }
 
 inline double MCTSpuctFactor(double totalVisit, double puct, double puctPow, double puctBase)
@@ -23,9 +28,14 @@ inline double MCTSpuctFactor(double totalVisit, double puct, double puctPow, dou
   return  puct * pow((totalVisit+puctBase)/puctBase, puctPow);
 }
 
-inline double MCTSselectionValue(double puctFactor, double value,double childVisit,double childPolicy)
+inline double MCTSselectionValue(double puctFactor,
+                                 double value,
+                                 double draw,
+                                 double   parentdraw,
+                                 double   childVisit,
+                                 double   childPolicy)
 {
-  return value + puctFactor * childPolicy / (childVisit + 1);
+  return value - 0.5 * draw * (1-parentdraw) + puctFactor * childPolicy / (childVisit + 1);
 }
 
 struct MCTSnode;
@@ -46,7 +56,7 @@ struct MCTSnode
   
 
   uint64_t visits;//包括自己
-  double WRtotal;//以下一次落子的这一方的视角,1胜-1负
+  ValueSum WRtotal;//以下一次落子的这一方的视角,1胜-1负
   //平均胜率=WRtotal/visits
 
   Color nextColor;
@@ -103,7 +113,7 @@ private:
   struct SearchResult
   {
     uint64_t newVisits;
-    double WRchange;
+    ValueSum WRchange;
   };
   void playForSearch(Color color, Loc loc);
   void undoForSearch(Loc loc);

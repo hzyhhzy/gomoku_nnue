@@ -155,6 +155,7 @@
     <ClCompile Include="Eva_nnuev2.cpp" />
     <ClCompile Include="Eva_nnuev2VCF.cpp" />
     <ClCompile Include="external\cnpy\cnpy.cpp" />
+    <ClCompile Include="global.cpp" />
     <ClCompile Include="MCTSsearch.cpp" />
     <ClCompile Include="nnue1.cpp" />
     <ClCompile Include="PVSsearch.cpp" />
