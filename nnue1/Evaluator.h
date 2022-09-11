@@ -1,15 +1,15 @@
 #pragma once
 #include "global.h"
-#include "EvaluatorOneSide.h"
+#include "Eva_nnuev2.h"
 class Evaluator
 {
 public:
-  EvaluatorOneSide* blackEvaluator;
-  EvaluatorOneSide* whiteEvaluator;
-  Key               zobrist[2][BS * BS];
+  Eva_nnuev2       *blackEvaluator;
+  Eva_nnuev2       *whiteEvaluator;
+  Key               zobrist[2][MaxBS * MaxBS];
   Key               key;
 
-  Color board[BS * BS];
+  Color board[MaxBS * MaxBS];
 
 
   Evaluator(std::string type, std::string filepath);
@@ -62,7 +62,7 @@ private:
     MoveCache(bool isUndo,Color color,Loc loc) :isUndo(isUndo), color(color), loc(loc){}
   };
 
-  MoveCache moveCacheB[BS * BS], moveCacheW[BS * BS];
+  MoveCache moveCacheB[MaxBS * MaxBS], moveCacheW[MaxBS * MaxBS];
   int moveCacheBlength, moveCacheWlength;
 
   void clearCache(Color color);//把所有缓存的步数清空，使得evaluatorOneSide的board与这里的board相同

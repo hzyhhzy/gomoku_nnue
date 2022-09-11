@@ -147,9 +147,9 @@
   <ItemGroup>
     <ClCompile Include="Engine.cpp" />
     <ClCompile Include="Evaluator.cpp" />
-    <ClCompile Include="EvaluatorOneSide.cpp" />
     <ClCompile Include="Eva_nnuev2.cpp" />
     <ClCompile Include="external\cnpy\cnpy.cpp" />
+    <ClCompile Include="ExtraStages.cpp" />
     <ClCompile Include="global.cpp" />
     <ClCompile Include="MCTSsearch.cpp" />
     <ClCompile Include="nnue1.cpp" />
@@ -167,12 +167,12 @@
     <ClInclude Include="AllSearch.h" />
     <ClInclude Include="Engine.h" />
     <ClInclude Include="Evaluator.h" />
-    <ClInclude Include="EvaluatorOneSide.h" />
     <ClInclude Include="Eva_nnuev2.h" />
     <ClInclude Include="external\cnpy\cnpy.h" />
     <ClInclude Include="external\simde_avx2.h" />
     <ClInclude Include="external\simde_fma.h" />
     <ClInclude Include="external\zlib\include\zlib.h" />
+    <ClInclude Include="ExtraStages.h" />
     <ClInclude Include="global.h" />
     <ClInclude Include="MCTSsearch.h" />
     <ClInclude Include="TT.h" />

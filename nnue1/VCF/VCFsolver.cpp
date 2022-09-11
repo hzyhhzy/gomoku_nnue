@@ -1,4 +1,5 @@
 #include "VCFsolver.h"
+
 #include <random>
 using namespace VCF;
 VCFHashTable VCFsolver::hashtable(20, 5);//如果要多线程，可以把第二个数改大
@@ -13,7 +14,7 @@ VCF::zobristTable::zobristTable(int64_t seed)
   for (int i = 0; i < 3; i++)
     basicRuleHash[i] = Hash128(r(), r());
   for (int i = 0; i < 2; i++)
-    for (int j = 0; j < (BS+6)*(BS+6); j++)
+    for (int j = 0; j < (MaxBS+6)*(MaxBS+6); j++)
     {
       boardhash[i][j] = Hash128(r(), r());
       //std::cout << boardhash[i][j] << std::endl;
@@ -21,7 +22,7 @@ VCF::zobristTable::zobristTable(int64_t seed)
 
 }
 
-VCFsolver::VCFsolver(int h, int w, BasicRule basicRule, Color pla)
+VCFsolver::VCFsolver(int h, int w, int basicRule, Color pla)
     : H(h)
     , W(w)
     , basicRule(basicRule)
@@ -72,7 +73,7 @@ void VCFsolver::setBoard(const Color* b, bool katagoType, bool colorType)
   for (int x = 0; x < W; x++)
     for (int y = 0; y < H; y++)
     {
-      Loc locSrc = katagoType ? x + 1 + (y + 1) * (W + 1) : x + y * BS;
+      Loc locSrc = katagoType ? x + 1 + (y + 1) * (W + 1) : x + y * MaxBS;
       Loc locDst = xytoshapeloc(x, y);
       Color c = b[locSrc];
       if (c == C_EMPTY)continue;
@@ -95,7 +96,7 @@ VCF::SearchResult VCFsolver::fullSearch(float factor, int maxLayer,Loc& bestmove
   SearchResult SR_beforeSearch=resetPts(onlyLoc);
   if (SR_beforeSearch == SR_Win||SR_beforeSearch==SR_Lose)
   {
-    bestmove = (onlyLoc/(BS+6)-3)*BS+(onlyLoc%(BS+6)-3);
+    bestmove = (onlyLoc/(MaxBS+6)-3)*MaxBS+(onlyLoc%(MaxBS+6)-3);
     return SR_beforeSearch;
   }
   for (int search_n =0;search_n<=maxLayer; search_n++)
@@ -106,7 +107,7 @@ VCF::SearchResult VCFsolver::fullSearch(float factor, int maxLayer,Loc& bestmove
     if (sr == SR_Win)
     {
       Loc winMove = PV[0];
-      bestmove =  (winMove/(BS+6)-3)*BS+(winMove%(BS+6)-3);
+      bestmove =  (winMove/(MaxBS+6)-3)*MaxBS+(winMove%(MaxBS+6)-3);
       return sr;
     }
     else if (sr == SR_Lose)
@@ -128,7 +129,7 @@ std::vector<Loc> VCFsolver::getPV()
   for (int i = 0; i < PVlen; i++)
   {
     Loc oldloc = PV[i];
-    Loc loc =  (oldloc/(BS+6)-3)*BS+(oldloc%(BS+6)-3);
+    Loc loc =  (oldloc/(MaxBS+6)-3)*MaxBS+(oldloc%(MaxBS+6)-3);
     PVvector[i] = loc;
   }
   return PVvector;
@@ -142,7 +143,7 @@ std::vector<Loc> VCFsolver::getPVreduced()
   {
     if (i % 2 == 1)continue;
     Loc oldloc = PV[i];
-    Loc loc =  (oldloc/(BS+6)-3)*BS+(oldloc%(BS+6)-3);
+    Loc loc =  (oldloc/(MaxBS+6)-3)*MaxBS+(oldloc%(MaxBS+6)-3);
     PVvector[i/2] = loc;
   }
   return PVvector;
@@ -155,7 +156,7 @@ void VCFsolver::playOutside(Loc loc, Color color, int locType,bool colorType)
   //loc换算
   if (locType == 1)
   {
-    int x = loc % BS, y = loc / BS;
+    int x = loc % MaxBS, y = loc / MaxBS;
     loc = xytoshapeloc(x, y);
   }
   else if (locType == 2)
@@ -176,7 +177,7 @@ void VCFsolver::playOutside(Loc loc, Color color, int locType,bool colorType)
 
   //shape
   int d = (color == C_BLACK) ? 1 : 64;
-  bool isSixNotWin = basicRule == BASICRULE_STANDARD || (BASICRULE_RENJU && (isWhite^(color==C_MY)));
+  bool isSixNotWin = basicRule == Rules::BASICRULE_STANDARD || (Rules::BASICRULE_RENJU && (isWhite^(color==C_MY)));
 
 
 #define OpPerShape(DIR,DIF,INC) shape[DIR][loc+(DIF)]+=INC
@@ -224,7 +225,7 @@ void VCFsolver::undoOutside(Loc loc, int locType)
   //loc换算
   if (locType == 1)
   {
-    int x = loc % BS, y = loc / BS;
+    int x = loc % MaxBS, y = loc / MaxBS;
     loc = xytoshapeloc(x, y);
   }
   else if (locType == 2)
@@ -239,7 +240,7 @@ SearchResult VCFsolver::resetPts(Loc& onlyLoc)
 {
   movenum = 0;
   PVlen = 0;
-  for (int i = 0; i < BS * BS; i++)PV[i] = LOC_NULL;
+  for (int i = 0; i < MaxBS * MaxBS; i++)PV[i] = LOC_NULL;
 
   ptNum = 0;
   onlyLoc = LOC_NULL;
@@ -335,8 +336,8 @@ VCF::PlayResult VCFsolver::playTwo(Loc loc1, Loc loc2, Loc& nextForceLoc)
   OpSix(2, -dir2);
   OpSix(3, -dir3);
 
-  if (basicRule == BASICRULE_STANDARD
-      || (BASICRULE_RENJU && (!isWhite))) {
+  if (basicRule == Rules::BASICRULE_STANDARD
+      || (Rules::BASICRULE_RENJU && (!isWhite))) {
     OpSix(0, dir0);
     OpSix(1, dir1);
     OpSix(2, dir2);
@@ -381,7 +382,7 @@ VCF::PlayResult VCFsolver::playTwo(Loc loc1, Loc loc2, Loc& nextForceLoc)
   OpSix(1, -dir1);
   OpSix(2, -dir2);
   OpSix(3, -dir3);
-  if (basicRule == BASICRULE_STANDARD || (BASICRULE_RENJU && (isWhite))) {
+  if (basicRule == Rules::BASICRULE_STANDARD || (Rules::BASICRULE_RENJU && (isWhite))) {
     OpSix(0, dir0);
     OpSix(1, dir1);
     OpSix(2, dir2);
@@ -529,8 +530,8 @@ void VCFsolver::undo(Loc loc)
   movenum--;
   Color color = board[loc];
   int   d           = (color == C_MY) ? 1 : 64;
-  bool  isSixNotWin = basicRule == BASICRULE_STANDARD
-                     || (BASICRULE_RENJU && (isWhite ^ (color == C_MY)));
+  bool  isSixNotWin = basicRule == Rules::BASICRULE_STANDARD
+                     || (Rules::BASICRULE_RENJU && (isWhite ^ (color == C_MY)));
 
   board[loc] = C_EMPTY;
 

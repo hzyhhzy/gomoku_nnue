@@ -42,7 +42,7 @@ void Evaluator::clear()
 {
   moveCacheBlength = 0;
   moveCacheWlength = 0;
-  for (int i = 0; i < BS * BS; i++)board[i] = C_EMPTY;
+  for (int i = 0; i < MaxBS * MaxBS; i++)board[i] = C_EMPTY;
   blackEvaluator->clear();
   whiteEvaluator->clear();
 }

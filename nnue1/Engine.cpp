@@ -78,7 +78,7 @@ std::string Engine::genmove()
     bestloc = LOC_PASS;
   nextColor = getOpp(nextColor);
 
-  int bestx = bestloc % BS, besty = bestloc / BS;
+  int bestx = bestloc % MaxBS, besty = bestloc / MaxBS;
   return to_string(bestx) + "," + to_string(besty);
 
 
@@ -127,8 +127,8 @@ void Engine::protocolLoop()
       int size;
       if (pieces.size() != 1 || !strOp::tryStringToInt(pieces[0], size))
         response = "ERROR Bad command";
-      else if (size != BS)
-        response = "ERROR This engine only support boardsize " + to_string(BS);
+      else if (size != MaxBS)
+        response = "ERROR This engine only support boardsize " + to_string(MaxBS);
       else
         response = "OK";
       search->clearBoard();

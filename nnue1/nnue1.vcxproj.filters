@@ -33,9 +33,6 @@
     <ClCompile Include="Evaluator.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="EvaluatorOneSide.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="Search.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -75,15 +72,15 @@
     <ClCompile Include="external\cnpy\cnpy.cpp">
       <Filter>源文件\external</Filter>
     </ClCompile>
+    <ClCompile Include="ExtraStages.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Evaluator.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="global.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="EvaluatorOneSide.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Search.h">
@@ -132,6 +129,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Engine.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="ExtraStages.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

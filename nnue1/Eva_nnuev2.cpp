@@ -18,8 +18,8 @@ void ModelBuf::update(Color                   oldcolor,
   int                         changenum = 0;
 
   {
-    int x0 = loc % BS;
-    int y0 = loc / BS;
+    int x0 = loc % MaxBS;
+    int y0 = loc / MaxBS;
 
     int dxs[4] = {1, 0, 1, 1};
     int dys[4] = {0, 1, 1, -1};
@@ -28,7 +28,7 @@ void ModelBuf::update(Color                   oldcolor,
       for (int dist = -5; dist <= 5; dist++) {
         int x = x0 - dist * dxs[dir];
         int y = y0 - dist * dys[dir];
-        if (x < 0 || x >= BS || y < 0 || y >= BS)
+        if (x < 0 || x >= MaxBS || y < 0 || y >= MaxBS)
           continue;
         OnePointChange c;
         c.dir = dir, c.loc = MakeLoc(x, y);
@@ -44,7 +44,7 @@ void ModelBuf::update(Color                   oldcolor,
   for (int p = 0; p < changenum; p++) {
     OnePointChange c = changeTable[p];
 
-    int y0 = c.loc / BS, x0 = c.loc % BS;
+    int y0 = c.loc / MaxBS, x0 = c.loc % MaxBS;
 
     for (int i = 0; i < groupBatch; i++) {
 
@@ -73,9 +73,9 @@ void Eva_nnuev2::calculateTrunk()
   for (int batch = 0; batch < groupBatch; batch++) {  //一直到trunk计算完毕，不同batch之间都没有交互,所以放在最外层
     int addrBias = batch * 16;
 
-    //这个数组太大，就不直接int16_t[(BS + 10) * (BS + 10)][6][16]了
-    int16_t *h1m = new int16_t[(BS + 10) * (BS + 10)*6*16];  //完整的卷积是先乘再相加，此处是相乘但还没相加。h1m沿一条线相加得到h1c。加了5层padding方便后续处理
-    memset(h1m, 0, sizeof(int16_t) * (BS + 10) * (BS + 10) * 6 * 16);
+    //这个数组太大，就不直接int16_t[(MaxBS + 10) * (MaxBS + 10)][6][16]了
+    int16_t *h1m = new int16_t[(MaxBS + 10) * (MaxBS + 10)*6*16];  //完整的卷积是先乘再相加，此处是相乘但还没相加。h1m沿一条线相加得到h1c。加了5层padding方便后续处理
+    memset(h1m, 0, sizeof(int16_t) * (MaxBS + 10) * (MaxBS + 10) * 6 * 16);
     //-------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // g1 prelu和h1conv的乘法部分
     auto g1lr_w   = simde_mm256_loadu_si256(weights.g1lr_w + addrBias);
@@ -85,10 +85,10 @@ void Eva_nnuev2::calculateTrunk()
     auto h1conv_w3 = simde_mm256_loadu_si256(weights.h1conv_w[3] + addrBias);
     auto h1conv_w4 = simde_mm256_loadu_si256(weights.h1conv_w[4] + addrBias);
     auto h1conv_w5 = simde_mm256_loadu_si256(weights.h1conv_w[5] + addrBias);
-    for (Loc locY = 0; locY < BS; locY++) {
-      for (Loc locX = 0; locX < BS; locX++) {
-        Loc loc1 = locY * BS + locX;             //原始loc
-        Loc loc2 = (locY + 5)  * (BS + 10) + locX + 5;  // padding后的loc
+    for (Loc locY = 0; locY < MaxBS; locY++) {
+      for (Loc locX = 0; locX < MaxBS; locX++) {
+        Loc loc1 = locY * MaxBS + locX;             //原始loc
+        Loc loc2 = (locY + 5)  * (MaxBS + 10) + locX + 5;  // padding后的loc
         int16_t *h1mbias = h1m + loc2 * 6 * 16;
 
         auto g1sum = simde_mm256_loadu_si256(buf.g1sum[loc1] + addrBias);
@@ -109,22 +109,22 @@ void Eva_nnuev2::calculateTrunk()
     }
 
     //-------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    int16_t h3[BS*BS][16]; //已经加上h3lr_b
+    int16_t h3[MaxBS*MaxBS][16]; //已经加上h3lr_b
 
     auto h1lr1_w = simde_mm256_loadu_si256(weights.h1lr1_w + addrBias);
     auto h1lr2_w = simde_mm256_loadu_si256(weights.h1lr2_w + addrBias);
     auto h1conv_b = simde_mm256_loadu_si256(weights.h1conv_b + addrBias);
     auto h3lr_b    = simde_mm256_loadu_si256(weights.h3lr_b + addrBias);
 
-    for (Loc locY = 0; locY < BS; locY++) {
-      for (Loc locX = 0; locX < BS; locX++) {
-        Loc loc1 = locY * BS + locX;             //原始loc
-        Loc      loc2    = (locY + 5) * (BS + 10) + locX + 5;  // padding后的loc
+    for (Loc locY = 0; locY < MaxBS; locY++) {
+      for (Loc locX = 0; locX < MaxBS; locX++) {
+        Loc loc1 = locY * MaxBS + locX;             //原始loc
+        Loc      loc2    = (locY + 5) * (MaxBS + 10) + locX + 5;  // padding后的loc
         int16_t *h1mbias = h1m + loc2 * 6 * 16;
 
         auto h2sum = h3lr_b;
 
-        const int dloc2s[4] = {1, BS + 10, BS + 10 + 1, -BS - 10 + 1};
+        const int dloc2s[4] = {1, MaxBS + 10, MaxBS + 10 + 1, -MaxBS - 10 + 1};
         for (int dir=0;dir<4;dir++)
         {
           const int dloc2 = dloc2s[dir];  
@@ -176,8 +176,8 @@ void Eva_nnuev2::calculateTrunk()
     delete[] h1m;
     
     //-------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    int16_t trunk1[(BS+2) * (BS+2)][16];//trunkconv2前的trunk，padding=1
-    memset(trunk1, 0, sizeof(int16_t) * (BS + 2) * (BS + 2) * 16);
+    int16_t trunk1[(MaxBS+2) * (MaxBS+2)][16];//trunkconv2前的trunk，padding=1
+    memset(trunk1, 0, sizeof(int16_t) * (MaxBS + 2) * (MaxBS + 2) * 16);
     //需要用到的权重
     auto h3lr_w  = simde_mm256_loadu_si256(weights.h3lr_w + addrBias);
     static_assert(trunkconv1GroupSize == 4, "现在的代码只支持trunkconv1GroupSize == 4");
@@ -189,10 +189,10 @@ void Eva_nnuev2::calculateTrunk()
     auto trunklr1_w = simde_mm256_loadu_si256(weights.trunklr1_w + addrBias);
     h3lr_b   = simde_mm256_loadu_si256(weights.h3lr_b + addrBias);
 
-    for (Loc locY = 0; locY < BS; locY++) {
-      for (Loc locX = 0; locX < BS; locX++) {
-        Loc loc1 = locY * BS + locX;             //原始loc
-        Loc  loc2  = (locY + 1) * (BS + 2) + locX + 1;  // padding后的loc
+    for (Loc locY = 0; locY < MaxBS; locY++) {
+      for (Loc locX = 0; locX < MaxBS; locX++) {
+        Loc loc1 = locY * MaxBS + locX;             //原始loc
+        Loc  loc2  = (locY + 1) * (MaxBS + 2) + locX + 1;  // padding后的loc
         auto trunk  = simde_mm256_loadu_si256(h3[loc1]);
         // h3lr
         trunk = simde_mm256_max_epi16(trunk, simde_mm256_mulhrs_epi16(trunk, h3lr_w));
@@ -230,20 +230,20 @@ void Eva_nnuev2::calculateTrunk()
     auto trunkconv2_w1 = simde_mm256_loadu_si256(weights.trunkconv2_w[1] + addrBias);
     auto trunkconv2_w2 = simde_mm256_loadu_si256(weights.trunkconv2_w[2] + addrBias);
 
-    for (Loc locY = 0; locY < BS; locY++) {
-      for (Loc locX = 0; locX < BS; locX++) {
-        Loc  loc1  = locY * BS + locX;            //原始loc
-        Loc  loc2   = (locY + 1) * (BS + 2) + locX + 1;  // padding后的loc
+    for (Loc locY = 0; locY < MaxBS; locY++) {
+      for (Loc locX = 0; locX < MaxBS; locX++) {
+        Loc  loc1  = locY * MaxBS + locX;            //原始loc
+        Loc  loc2   = (locY + 1) * (MaxBS + 2) + locX + 1;  // padding后的loc
         auto trunka = simde_mm256_adds_epi16(
-            simde_mm256_adds_epi16(simde_mm256_loadu_si256(trunk1[loc2 - (BS + 2)]),
-                                   simde_mm256_loadu_si256(trunk1[loc2 + (BS + 2)])),
+            simde_mm256_adds_epi16(simde_mm256_loadu_si256(trunk1[loc2 - (MaxBS + 2)]),
+                                   simde_mm256_loadu_si256(trunk1[loc2 + (MaxBS + 2)])),
             simde_mm256_adds_epi16(simde_mm256_loadu_si256(trunk1[loc2 - 1]),
                                    simde_mm256_loadu_si256(trunk1[loc2 + 1])));
         auto trunkb = simde_mm256_adds_epi16(
-            simde_mm256_adds_epi16(simde_mm256_loadu_si256(trunk1[loc2 - (BS + 2) - 1]),
-                                   simde_mm256_loadu_si256(trunk1[loc2 - (BS + 2) + 1])),
-            simde_mm256_adds_epi16(simde_mm256_loadu_si256(trunk1[loc2 + (BS + 2) - 1]),
-                                   simde_mm256_loadu_si256(trunk1[loc2 + (BS + 2) + 1])));
+            simde_mm256_adds_epi16(simde_mm256_loadu_si256(trunk1[loc2 - (MaxBS + 2) - 1]),
+                                   simde_mm256_loadu_si256(trunk1[loc2 - (MaxBS + 2) + 1])),
+            simde_mm256_adds_epi16(simde_mm256_loadu_si256(trunk1[loc2 + (MaxBS + 2) - 1]),
+                                   simde_mm256_loadu_si256(trunk1[loc2 + (MaxBS + 2) + 1])));
         auto trunk = simde_mm256_loadu_si256(trunk1[loc2]);
 
         trunk = simde_mm256_mulhrs_epi16(trunk, trunkconv2_w0);
@@ -270,7 +270,7 @@ void ModelBuf::emptyboard(const ModelWeight &weights)
   // shape table
   {
     for (int i = 0; i < 4; i++)
-      for (int j = 0; j < BS * BS; j++)
+      for (int j = 0; j < MaxBS * MaxBS; j++)
         shapeTable[j][i] = 0;
 
     //以下不可交换次序，因为存在覆盖
@@ -278,16 +278,16 @@ void ModelBuf::emptyboard(const ModelWeight &weights)
     //正方向的墙（右墙，下墙，右下墙，右上墙）
 
     for (int thick = 1; thick <= 5; thick++) {
-      for (int i = 0; i < BS; i++) {
+      for (int i = 0; i < MaxBS; i++) {
         int c = 0;
         for (int j = 0; j < thick; j++)
           c += pow3[11 - j];
-        shapeTable[(BS - 6 + thick) + i * BS][0] = c;  //右墙
-        shapeTable[i + (BS - 6 + thick) * BS][1] = c;  //下墙
-        shapeTable[(BS - 6 + thick) + i * BS][2] = c;  //右下墙靠右
-        shapeTable[i + (BS - 6 + thick) * BS][2] = c;  //右下墙靠下
-        shapeTable[(BS - 6 + thick) + i * BS][3] = c;  //右上墙靠右
-        shapeTable[i + (6 - 1 - thick) * BS][3]  = c;  //右下墙靠上
+        shapeTable[(MaxBS - 6 + thick) + i * MaxBS][0] = c;  //右墙
+        shapeTable[i + (MaxBS - 6 + thick) * MaxBS][1] = c;  //下墙
+        shapeTable[(MaxBS - 6 + thick) + i * MaxBS][2] = c;  //右下墙靠右
+        shapeTable[i + (MaxBS - 6 + thick) * MaxBS][2] = c;  //右下墙靠下
+        shapeTable[(MaxBS - 6 + thick) + i * MaxBS][3] = c;  //右上墙靠右
+        shapeTable[i + (6 - 1 - thick) * MaxBS][3]  = c;  //右下墙靠上
       }
     }
 
@@ -295,16 +295,16 @@ void ModelBuf::emptyboard(const ModelWeight &weights)
 
     //厚度1
     for (int thick = 1; thick <= 5; thick++) {
-      for (int i = 0; i < BS; i++) {
+      for (int i = 0; i < MaxBS; i++) {
         int c = 2 * pow3[11];  // 3进制2000000000
         for (int j = 0; j < thick - 1; j++)
           c += pow3[j];
-        shapeTable[(6 - 1 - thick) + i * BS][0]  = c;  //左墙
-        shapeTable[i + (6 - 1 - thick) * BS][1]  = c;  //上墙
-        shapeTable[(6 - 1 - thick) + i * BS][2]  = c;  //左上墙靠左
-        shapeTable[i + (6 - 1 - thick) * BS][2]  = c;  //左上墙靠上
-        shapeTable[(6 - 1 - thick) + i * BS][3]  = c;  //左下墙靠左
-        shapeTable[i + (BS - 6 + thick) * BS][3] = c;  //左下墙靠下
+        shapeTable[(6 - 1 - thick) + i * MaxBS][0]  = c;  //左墙
+        shapeTable[i + (6 - 1 - thick) * MaxBS][1]  = c;  //上墙
+        shapeTable[(6 - 1 - thick) + i * MaxBS][2]  = c;  //左上墙靠左
+        shapeTable[i + (6 - 1 - thick) * MaxBS][2]  = c;  //左上墙靠上
+        shapeTable[(6 - 1 - thick) + i * MaxBS][3]  = c;  //左下墙靠左
+        shapeTable[i + (MaxBS - 6 + thick) * MaxBS][3] = c;  //左下墙靠下
       }
     }
 
@@ -318,15 +318,15 @@ void ModelBuf::emptyboard(const ModelWeight &weights)
           c += pow3[10 - i];
         for (int i = 0; i < b - 1; i++)
           c += pow3[i];
-        shapeTable[(BS - 6 + a) + (5 - b) * BS][2]      = c;  //右上角
-        shapeTable[(BS - 6 + a) * BS + (5 - b)][2]      = c;  //左下角
-        shapeTable[(5 - b) + (5 - a) * BS][3]           = c;  //左上角
-        shapeTable[(BS - 6 + a) + (BS - 6 + b) * BS][3] = c;  //右下角
+        shapeTable[(MaxBS - 6 + a) + (5 - b) * MaxBS][2]      = c;  //右上角
+        shapeTable[(MaxBS - 6 + a) * MaxBS + (5 - b)][2]      = c;  //左下角
+        shapeTable[(5 - b) + (5 - a) * MaxBS][3]           = c;  //左上角
+        shapeTable[(MaxBS - 6 + a) + (MaxBS - 6 + b) * MaxBS][3] = c;  //右下角
       }
   }
 
   //g1 and g2
-  for (Loc loc = 0; loc < BS*BS; loc++) {
+  for (Loc loc = 0; loc < MaxBS*MaxBS; loc++) {
 
     for (int i = 0; i < groupBatch; i++) {
       auto g1sum_ = simde_mm256_setzero_si256();
@@ -382,17 +382,17 @@ bool Eva_nnuev2::loadParam(std::string filepath)
 
 void Eva_nnuev2::clear()
 {
-  for (int i = 0; i < BS * BS; i++)
+  for (int i = 0; i < MaxBS * MaxBS; i++)
     board[i] = C_EMPTY;
   buf.emptyboard(weights);
 }
 
 void Eva_nnuev2::recalculate()
 {
-  Color boardCopy[BS * BS];
-  memcpy(boardCopy, board, BS * BS * sizeof(Color));
+  Color boardCopy[MaxBS * MaxBS];
+  memcpy(boardCopy, board, MaxBS * MaxBS * sizeof(Color));
   clear();
-  for (Loc i = LOC_ZERO; i < BS * BS; ++i) {
+  for (Loc i = LOC_ZERO; i < MaxBS * MaxBS; ++i) {
     if (boardCopy[i] != C_EMPTY)
       play(boardCopy[i], i);
   }
@@ -419,7 +419,7 @@ void Eva_nnuev2::evaluatePolicy(PolicyType *policy)
   if (!buf.trunkUpToDate)
     calculateTrunk();
   
-  for (Loc loc = 0; loc < BS * BS; loc++) {
+  for (Loc loc = 0; loc < MaxBS * MaxBS; loc++) {
     auto psum = simde_mm256_setzero_si256();//int32
     for (int batch = 0; batch < groupBatch; batch++) {
 
@@ -461,7 +461,7 @@ ValueType Eva_nnuev2::evaluateValue()
 
     auto trunklr2v_b = simde_mm256_loadu_si256(weights.trunklr2v_b + batch16 * 16);
     auto trunklr2v_w = simde_mm256_loadu_si256(weights.trunklr2v_w + batch16 * 16);
-    for (Loc loc = 0; loc < BS * BS; loc++) {
+    for (Loc loc = 0; loc < MaxBS * MaxBS; loc++) {
       auto t = simde_mm256_loadu_si256(buf.trunk[loc] + batch16 * 16);
       // trunklr2p
       t = simde_mm256_adds_epi16(t, trunklr2v_b);
@@ -478,7 +478,7 @@ ValueType Eva_nnuev2::evaluateValue()
   }
 
   //scale, valuelr
-  auto scale       = simde_mm256_set1_ps(weights.scale_beforemlpInv / BS / BS);
+  auto scale       = simde_mm256_set1_ps(weights.scale_beforemlpInv / MaxBS / MaxBS);
   for (int batch32 = 0; batch32 < groupBatch * 2; batch32++) {
     auto valuelr_b = simde_mm256_loadu_ps(weights.valuelr_b + batch32 * 8);
     auto valuelr_w = simde_mm256_loadu_ps(weights.valuelr_w + batch32 * 8);
@@ -551,7 +551,7 @@ void Eva_nnuev2::debug_print()
 {
   using namespace std;
   Loc loc = MakeLoc(0, 0);
-  PolicyType p[BS * BS];
+  PolicyType p[MaxBS * MaxBS];
   auto       v = evaluateFull(p);
   cout << "value: win=" << v.win << " loss=" << v.loss << " draw=" << v.draw << endl;
   //for (int i = 48; i < groupSize; i++)
@@ -559,9 +559,9 @@ void Eva_nnuev2::debug_print()
 
 
   cout << "policy: " <<  endl;
-  for (int y = 0; y < BS; y++) {
-    for (int x = 0; x < BS; x++)
-      cout << p[y*BS+x] << "\t";
+  for (int y = 0; y < MaxBS; y++) {
+    for (int x = 0; x < MaxBS; x++)
+      cout << p[y*MaxBS+x] << "\t";
     cout << endl;
   }
   cout << endl;
@@ -580,7 +580,7 @@ void Eva_nnuev2::debug_print()
   cout << endl;
   cout << "valueavg";
   for (int i = 0; i < mix6::valueNum; i++)
-    cout << float(buf.valueSumBoard[i]) / (BS * BS) << " ";
+    cout << float(buf.valueSumBoard[i]) / (MaxBS * MaxBS) << " ";
   cout << endl;*/
 }
 

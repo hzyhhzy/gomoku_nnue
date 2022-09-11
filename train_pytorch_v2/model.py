@@ -349,8 +349,8 @@ class Model_v2(nn.Module):
         boardWs=mask.sum(dim=3).max(dim=2)[0].squeeze(1)
         boardArea=boardHs*boardWs
         boardAreaInput=torch.stack((
-            boardArea/(boardW*boardHs)-1,
-            torch.sqrt(boardArea/(boardW*boardHs))-1,
+            boardArea/225-1,
+            torch.sqrt(boardArea/225)-1,
             (boardHs-boardWs)*(boardHs-boardWs)/boardArea
         ),dim=1)
         #print(boardArea)

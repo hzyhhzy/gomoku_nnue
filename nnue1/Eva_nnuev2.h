@@ -1,10 +1,10 @@
 #pragma once
-#include "EvaluatorOneSide.h"
-
+#include "global.h"
 #include <vector>
 
 namespace NNUEV2 {
     const int shapeNum     = 708588;
+    const int globalFeatureNum           = 33;
     const int groupSize    = 64;
     const int groupBatch   = groupSize / 16;
     const int featureNum   = groupSize*2;
@@ -100,23 +100,23 @@ namespace NNUEV2 {
     struct ModelBuf
     {
       // 1 convert board to shape
-      uint32_t shapeTable[BS * BS][4];  // 4个方向，BS*BS个位置
+      uint32_t shapeTable[MaxBS * MaxBS][4];  // 4个方向，MaxBS*MaxBS个位置
 
       // 2  shape到vector  g1无需提取，只缓存g2
-      int16_t g2[BS * BS][4][groupSize];
+      int16_t g2[MaxBS * MaxBS][4][groupSize];
 
       // 3  g1sum=g1.sum(1), shape=H*W*g
-      int16_t g1sum[BS * BS][groupSize];
+      int16_t g1sum[MaxBS * MaxBS][groupSize];
 
       // 4  h1=self.g1lr(g1sum), shape=HWc
-      //int16_t h1[BS * BS][groupSize];
+      //int16_t h1[MaxBS * MaxBS][groupSize];
 
       // 后面的部分几乎没法增量计算
 
 
       // value头和policy头共享trunk，所以也放在缓存里
       bool    trunkUpToDate;
-      int16_t trunk[BS * BS][groupSize];  
+      int16_t trunk[MaxBS * MaxBS][groupSize];  
 
       void update(Color oldcolor, Color newcolor, Loc loc, const ModelWeight &weights);
 
@@ -124,26 +124,29 @@ namespace NNUEV2 {
     };
 
 }  // namespace NNUEV2
-class Eva_nnuev2 : public EvaluatorOneSide
+class Eva_nnuev2
 {
 public:
+  Color mySide;  //这个估值器是哪边的。无论上一手是谁走的，都返回下一手为mySide的估值
+  Color board[MaxBS * MaxBS];
+
   uint64_t         TotalEvalNum;
   NNUEV2::ModelWeight weights;
   NNUEV2::ModelBuf buf;
 
-  virtual bool loadParam(std::string filepath);
-  virtual void clear();
-  virtual void recalculate();  //根据board完全重新计算棋形表
+  bool loadParam(std::string filepath);
+  void clear();
+  void recalculate();  //根据board完全重新计算棋形表
 
   //计算拆分为两部分，第一部分是可增量计算的，放在play函数里。第二部分是不易增量计算的，放在evaluate里。
-  virtual void      play(Color color, Loc loc);
-  virtual ValueType evaluateFull(PolicyType *policy);    // policy通过函数参数返回
-  virtual void      evaluatePolicy(PolicyType *policy);  // policy通过函数参数返回
-  virtual ValueType evaluateValue();                     //
+  void      play(Color color, Loc loc);
+  ValueType evaluateFull(PolicyType *policy);    // policy通过函数参数返回
+  void      evaluatePolicy(PolicyType *policy);  // policy通过函数参数返回
+  ValueType evaluateValue();                     //
 
-  virtual void undo(Loc loc);  // play的逆过程
+  void undo(Loc loc);  // play的逆过程
 
-  virtual void debug_print();
+  void debug_print();
 
 private:
   void calculateTrunk();

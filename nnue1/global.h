@@ -9,34 +9,26 @@
 #include <string>
 #include <vector>
 
-const int BS = 15;
+const int MaxBS = 15;
 
-typedef int8_t         BasicRule;
-const BasicRule BASICRULE_FREESTYLE = 0;
-const BasicRule BASICRULE_STANDARD  = 1;
-const BasicRule BASICRULE_RENJU     = 2;
+namespace Rules {
 
-const BasicRule DEFAULT_RULE = BASICRULE_STANDARD;
+const int BASICRULE_FREESTYLE = 0;
+const int BASICRULE_STANDARD  = 1;
+const int BASICRULE_RENJU     = 2;
 
-typedef int8_t VCNRule;
-const VCNRule VCNRULE_NOVC  = 0;
-const VCNRule VCNRULE_VC1_B = 1;
-const VCNRule VCNRULE_VC2_B = 2;
-const VCNRule VCNRULE_VC3_B = 3;
-const VCNRule VCNRULE_VC4_B = 4;
-const VCNRule VCNRULE_VC1_W = 11;
-const VCNRule VCNRULE_VC2_W = 12;
-const VCNRule VCNRULE_VC3_W = 13;
-const VCNRule VCNRULE_VC4_W = 14;
-const VCNRule VCNRULE_VC1_M = 1;
-const VCNRule VCNRULE_VC2_M = 2;
-const VCNRule VCNRULE_VC3_M = 3;
-const VCNRule VCNRULE_VC4_M = 4;
-const VCNRule VCNRULE_VC1_O = 11;
-const VCNRule VCNRULE_VC2_O = 12;
-const VCNRule VCNRULE_VC3_O = 13;
-const VCNRule VCNRULE_VC4_O = 14;
+const int VCNRULE_NOVC  = 0;
+const int VCNRULE_VC1_B = 1;
+const int VCNRULE_VC2_B = 2;
+const int VCNRULE_VC3_B = 3;
+const int VCNRULE_VC4_B = 4;
+const int VCNRULE_VC1_W = 11;
+const int VCNRULE_VC2_W = 12;
+const int VCNRULE_VC3_W = 13;
+const int VCNRULE_VC4_W = 14;
+}  // namespace Rules
 
+const int DEFAULT_RULE = Rules::BASICRULE_STANDARD;  
 
 
 typedef uint64_t Key;
@@ -54,11 +46,11 @@ static inline Color getOpp(Color c) { return c ^ 3; }
 typedef int16_t      Loc;
 static constexpr Loc LOC_ZERO = 0;
 static constexpr Loc LOC_NULL = -1;
-static constexpr Loc LOC_PASS = BS * BS;
-inline Loc           MakeLoc(int x, int y) { return Loc(x + y * BS); }
+static constexpr Loc LOC_PASS = MaxBS * MaxBS;
+inline Loc           MakeLoc(int x, int y) { return Loc(x + y * MaxBS); }
 inline std::string   locstr(Loc loc)
 {
-  return std::string(1, char('A' + loc % BS)) + std::to_string(int(BS - loc / BS));
+  return std::string(1, char('A' + loc % MaxBS)) + std::to_string(int(MaxBS - loc / MaxBS));
 }
 inline std::ostream &operator<<(std::ostream &os, std::vector<Loc> pv)
 {
@@ -118,9 +110,9 @@ ValueSum operator*(double b, ValueSum a);
 inline std::string dbg_board(const Color *board)
 {
   std::ostringstream os;
-  for (int i = 0; i < BS; i++) {
-    for (int j = 0; j < BS; j++) {
-      switch (board[j + i * BS]) {
+  for (int i = 0; i < MaxBS; i++) {
+    for (int j = 0; j < MaxBS; j++) {
+      switch (board[j + i * MaxBS]) {
       case C_BLACK: os << "X "; break;
       case C_WHITE: os << "O "; break;
       case C_EMPTY: os << ". "; break;

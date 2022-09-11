@@ -1,7 +1,7 @@
 #pragma once
 #include "..\global.h"
 #include "VCFHashTable.h"
-static_assert(LOC_NULL >= (BS + 6)* (BS + 6)+1||LOC_NULL<0);//保证loc_null不是棋盘上的点
+static_assert(LOC_NULL >= (MaxBS + 6)* (MaxBS + 6)+1||LOC_NULL<0);//保证loc_null不是棋盘上的点
 namespace VCF {
 
   struct alignas(int64_t) PT
@@ -14,7 +14,7 @@ namespace VCF {
 
   struct zobristTable
   {
-    Hash128 boardhash[2][(BS + 6) * (BS + 6)];
+    Hash128 boardhash[2][(MaxBS + 6) * (MaxBS + 6)];
     Hash128 isWhite;
     Hash128 basicRuleHash[3];
     zobristTable(int64_t seed);
@@ -54,14 +54,14 @@ namespace VCF {
   };
 
 
-  inline Loc xytoshapeloc(int x, int y) { return Loc((BS + 6) * (y + 3) + x + 3); }
-  static const Loc dirs[4] = { 1, BS + 6, BS + 6 + 1, -BS - 6 + 1 };//+x +y +x+y +x-y
+  inline Loc xytoshapeloc(int x, int y) { return Loc((MaxBS + 6) * (y + 3) + x + 3); }
+  static const Loc dirs[4] = { 1, MaxBS + 6, MaxBS + 6 + 1, -MaxBS - 6 + 1 };//+x +y +x+y +x-y
   //为了方便常量调用，分开再写一遍
   static const Loc dir0 = 1;
-  static const Loc dir1 =  BS + 6;
-  static const Loc dir2 =  BS + 6 + 1;
-  static const Loc dir3 = -BS - 6 + 1;
-  static const int ArrSize = (BS + 6) * (BS + 6);//考虑额外3圈后的棋盘格点数
+  static const Loc dir1 =  MaxBS + 6;
+  static const Loc dir2 =  MaxBS + 6 + 1;
+  static const Loc dir3 = -MaxBS - 6 + 1;
+  static const int ArrSize = (MaxBS + 6) * (MaxBS + 6);//考虑额外3圈后的棋盘格点数
 
 
 
@@ -78,29 +78,29 @@ class VCFsolver
 public:
   const int H, W;
   const bool isWhite;//如果进攻方是黑棋，则false，进攻方是白棋则true。若true，color全是反向
-  const BasicRule basicRule;
+  const int basicRule;
 
-  Color board[(BS + 6) * (BS + 6)];  //预留3圈
+  Color board[(MaxBS + 6) * (MaxBS + 6)];  //预留3圈
   // shape=1*己方棋子+8*长连+64*对方棋子+512*对手长连+4096*出界
-  int16_t shape[4][(BS + 6) * (BS + 6)];  //预留3圈
+  int16_t shape[4][(MaxBS + 6) * (MaxBS + 6)];  //预留3圈
   Hash128 boardHash;
 
   int     ptNum;             // pts里面前多少个有效
-  VCF::PT pts[8 * BS * BS];  //眠三
+  VCF::PT pts[8 * MaxBS * MaxBS];  //眠三
 
   int64_t nodeNumThisSearch;//记录这次搜索已经搜索了多少节点了，用来提前终止，每次fullSearch开始时清零
   int movenum;//手数，从开始vcf到现在的局面已经多少手了
-  Loc PV[BS * BS];//记录路线
+  Loc PV[MaxBS * MaxBS];//记录路线
   int PVlen;
 
-  VCFsolver() :VCFsolver(C_BLACK,BASICRULE_FREESTYLE) {}
-  VCFsolver(BasicRule basicRule,Color pla) : VCFsolver(BS, BS, basicRule, pla) {}
-  VCFsolver(int h, int w, BasicRule basicRule, Color pla);
+  VCFsolver() :VCFsolver(C_BLACK,DEFAULT_RULE) {}
+  VCFsolver(int basicRule,Color pla) : VCFsolver(MaxBS, MaxBS, basicRule, pla) {}
+  VCFsolver(int h, int w, int basicRule, Color pla);
   void reset();
 
   //两种board
   //b是外部的棋盘，pla是进攻方
-  //katagoType是否是katago的棋盘，false对应loc=x+y*BS，true对应loc=x+1+(y+1)*(W+1)
+  //katagoType是否是katago的棋盘，false对应loc=x+y*MaxBS，true对应loc=x+1+(y+1)*(W+1)
   //colorType是源棋盘的表达形式，=false 己方对方，=true 黑色白色
   void setBoard(const Color* b, bool katagoType, bool colorType);
 
@@ -112,7 +112,7 @@ public:
 
   
   //用于外部调用，更新棋盘。保证shape正确，不保证pts正确。
-  //locType=0 vcf内部loc格式，=1 x+y*BS，=2 katago格式
+  //locType=0 vcf内部loc格式，=1 x+y*MaxBS，=2 katago格式
   //colorType=false 己方对方，=true 黑色白色
   void playOutside(Loc loc, Color color, int locType,bool colorType);
   void undoOutside(Loc loc, int locType);//用于外部调用，更新棋盘。保证shape正确，不保证pts正确。

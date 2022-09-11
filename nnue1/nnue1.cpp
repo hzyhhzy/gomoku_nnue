@@ -95,9 +95,9 @@ int main_testMCTS()
   ". . . x . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . ";
-  for (int y = 0; y < BS; y++)
-    for (int x = 0; x < BS; x++) {
-      char  colorchar = boardstr[2 * (x + y * BS)];
+  for (int y = 0; y < MaxBS; y++)
+    for (int x = 0; x < MaxBS; x++) {
+      char  colorchar = boardstr[2 * (x + y * MaxBS)];
       Color color     = C_EMPTY;
       if (colorchar == 'x')
         color = C_BLACK;
@@ -166,9 +166,9 @@ int main_testeval()
     ". . . . . . . . . . . . . . . "
     ". . . . . . . . . . . . . . . "
     ". . . . . . . . . . . . . . . ";
-  for (int y = 0; y < BS; y++)
-    for (int x = 0; x < BS; x++) {
-      char  colorchar = boardstr[2 * (x + y * BS)];
+  for (int y = 0; y < MaxBS; y++)
+    for (int x = 0; x < MaxBS; x++) {
+      char  colorchar = boardstr[2 * (x + y * MaxBS)];
       Color color     = C_EMPTY;
       if (colorchar == 'x')
         color = C_BLACK;
@@ -183,7 +183,7 @@ int main_testeval()
 }
 int main_benchmark()
 {
-  EvaluatorOneSide *eva = new Eva_nnuev2();
+  Eva_nnuev2 *eva = new Eva_nnuev2();
   eva->loadParam("v2_c16.txt");
 
   int64_t testnum = 500000;
@@ -192,15 +192,15 @@ int main_benchmark()
   prng();
   prng();
 
-  PolicyType p[BS * BS];
+  PolicyType p[MaxBS * MaxBS];
   int64_t time_start=now();
 
   // 平均每play和undo两次，然后eval一次
   for (int64_t i = 0; i < testnum; i++) {
     for (int j = 0; j < 3; j++) {
       uint64_t rand  = prng();
-      Loc      loc   = rand % (BS * BS);
-      rand           = rand / (BS * BS);
+      Loc      loc   = rand % (MaxBS * MaxBS);
+      rand           = rand / (MaxBS * MaxBS);
       Color newcolor = (eva->board[loc] + 1 + rand % 2) % 3;
       if (eva->board[loc] != C_EMPTY)
         eva->undo(loc);
@@ -220,7 +220,7 @@ int main_benchmark()
 }
 int main_testvcf()
 {
-  Color board[BS * BS];
+  Color board[MaxBS * MaxBS];
   /*
   const char boardstr[] = ""
   ". . . . . . . . . . . . . . . "
@@ -292,17 +292,17 @@ int main_testvcf()
     ". . . . . . . . . . . . . . . "
     ". . . . . . . . . . . . . . . "
     ;
-  for (int y = 0; y < BS; y++)
-    for (int x = 0; x < BS; x++) {
-      char  colorchar = boardstr[2 * (x + y * BS)];
+  for (int y = 0; y < MaxBS; y++)
+    for (int x = 0; x < MaxBS; x++) {
+      char  colorchar = boardstr[2 * (x + y * MaxBS)];
       Color color     = C_EMPTY;
       if (colorchar == 'x')
         color = C_BLACK;
       else if (colorchar == 'o')
         color = C_WHITE;
-      board[x + y * BS] = color;
+      board[x + y * MaxBS] = color;
     }
-  VCFsolver v(BS,BS,DEFAULT_RULE, C_BLACK);
+  VCFsolver v(MaxBS,MaxBS,DEFAULT_RULE, C_BLACK);
   v.setBoard(board, false,true);
   Loc bestloc;
   int result;

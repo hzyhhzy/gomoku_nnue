@@ -90,8 +90,8 @@ public:
 
   VCFsolver vcfSolver[2];
 
-  Loc locbuf[BS * BS];
-  PolicyType pbuf1[BS * BS], pbuf2[MAX_MCTS_CHILDREN];
+  Loc locbuf[MaxBS * MaxBS];
+  PolicyType pbuf1[MaxBS * MaxBS], pbuf2[MAX_MCTS_CHILDREN];
   float pbuf3[MAX_MCTS_CHILDREN];
 
 

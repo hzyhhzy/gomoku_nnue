@@ -9,14 +9,14 @@ MCTSnode::MCTSnode(Evaluator* evaluator, Color nextColor,double policyTemp, Loc*
 
   //calculate policy
   WRtotal = ValueSum(evaluator->evaluateFull(nextColor, pbuf1));
-  for (Loc loc = 0; loc < BS * BS; loc++)
+  for (Loc loc = 0; loc < MaxBS * MaxBS; loc++)
   {
     if (evaluator->board[loc] != C_EMPTY)pbuf1[loc] = MIN_POLICY;
   }
 
   //policy sort
-  std::iota(locbuf, locbuf + BS * BS, LOC_ZERO);
-  std::partial_sort(locbuf,locbuf+MAX_MCTS_CHILDREN, locbuf + BS * BS, [&](Loc a, Loc b) {
+  std::iota(locbuf, locbuf + MaxBS * MaxBS, LOC_ZERO);
+  std::partial_sort(locbuf,locbuf+MAX_MCTS_CHILDREN, locbuf + MaxBS * MaxBS, [&](Loc a, Loc b) {
     return pbuf1[a] > pbuf1[b];
     });
 
@@ -79,7 +79,7 @@ MCTSnode::~MCTSnode()
 MCTSsearch::MCTSsearch(Evaluator *e)
     : Search(e)
     , rootNode(NULL)
-    , vcfSolver {{BS, BS, DEFAULT_RULE, C_BLACK}, {BS, BS, DEFAULT_RULE, C_WHITE}}
+    , vcfSolver {{MaxBS, MaxBS, DEFAULT_RULE, C_BLACK}, {MaxBS, MaxBS, DEFAULT_RULE, C_WHITE}}
 {
   vcfSolver[0].setBoard(boardPointer, false, true);
   vcfSolver[1].setBoard(boardPointer, false, true);
