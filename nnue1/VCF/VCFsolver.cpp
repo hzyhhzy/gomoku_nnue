@@ -506,7 +506,8 @@ VCF::PlayResult VCFsolver::playTwo(Loc loc1, Loc loc2, Loc& nextForceLoc)
   OpPerShape(3, dir3, 1);
   OpPerShape(3, dir3, 2);
 
-
+  
+#undef OpPerShape
 
 
 

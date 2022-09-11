@@ -33,13 +33,7 @@
     <ClCompile Include="Evaluator.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Eva_sum1.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="EvaluatorOneSide.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="ABsearch.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Search.cpp">
@@ -48,16 +42,7 @@
     <ClCompile Include="Engine.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="PVSsearch.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="TT.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="Eva_mix6_avx2.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="EngineDev.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="utils.cpp">
@@ -75,19 +60,10 @@
     <ClCompile Include="VCF\hash.cpp">
       <Filter>源文件\VCF</Filter>
     </ClCompile>
-    <ClCompile Include="Eva_mix6VCF.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="PVSsearchVCT.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="MCTSsearch.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Eva_nnuev2.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="Eva_nnuev2VCF.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="validation.cpp">
@@ -107,19 +83,10 @@
     <ClInclude Include="global.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Eva_sum1.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="EvaluatorOneSide.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="ABsearch.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="Search.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="AllEvaluator.h">
@@ -128,16 +95,7 @@
     <ClInclude Include="AllSearch.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="PVSsearch.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="TT.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="Eva_mix6_avx2.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="EngineDev.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="VCF\VCFHashTable.h">
@@ -152,12 +110,6 @@
     <ClInclude Include="VCF\hash.h">
       <Filter>头文件\VCF</Filter>
     </ClInclude>
-    <ClInclude Include="Eva_mix6VCF.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="PVSsearchVCT.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="MCTSsearch.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -170,9 +122,6 @@
     <ClInclude Include="Eva_nnuev2.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Eva_nnuev2VCF.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="external\cnpy\cnpy.h">
       <Filter>头文件\external</Filter>
     </ClInclude>
@@ -180,6 +129,9 @@
       <Filter>头文件\external</Filter>
     </ClInclude>
     <ClInclude Include="validation.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

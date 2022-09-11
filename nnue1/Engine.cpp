@@ -2,24 +2,22 @@
 
 #include "TT.h"
 
+#include <chrono>
 #include <future>
 using namespace std;
 
-Engine::Engine(std::string evaluator_type,
-               std::string weightfile,
-               int         TTsize,
-               bool        writeLogEnable)
-    : writeLogEnable(writeLogEnable)
+Engine::Engine(std::string evaluator_type, std::string weightfile, std::string configfile,bool writeLogEnable): writeLogEnable(writeLogEnable)
 {
   evaluator = new Evaluator(evaluator_type, weightfile);
-  search    = new PVSsearch(evaluator);
-  TT.resize(TTsize);
+  search    = new MCTSsearch(evaluator);
+  if (configfile != "")search->loadParamFile(configfile);
+
   nextColor = C_BLACK;
 
   if (writeLogEnable) {
     string logfilepath = weightfile;
     while (logfilepath[logfilepath.length() - 1] != '/'
-           && logfilepath[logfilepath.length() - 1] != '\\' && logfilepath.length() > 0)
+      && logfilepath[logfilepath.length() - 1] != '\\' && logfilepath.length() > 0)
       logfilepath.pop_back();
     logfilepath = logfilepath + "log.txt";
 
@@ -29,8 +27,6 @@ Engine::Engine(std::string evaluator_type,
   timeout_turn  = 1000;
   timeout_match = 10000000;
   time_left     = 10000000;
-  max_nodes     = UINT64_MAX;
-  max_depth     = 64;
 }
 
 void Engine::writeLog(std::string str)
@@ -41,58 +37,52 @@ void Engine::writeLog(std::string str)
 
 std::string Engine::genmove()
 {
+  
   Time   tic         = now();
-  double bestvalue   = VALUE_NONE;
+  double bestvalue   = 0;
   Loc    bestloc     = LOC_NULL;
   int    maxTurnTime = min(timeout_turn - ReservedTime, time_left / 7);
   int    maxWaitTime = max(maxTurnTime - AsyncWaitReservedTime, 0);
   int    optimalTime = maxTurnTime * 2 / 5;
-  int    maxDepth    = min(max_depth, 64);
 
-  search->clear();
-  search->setOptions(max_nodes);
-  for (int depth = 1; depth < maxDepth; depth++) {
     auto result = std::async(std::launch::async, [&]() {
       Loc    loc;
-      double value = search->fullsearch(nextColor, depth, loc);
+      double value = search->fullsearch(nextColor, 0, loc);
       return std::make_pair(value, loc);
     });
 
     if (result.wait_for(chrono::milliseconds(
-            max(maxWaitTime + tic - now(), depth == 1 ? 1000LL : 0LL)))
+            max(maxWaitTime + tic - now(), 10LL)))
         == future_status::timeout) {
       search->stop();
-      break;
-    }
-    else if (search->terminate) {
-      break;
     }
 
     std::tie(bestvalue, bestloc) = result.get();
     Time toc                     = now();
     // search->evaluator->recalculate();
-    cout << "MESSAGE Depth = " << depth << "-" << search->selDepth
-         << " Value = " << valueText(bestvalue) << " Nodes = " << search->nodes << "("
-         << search->interiorNodes << ")"
-         << " Time = " << toc - tic << " Nps = "
-         << search->nodes * 1000.0 / (toc - tic)
-         //<< " TT = " << 100.0 * search->ttHits / search->interiorNodes << "("
-         //<< 100.0 * search->ttCuts / search->ttHits << ")"
-         << " PV = " << search->rootPV() << endl;
+    std::cout << "MESSAGE Nodes = " << search->getRootVisit()
+      << " Value = " << bestvalue
+      << " Time = " << toc - tic << " Nps = "
+      << search->getRootVisit() * 1000.0 / (toc - tic)
+      //<< " TT = " << 100.0 * search->ttHits / search->interiorNodes << "("
+      //<< 100.0 * search->ttCuts / search->ttHits << ")"
+      << " BestMove = " << locstr(bestloc)
+      //<< " PV = " << search->rootPV()
+      << endl;
 
-    // Reach time limit
-    if (toc - tic > optimalTime)
-      break;
-  }
+  
 
   if (bestloc != LOC_NULL)
-    evaluator->play(nextColor, bestloc);
+    search->play(nextColor, bestloc);
   else
     bestloc = LOC_PASS;
   nextColor = getOpp(nextColor);
 
   int bestx = bestloc % BS, besty = bestloc / BS;
   return to_string(bestx) + "," + to_string(besty);
+
+
+
 }
 
 void Engine::protocolLoop()
@@ -100,7 +90,7 @@ void Engine::protocolLoop()
   string line;
   writeLog("Start protocol loop");
   while (getline(cin, line)) {
-    writeLog(line);
+    writeLog( line );
     bool           print_endl = true;
     string         response   = "";
     string         command;
@@ -141,7 +131,7 @@ void Engine::protocolLoop()
         response = "ERROR This engine only support boardsize " + to_string(BS);
       else
         response = "OK";
-      evaluator->clear();
+      search->clearBoard();
       nextColor = C_BLACK;
     }
     else if (command == "TURN") {
@@ -151,13 +141,13 @@ void Engine::protocolLoop()
         response = "ERROR Bad command";
       else {
         Loc opploc = MakeLoc(oppx, oppy);
-        evaluator->play(nextColor, opploc);
+        search->play(nextColor, opploc);
         nextColor = getOpp(nextColor);
         response  = genmove();
       }
     }
     else if (command == "BOARD") {
-      evaluator->clear();
+      search->clearBoard();
       nextColor = C_BLACK;
 
       string line2;
@@ -190,13 +180,13 @@ void Engine::protocolLoop()
         }
         else {  // normal move
           Loc loc = MakeLoc(x, y);
-          evaluator->play(nextColor, loc);
+          search->play(nextColor, loc);
           nextColor = getOpp(nextColor);
         }
       }
     }
     else if (command == "BEGIN") {
-      evaluator->clear();
+      search->clearBoard();
       nextColor = C_BLACK;
       response  = genmove();
     }
@@ -207,7 +197,6 @@ void Engine::protocolLoop()
         subcommand = pieces[0];
         pieces.erase(pieces.begin());
       }
-
       if (subcommand == "timeout_turn") {
         int tmp;
         if (pieces.size() != 1 || !strOp::tryStringToInt(pieces[0], tmp))
@@ -228,30 +217,6 @@ void Engine::protocolLoop()
           cout << "ERROR Bad command" << endl;
         else
           time_left = tmp;
-      }
-      else if (subcommand == "max_memory") {
-        int tmp;
-        if (pieces.size() != 1 || !strOp::tryStringToInt(pieces[0], tmp))
-          cout << "ERROR Bad command" << endl;
-        else {
-          constexpr int ReversedMemMb   = 132;  // ¹ÀËãµÄÄÚ´æÏûºÄ
-          size_t        useableMemoryMb = max(tmp - ReversedMemMb, 0);
-          TT.resize(1 + useableMemoryMb / 2 / (1024 * 1024));
-        }
-      }
-      else if (subcommand == "max_node") {
-        int tmp;
-        if (pieces.size() != 1 || !strOp::tryStringToInt(pieces[0], tmp))
-          cout << "ERROR Bad command" << endl;
-        else
-          max_nodes = tmp;
-      }
-      else if (subcommand == "max_depth") {
-        int tmp;
-        if (pieces.size() != 1 || !strOp::tryStringToInt(pieces[0], tmp))
-          cout << "ERROR Bad command" << endl;
-        else
-          max_depth = tmp;
       }
       else {  // do nothing
       }
@@ -283,5 +248,5 @@ void Engine::protocolLoop()
     writeLog(response);
   }
 
-  writeLog("Finished protocol loop");
+  writeLog( "Finished protocol loop" );
 }

@@ -42,13 +42,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -145,23 +145,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="ABsearch.cpp" />
     <ClCompile Include="Engine.cpp" />
-    <ClCompile Include="EngineDev.cpp" />
     <ClCompile Include="Evaluator.cpp" />
     <ClCompile Include="EvaluatorOneSide.cpp" />
-    <ClCompile Include="Eva_mix6VCF.cpp" />
-    <ClCompile Include="Eva_mix6_avx2.cpp" />
     <ClCompile Include="Eva_nnuev2.cpp" />
-    <ClCompile Include="Eva_nnuev2VCF.cpp" />
     <ClCompile Include="external\cnpy\cnpy.cpp" />
     <ClCompile Include="global.cpp" />
     <ClCompile Include="MCTSsearch.cpp" />
     <ClCompile Include="nnue1.cpp" />
-    <ClCompile Include="PVSsearch.cpp" />
-    <ClCompile Include="PVSsearchVCT.cpp" />
     <ClCompile Include="Search.cpp" />
-    <ClCompile Include="Eva_sum1.cpp" />
     <ClCompile Include="TT.cpp" />
     <ClCompile Include="utils.cpp" />
     <ClCompile Include="validation.cpp" />
@@ -171,28 +163,20 @@
     <ClCompile Include="VCF\VCFsolver.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ABsearch.h" />
     <ClInclude Include="AllEvaluator.h" />
     <ClInclude Include="AllSearch.h" />
     <ClInclude Include="Engine.h" />
-    <ClInclude Include="EngineDev.h" />
     <ClInclude Include="Evaluator.h" />
     <ClInclude Include="EvaluatorOneSide.h" />
-    <ClInclude Include="Eva_mix6VCF.h" />
-    <ClInclude Include="Eva_mix6_avx2.h" />
     <ClInclude Include="Eva_nnuev2.h" />
-    <ClInclude Include="Eva_nnuev2VCF.h" />
     <ClInclude Include="external\cnpy\cnpy.h" />
     <ClInclude Include="external\simde_avx2.h" />
     <ClInclude Include="external\simde_fma.h" />
     <ClInclude Include="external\zlib\include\zlib.h" />
     <ClInclude Include="global.h" />
     <ClInclude Include="MCTSsearch.h" />
-    <ClInclude Include="PVSsearchVCT.h" />
     <ClInclude Include="TT.h" />
-    <ClInclude Include="PVSsearch.h" />
     <ClInclude Include="Search.h" />
-    <ClInclude Include="Eva_sum1.h" />
     <ClInclude Include="validation.h" />
     <ClInclude Include="VCF\hash.h" />
     <ClInclude Include="VCF\mutexpool.h" />
