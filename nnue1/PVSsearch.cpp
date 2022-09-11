@@ -8,7 +8,7 @@ PVSsearch::PVSsearch(Evaluator *e)
     , interiorNodes(0)
     , ttHits(0)
     , ttCuts(0)
-    , vcfSolver {{BS, BS, C_BLACK}, {BS, BS, C_WHITE}}
+    , vcfSolver {{BS, BS, DEFAULT_RULE, C_BLACK}, {BS, BS, DEFAULT_RULE, C_WHITE}}
 {}
 
 float PVSsearch::fullsearch(Color color, double factor, Loc &bestmove)

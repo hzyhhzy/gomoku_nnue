@@ -76,7 +76,10 @@ MCTSnode::~MCTSnode()
   }
 }
 
-MCTSsearch::MCTSsearch(Evaluator* e) :Search(e), rootNode(NULL), vcfSolver{ {BS, BS, C_BLACK}, {BS, BS, C_WHITE} }
+MCTSsearch::MCTSsearch(Evaluator *e)
+    : Search(e)
+    , rootNode(NULL)
+    , vcfSolver {{BS, BS, DEFAULT_RULE, C_BLACK}, {BS, BS, DEFAULT_RULE, C_WHITE}}
 {
   vcfSolver[0].setBoard(boardPointer, false, true);
   vcfSolver[1].setBoard(boardPointer, false, true);

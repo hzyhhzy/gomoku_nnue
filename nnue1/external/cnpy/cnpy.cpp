@@ -11,7 +11,7 @@
 #include<stdint.h>
 #include<stdexcept>
 #include <regex>
-#pragma comment(lib, "D:/gomtrain/git/gomoku_nnue/nnue1/external/zlib/lib_release/zlibstatic.lib")
+#pragma comment(lib, "./external/zlib/lib_release/zlibstatic.lib")
 char cnpy::BigEndianTest() {
     int x = 1;
     return (((char *)&x)[0]) ? '<' : '>';

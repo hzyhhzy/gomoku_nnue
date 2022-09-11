@@ -624,7 +624,7 @@ int main_testvcf()
         color = C_WHITE;
       board[x + y * BS] = color;
     }
-  VCFsolver v(BS,BS,C_BLACK);
+  VCFsolver v(BS,BS,DEFAULT_RULE, C_BLACK);
   v.setBoard(board, false,true);
   Loc bestloc;
   int result;

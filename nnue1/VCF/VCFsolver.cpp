@@ -10,6 +10,8 @@ VCF::zobristTable::zobristTable(int64_t seed)
   r();
   r();
   isWhite = Hash128(r(), r());
+  for (int i = 0; i < 3; i++)
+    basicRuleHash[i] = Hash128(r(), r());
   for (int i = 0; i < 2; i++)
     for (int j = 0; j < (BS+6)*(BS+6); j++)
     {
@@ -19,16 +21,22 @@ VCF::zobristTable::zobristTable(int64_t seed)
 
 }
 
-VCFsolver::VCFsolver(int h, int w, Color pla) :H(h), W(w), isWhite(pla == C_WHITE)
+VCFsolver::VCFsolver(int h, int w, BasicRule basicRule, Color pla)
+    : H(h)
+    , W(w)
+    , basicRule(basicRule)
+    , isWhite(pla == C_WHITE)
 {
   reset();
 }
 
 void VCFsolver::reset()
 {
+
   //hash
-  if (isWhite)boardHash = zobrist.isWhite;
-  else boardHash = Hash128();
+  boardHash = Hash128();
+  boardHash ^= zobrist.basicRuleHash[basicRule];
+  if (isWhite)boardHash ^= zobrist.isWhite;
 
   //board
   for (int i = 0; i < ArrSize; i++)
@@ -168,6 +176,8 @@ void VCFsolver::playOutside(Loc loc, Color color, int locType,bool colorType)
 
   //shape
   int d = (color == C_BLACK) ? 1 : 64;
+  bool isSixNotWin = basicRule == BASICRULE_STANDARD || (BASICRULE_RENJU && (isWhite^(color==C_MY)));
+
 
 #define OpPerShape(DIR,DIF,INC) shape[DIR][loc+(DIF)]+=INC
   OpPerShape(0, -2 * dir0, d);
@@ -197,11 +207,12 @@ void VCFsolver::playOutside(Loc loc, Color color, int locType,bool colorType)
   OpPerShape(2, -3 * dir2, 8 * d);
   OpPerShape(3, -3 * dir3, 8 * d);
 
-  //六不胜时解除底下的注释
-  //OpPerShape(0, 3*dir0,8*d);
-  //OpPerShape(1, 3*dir1,8*d);
-  //OpPerShape(2, 3*dir2,8*d);
-  //OpPerShape(3, 3*dir3,8*d);
+  if (isSixNotWin) {
+    OpPerShape(0, 3 * dir0, 8 * d);
+    OpPerShape(1, 3 * dir1, 8 * d);
+    OpPerShape(2, 3 * dir2, 8 * d);
+    OpPerShape(3, 3 * dir3, 8 * d);
+  }
 
 
 
@@ -323,11 +334,14 @@ VCF::PlayResult VCFsolver::playTwo(Loc loc1, Loc loc2, Loc& nextForceLoc)
   OpSix(1, -dir1);
   OpSix(2, -dir2);
   OpSix(3, -dir3);
-  //六不胜去掉下面注释
-  //OpSix(0, dir0);
-  //OpSix(1, dir1);
-  //OpSix(2, dir2);
-  //OpSix(3, dir3);
+
+  if (basicRule == BASICRULE_STANDARD
+      || (BASICRULE_RENJU && (!isWhite))) {
+    OpSix(0, dir0);
+    OpSix(1, dir1);
+    OpSix(2, dir2);
+    OpSix(3, dir3);
+  }
 #undef OpSix
 
   //DIR方向编号，DX方向编号对应的指针改变量，DIS是移动距离
@@ -367,11 +381,12 @@ VCF::PlayResult VCFsolver::playTwo(Loc loc1, Loc loc2, Loc& nextForceLoc)
   OpSix(1, -dir1);
   OpSix(2, -dir2);
   OpSix(3, -dir3);
-  //六不胜去掉下面注释
-  //OpSix(0, dir0);
-  //OpSix(1, dir1);
-  //OpSix(2, dir2);
-  //OpSix(3, dir3);
+  if (basicRule == BASICRULE_STANDARD || (BASICRULE_RENJU && (isWhite))) {
+    OpSix(0, dir0);
+    OpSix(1, dir1);
+    OpSix(2, dir2);
+    OpSix(3, dir3);
+  }
 #undef OpSix
 
   //DIR方向编号，DX方向编号对应的指针改变量，DIS是移动距离
@@ -512,7 +527,10 @@ void VCFsolver::undo(Loc loc)
 {
   movenum--;
   Color color = board[loc];
-  int d = (color == C_MY) ? 1 : 64;
+  int   d           = (color == C_MY) ? 1 : 64;
+  bool  isSixNotWin = basicRule == BASICRULE_STANDARD
+                     || (BASICRULE_RENJU && (isWhite ^ (color == C_MY)));
+
   board[loc] = C_EMPTY;
 
   //hash
@@ -545,12 +563,13 @@ void VCFsolver::undo(Loc loc)
   OpPerShape(1, -3 * dir1, 8 * d);
   OpPerShape(2, -3 * dir2, 8 * d);
   OpPerShape(3, -3 * dir3, 8 * d);
-
-  //六不胜时解除底下的注释
-  //OpPerShape(0, 3*dir0,8*d);
-  //OpPerShape(1, 3*dir1,8*d);
-  //OpPerShape(2, 3*dir2,8*d);
-  //OpPerShape(3, 3*dir3,8*d);
+  
+  if (isSixNotWin) {
+    OpPerShape(0, 3 * dir0, 8 * d);
+    OpPerShape(1, 3 * dir1, 8 * d);
+    OpPerShape(2, 3 * dir2, 8 * d);
+    OpPerShape(3, 3 * dir3, 8 * d);
+  }
 
 
 

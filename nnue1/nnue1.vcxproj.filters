@@ -90,14 +90,14 @@
     <ClCompile Include="Eva_nnuev2VCF.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="external\cnpy\cnpy.cpp">
-      <Filter>源文件\external</Filter>
-    </ClCompile>
     <ClCompile Include="validation.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="global.cpp">
       <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="external\cnpy\cnpy.cpp">
+      <Filter>源文件\external</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

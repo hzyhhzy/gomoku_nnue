@@ -11,6 +11,34 @@
 
 const int BS = 15;
 
+typedef int8_t         BasicRule;
+const BasicRule BASICRULE_FREESTYLE = 0;
+const BasicRule BASICRULE_STANDARD  = 1;
+const BasicRule BASICRULE_RENJU     = 2;
+
+const BasicRule DEFAULT_RULE = BASICRULE_STANDARD;
+
+typedef int8_t VCNRule;
+const VCNRule VCNRULE_NOVC  = 0;
+const VCNRule VCNRULE_VC1_B = 1;
+const VCNRule VCNRULE_VC2_B = 2;
+const VCNRule VCNRULE_VC3_B = 3;
+const VCNRule VCNRULE_VC4_B = 4;
+const VCNRule VCNRULE_VC1_W = 11;
+const VCNRule VCNRULE_VC2_W = 12;
+const VCNRule VCNRULE_VC3_W = 13;
+const VCNRule VCNRULE_VC4_W = 14;
+const VCNRule VCNRULE_VC1_M = 1;
+const VCNRule VCNRULE_VC2_M = 2;
+const VCNRule VCNRULE_VC3_M = 3;
+const VCNRule VCNRULE_VC4_M = 4;
+const VCNRule VCNRULE_VC1_O = 11;
+const VCNRule VCNRULE_VC2_O = 12;
+const VCNRule VCNRULE_VC3_O = 13;
+const VCNRule VCNRULE_VC4_O = 14;
+
+
+
 typedef uint64_t Key;
 
 typedef int8_t         Color;

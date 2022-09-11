@@ -16,6 +16,7 @@ namespace VCF {
   {
     Hash128 boardhash[2][(BS + 6) * (BS + 6)];
     Hash128 isWhite;
+    Hash128 basicRuleHash[3];
     zobristTable(int64_t seed);
   };
 
@@ -77,6 +78,7 @@ class VCFsolver
 public:
   const int H, W;
   const bool isWhite;//如果进攻方是黑棋，则false，进攻方是白棋则true。若true，color全是反向
+  const BasicRule basicRule;
 
   Color board[(BS + 6) * (BS + 6)];  //预留3圈
   // shape=1*己方棋子+8*长连+64*对方棋子+512*对手长连+4096*出界
@@ -91,9 +93,9 @@ public:
   Loc PV[BS * BS];//记录路线
   int PVlen;
 
-  VCFsolver() :VCFsolver(C_BLACK) {}
-  VCFsolver(Color pla) :VCFsolver(BS, BS,pla) {}
-  VCFsolver(int h, int w,Color pla);
+  VCFsolver() :VCFsolver(C_BLACK,BASICRULE_FREESTYLE) {}
+  VCFsolver(BasicRule basicRule,Color pla) : VCFsolver(BS, BS, basicRule, pla) {}
+  VCFsolver(int h, int w, BasicRule basicRule, Color pla);
   void reset();
 
   //两种board
