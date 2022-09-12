@@ -25,6 +25,12 @@
     <Filter Include="源文件\external">
       <UniqueIdentifier>{15c98c25-14ee-4cdd-8e54-c67c0af3d5f8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="头文件\HashTable">
+      <UniqueIdentifier>{4a43db1e-8694-4dbe-8492-3daf8d74b13b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="源文件\HashTable">
+      <UniqueIdentifier>{8ac846e5-623b-4ac5-b797-d8fe58d8216b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="nnue1.cpp">
@@ -48,15 +54,6 @@
     <ClCompile Include="VCF\VCFsolver.cpp">
       <Filter>源文件\VCF</Filter>
     </ClCompile>
-    <ClCompile Include="VCF\VCFHashTable.cpp">
-      <Filter>源文件\VCF</Filter>
-    </ClCompile>
-    <ClCompile Include="VCF\mutexpool.cpp">
-      <Filter>源文件\VCF</Filter>
-    </ClCompile>
-    <ClCompile Include="VCF\hash.cpp">
-      <Filter>源文件\VCF</Filter>
-    </ClCompile>
     <ClCompile Include="MCTSsearch.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -74,6 +71,18 @@
     </ClCompile>
     <ClCompile Include="ExtraStages.cpp">
       <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="HashTable\hash.cpp">
+      <Filter>源文件\HashTable</Filter>
+    </ClCompile>
+    <ClCompile Include="HashTable\mutexpool.cpp">
+      <Filter>源文件\HashTable</Filter>
+    </ClCompile>
+    <ClCompile Include="HashTable\VCFHashTable.cpp">
+      <Filter>源文件\HashTable</Filter>
+    </ClCompile>
+    <ClCompile Include="HashTable\NNUEHashTable.cpp">
+      <Filter>源文件\HashTable</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -95,16 +104,7 @@
     <ClInclude Include="TT.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="VCF\VCFHashTable.h">
-      <Filter>头文件\VCF</Filter>
-    </ClInclude>
     <ClInclude Include="VCF\VCFsolver.h">
-      <Filter>头文件\VCF</Filter>
-    </ClInclude>
-    <ClInclude Include="VCF\mutexpool.h">
-      <Filter>头文件\VCF</Filter>
-    </ClInclude>
-    <ClInclude Include="VCF\hash.h">
       <Filter>头文件\VCF</Filter>
     </ClInclude>
     <ClInclude Include="MCTSsearch.h">
@@ -133,6 +133,18 @@
     </ClInclude>
     <ClInclude Include="ExtraStages.h">
       <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="HashTable\hash.h">
+      <Filter>头文件\HashTable</Filter>
+    </ClInclude>
+    <ClInclude Include="HashTable\mutexpool.h">
+      <Filter>头文件\HashTable</Filter>
+    </ClInclude>
+    <ClInclude Include="HashTable\VCFHashTable.h">
+      <Filter>头文件\HashTable</Filter>
+    </ClInclude>
+    <ClInclude Include="HashTable\NNUEHashTable.h">
+      <Filter>头文件\HashTable</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

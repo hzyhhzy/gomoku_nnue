@@ -151,15 +151,16 @@
     <ClCompile Include="external\cnpy\cnpy.cpp" />
     <ClCompile Include="ExtraStages.cpp" />
     <ClCompile Include="global.cpp" />
+    <ClCompile Include="HashTable\hash.cpp" />
+    <ClCompile Include="HashTable\mutexpool.cpp" />
+    <ClCompile Include="HashTable\NNUEHashTable.cpp" />
+    <ClCompile Include="HashTable\VCFHashTable.cpp" />
     <ClCompile Include="MCTSsearch.cpp" />
     <ClCompile Include="nnue1.cpp" />
     <ClCompile Include="Search.cpp" />
     <ClCompile Include="TT.cpp" />
     <ClCompile Include="utils.cpp" />
     <ClCompile Include="validation.cpp" />
-    <ClCompile Include="VCF\hash.cpp" />
-    <ClCompile Include="VCF\mutexpool.cpp" />
-    <ClCompile Include="VCF\VCFHashTable.cpp" />
     <ClCompile Include="VCF\VCFsolver.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -174,13 +175,14 @@
     <ClInclude Include="external\zlib\include\zlib.h" />
     <ClInclude Include="ExtraStages.h" />
     <ClInclude Include="global.h" />
+    <ClInclude Include="HashTable\hash.h" />
+    <ClInclude Include="HashTable\mutexpool.h" />
+    <ClInclude Include="HashTable\NNUEHashTable.h" />
+    <ClInclude Include="HashTable\VCFHashTable.h" />
     <ClInclude Include="MCTSsearch.h" />
     <ClInclude Include="TT.h" />
     <ClInclude Include="Search.h" />
     <ClInclude Include="validation.h" />
-    <ClInclude Include="VCF\hash.h" />
-    <ClInclude Include="VCF\mutexpool.h" />
-    <ClInclude Include="VCF\VCFHashTable.h" />
     <ClInclude Include="VCF\VCFsolver.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
