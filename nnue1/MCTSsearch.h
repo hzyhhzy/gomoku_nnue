@@ -1,16 +1,9 @@
 #pragma once
 #include "Search.h"
 #include "VCF/VCFsolver.h"
-const int MAX_MCTS_CHILDREN = 30;
 const double policyQuant = 50000;
 const double policyQuantInv = 1/policyQuant;
 
-enum MCTSsureResult : int16_t {
-  MC_Win = 1,
-  MC_LOSE = -1,
-  MC_DRAW = 2,
-  MC_UNCERTAIN = 0
-};
 inline ValueSum sureResultWR(MCTSsureResult sr)
 {
   if (sr == MC_Win)

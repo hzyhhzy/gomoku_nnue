@@ -50,7 +50,7 @@ void loss_oneSample(Eva_nnuev2 *eva,
   ValueType  value = eva->evaluateFull(policy_int);
   double      policy[MaxBS * MaxBS];
   for (Loc loc = 0; loc < MaxBS * MaxBS; loc++) {
-    policy[loc] = policy_int[loc] / quantFactor;
+    policy[loc] = policy_int[loc] / policyQuantFactor;
   }
 
   //ploss---------------------------------------------------------------------------------------------

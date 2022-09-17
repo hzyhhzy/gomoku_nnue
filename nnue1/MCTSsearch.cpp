@@ -43,7 +43,7 @@ MCTSnode::MCTSnode(Evaluator* evaluator, Color nextColor,double policyTemp, Loc*
 
   PolicyType maxRawPolicy = *std::max_element(pbuf2, pbuf2 + legalChildrennum);
   std::transform(pbuf2, pbuf2 + legalChildrennum, pbuf3, [=](auto& p) {
-    const double invQ = 1.0 / quantFactor / policyTemp;
+    const double invQ = 1.0 / policyQuantFactor / policyTemp;
     return (float)std::exp((p - maxRawPolicy) * invQ);
     // return (float)std::max(p, PolicyType(0));
     });

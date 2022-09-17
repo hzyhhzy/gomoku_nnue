@@ -11,6 +11,10 @@
 
 const int MaxBS = 15;
 
+const int MAX_MCTS_CHILDREN = 32;
+
+const float policyQuantFactor = 32;
+
 namespace Rules {
 
 const int BASICRULE_FREESTYLE = 0;
@@ -47,6 +51,8 @@ typedef int16_t      Loc;
 static constexpr Loc LOC_ZERO = 0;
 static constexpr Loc LOC_NULL = -1;
 static constexpr Loc LOC_PASS = MaxBS * MaxBS;
+
+enum MCTSsureResult : int16_t { MC_Win = 1, MC_LOSE = -1, MC_DRAW = 2, MC_UNCERTAIN = 0 };
 inline Loc           MakeLoc(int x, int y) { return Loc(x + y * MaxBS); }
 inline std::string   locstr(Loc loc)
 {
@@ -68,8 +74,6 @@ const PolicyType VCF_POLICY     = 1e5;
 
 const double WIN_VALUE  = 1;
 const double LOSE_VALUE = -1;
-
-const float quantFactor = 32;
 
 struct ValueType
 {

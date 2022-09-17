@@ -443,7 +443,7 @@ void Eva_nnuev2::evaluatePolicy(PolicyType *policy)
     psum = simde_mm256_hadd_epi32(psum, psum);
 
     auto  p = simde_mm256_extract_epi32(psum, 0) + simde_mm256_extract_epi32(psum, 4);
-    policy[loc] = p * weights.scale_policyInv * quantFactor/32768;
+    policy[loc] = p * weights.scale_policyInv * policyQuantFactor / 32768;
   }
 }
 

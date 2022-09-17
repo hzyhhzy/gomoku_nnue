@@ -21,13 +21,18 @@ public:
   std::mutex& getMutex(uint32_t idx);
 };*/
 
+struct MCTSnode;
+
 class NNUEHashTable
 {
   struct Entry
   {
     uint64_t hash1;  // HASH相撞的概率极低，可以忽略
-    int64_t  result;
-    Entry() : hash1(), result(0) {}
+    MCTSsureResult sureResult;
+    int16_t        legalChildrennum;
+    Loc      locs[MAX_MCTS_CHILDREN];
+    uint16_t policy[MAX_MCTS_CHILDREN];
+    Entry() : hash1(0) {}
     ~Entry() {}
   };
 
@@ -49,6 +54,6 @@ public:
   NNUEHashTable &operator=(const NNUEHashTable &other) = delete;
 
   // These are thread-safe. For get, ret will be set to nullptr upon a failure to find.
-  int64_t get(Hash128 hash);
-  void    set(Hash128 hash, int64_t result);
+  bool get(Hash128 hash, MCTSnode &node);
+  void    set(Hash128 hash, const MCTSnode& node);
 };

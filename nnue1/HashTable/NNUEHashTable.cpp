@@ -1,4 +1,5 @@
 #include "NNUEHashTable.h"
+#include "../MCTSsearch.h"
 
 using namespace std;
 
@@ -17,7 +18,7 @@ NNUEHashTable::~NNUEHashTable()
   delete mutexPool;
 }
 
-int64_t NNUEHashTable::get(Hash128 hash)
+bool NNUEHashTable::get(Hash128 hash, MCTSnode &node)
 {
   // Free ret BEFORE locking, to avoid any expensive operations while locked.
 
@@ -30,12 +31,18 @@ int64_t NNUEHashTable::get(Hash128 hash)
   std::lock_guard<std::mutex> lock(mutex);
 #endif
   if (entry.hash1 == hash.hash1) {
-    return entry.result;
+    node.sureResult       = entry.sureResult;
+    node.legalChildrennum = entry.legalChildrennum;
+    for (int child = 0; child < MAX_MCTS_CHILDREN; child++) {
+      node.children[child].loc = entry.locs[child];
+      node.children[child].policy = entry.policy[child];
+    }
+    return true;
   }
-  return 0;
+  else return false;
 }
 
-void NNUEHashTable::set(Hash128 hash, int64_t result)
+void NNUEHashTable::set(Hash128 hash, const MCTSnode &node)
 {
   // Immediately copy p right now, before locking, to avoid any expensive operations while
   // locked.
@@ -55,8 +62,13 @@ void NNUEHashTable::set(Hash128 hash, int64_t result)
     std::lock_guard<std::mutex> lock(mutex);
 #endif
     // Perform a swap, to avoid any expensive free under the mutex.
-    entry.hash1  = hash.hash1;
-    entry.result = result;
+    entry.hash1           = hash.hash1;
+    entry.sureResult       = node.sureResult;
+    entry.legalChildrennum = node.legalChildrennum;
+    for (int child = 0; child < MAX_MCTS_CHILDREN; child++) {
+      entry.locs[child] = node.children[child].loc;
+      entry.policy[child] = node.children[child].policy;
+    }
   }
 
   // No longer locked, allow buf to fall out of scope now, will free whatever used to be
