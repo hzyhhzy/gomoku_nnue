@@ -56,9 +56,9 @@ int maingtp(int argc, const char **argv)
 }
 
 
-int main_testMCTS()
+int main_testMCTS(int argc, const char **argv)
 {
-  Evaluator *eva    = new Evaluator("nnuev2", "D:/gomtrain/export/gomf1.txt");
+  Evaluator  *eva    = new Evaluator("nnuev2", appPath(argc, argv) + "model.txt");
   MCTSsearch *search = new MCTSsearch(eva);
   /*
   const char boardstr[] = ""
@@ -89,10 +89,10 @@ int main_testMCTS()
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . "
-  ". . . o . . . . . . . . . . . "
-  ". . . . . o o x . . . . . . . "
+  ". . . . . . o . . . . . . . . "
+  ". . . . . o o . . . . . . . . "
   ". . . . . x o x . . . . . . . "
-  ". . . x . . . . . . . . . . . "
+  ". . . x . o x x . . . . . . . "
   ". . . . . . . . . . . . . . . "
   ". . . . . . . . . . . . . . . ";
   for (int y = 0; y < MaxBS; y++)
@@ -104,13 +104,13 @@ int main_testMCTS()
       else if (colorchar == 'o')
         color = C_WHITE;
       if (color != C_EMPTY)
-        eva->play(color, MakeLoc(x, y));
+        search->play(color, MakeLoc(x, y));
     }
 
   Time tic = now();
   for (int depth = 0; depth < 100000; depth++) {
     Loc    loc;
-    double value = search->fullsearch(C_BLACK, 100000, loc);
+    double value = search->fullsearch(C_BLACK, 10000, loc);
     Time      toc   = now();
     MCTSnode *rootNode = search->rootNode;
     cout << "Depth = " << depth << " Value = " << value
@@ -318,7 +318,7 @@ int main_testvcf()
 int main(int argc, const char **argv)
 {
   //main_testvcf();
-  //main_testMCTS();
+  //main_testMCTS(argc, argv);
   return maingtp(argc, argv);
    //return main_testeval();
    //main_testsearch();

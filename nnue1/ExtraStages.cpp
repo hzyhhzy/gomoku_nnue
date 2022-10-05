@@ -72,4 +72,6 @@ std::vector<float> ExtraStates::getGlobalFeatureInput_States(Color nextPlayer)
     gf[26]    = exp(-(maxMoves - movenum) / 1.5);
     gf[27]    = 2 * ((int(maxMoves - movenum)) % 2) - 1;
   }
+
+  return gf;
 }

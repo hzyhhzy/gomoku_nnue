@@ -32,7 +32,7 @@ const int VCNRULE_VC3_W = 13;
 const int VCNRULE_VC4_W = 14;
 }  // namespace Rules
 
-const int DEFAULT_RULE = Rules::BASICRULE_STANDARD;  
+const int DEFAULT_RULE = Rules::BASICRULE_FREESTYLE;  
 
 
 typedef uint64_t Key;

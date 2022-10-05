@@ -157,7 +157,6 @@
     <ClCompile Include="HashTable\VCFHashTable.cpp" />
     <ClCompile Include="MCTSsearch.cpp" />
     <ClCompile Include="nnue1.cpp" />
-    <ClCompile Include="Search.cpp" />
     <ClCompile Include="TT.cpp" />
     <ClCompile Include="utils.cpp" />
     <ClCompile Include="validation.cpp" />
@@ -181,7 +180,6 @@
     <ClInclude Include="HashTable\VCFHashTable.h" />
     <ClInclude Include="MCTSsearch.h" />
     <ClInclude Include="TT.h" />
-    <ClInclude Include="Search.h" />
     <ClInclude Include="validation.h" />
     <ClInclude Include="VCF\VCFsolver.h" />
   </ItemGroup>

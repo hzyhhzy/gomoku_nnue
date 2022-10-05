@@ -1,6 +1,7 @@
 #pragma once
-#include "Search.h"
+#include "Evaluator.h"
 #include "VCF/VCFsolver.h"
+#include "ExtraStages.h"
 const double policyQuant = 50000;
 const double policyQuantInv = 1/policyQuant;
 
@@ -32,6 +33,7 @@ inline double MCTSselectionValue(double puctFactor,
 }
 
 struct MCTSnode;
+class MCTSsearch;
 
 struct MCTSchild
 {
@@ -54,17 +56,27 @@ struct MCTSnode
 
   Color nextColor;
   
-  MCTSnode(Evaluator* evaluator,  Color nextColor,double policyTemp,Loc* locbuf,PolicyType* pbuf1,PolicyType* pbuf2,float* pbuf3);
+  MCTSnode(MCTSsearch* search,  Color nextColor,double policyTemp,Loc* locbuf,PolicyType* pbuf1,PolicyType* pbuf2,float* pbuf3);
   MCTSnode(MCTSsureResult sureResult, Color nextColor);
   ~MCTSnode();
   
 };
 
-class MCTSsearch :
-    public Search
+class MCTSsearch 
 {
 public:
-  MCTSnode* rootNode;
+  MCTSnode   *rootNode;
+  Color       board[MaxBS * MaxBS];
+  ExtraStates states;
+
+  Evaluator *evaluator;  //在engine里析构这个evaluator，不在这里析构
+  VCFsolver vcfSolver[2];
+
+  Loc        locbuf[MaxBS * MaxBS];
+  PolicyType pbuf1[MaxBS * MaxBS], pbuf2[MAX_MCTS_CHILDREN];
+  float      pbuf3[MAX_MCTS_CHILDREN];
+
+  std::atomic_bool terminate;
 
   struct Option
   {
@@ -81,22 +93,18 @@ public:
 
   }params;
 
-  VCFsolver vcfSolver[2];
-
-  Loc locbuf[MaxBS * MaxBS];
-  PolicyType pbuf1[MaxBS * MaxBS], pbuf2[MAX_MCTS_CHILDREN];
-  float pbuf3[MAX_MCTS_CHILDREN];
 
 
   MCTSsearch(Evaluator *e);
-  virtual float    fullsearch(Color color, double factor, Loc &bestmove);
-  virtual void play(Color color, Loc loc);
-  virtual void undo( Loc loc);
-  virtual void clearBoard(); 
+  float    fullsearch(Color color, double factor, Loc &bestmove);
+  void play(Color color, Loc loc);
+  void undo( Loc loc);
+  void clearBoard(); 
 
   Loc bestRootMove() const;
   float getRootValue() const;
   int64_t getRootVisit() const;
+  void stop() { terminate.store(true, std::memory_order_relaxed); }
 
   void             setOptions(size_t maxNodes) { option.maxNodes = maxNodes; }
   void loadParamFile(std::string filename);
@@ -113,7 +121,9 @@ private:
 
   SearchResult search(MCTSnode* node, uint64_t remainVisits,bool isRoot);
   MCTSsureResult checkSureResult(Loc nextMove, Color color);//check VCF
-  int selectChildIDToSearch(MCTSnode* node);
+  int                selectChildIDToSearch(MCTSnode *node);
+  std::vector<float> getGlobalFeatureInput(Color nextPlayer);
+  Hash128            getStateHash(Color nextPlayer);
 
 
 

@@ -177,7 +177,9 @@ void VCFsolver::playOutside(Loc loc, Color color, int locType,bool colorType)
 
   //shape
   int d = (color == C_BLACK) ? 1 : 64;
-  bool isSixNotWin = basicRule == Rules::BASICRULE_STANDARD || (Rules::BASICRULE_RENJU && (isWhite^(color==C_MY)));
+  bool isSixNotWin =
+      basicRule == Rules::BASICRULE_STANDARD
+      || (basicRule == Rules::BASICRULE_RENJU && (isWhite ^ (color == C_MY)));
 
 
 #define OpPerShape(DIR,DIF,INC) shape[DIR][loc+(DIF)]+=INC
@@ -337,7 +339,7 @@ VCF::PlayResult VCFsolver::playTwo(Loc loc1, Loc loc2, Loc& nextForceLoc)
   OpSix(3, -dir3);
 
   if (basicRule == Rules::BASICRULE_STANDARD
-      || (Rules::BASICRULE_RENJU && (!isWhite))) {
+      || (basicRule == Rules::BASICRULE_RENJU && (!isWhite))) {
     OpSix(0, dir0);
     OpSix(1, dir1);
     OpSix(2, dir2);
@@ -382,7 +384,8 @@ VCF::PlayResult VCFsolver::playTwo(Loc loc1, Loc loc2, Loc& nextForceLoc)
   OpSix(1, -dir1);
   OpSix(2, -dir2);
   OpSix(3, -dir3);
-  if (basicRule == Rules::BASICRULE_STANDARD || (Rules::BASICRULE_RENJU && (isWhite))) {
+  if (basicRule == Rules::BASICRULE_STANDARD
+      || (basicRule == Rules::BASICRULE_RENJU && (isWhite))) {
     OpSix(0, dir0);
     OpSix(1, dir1);
     OpSix(2, dir2);
@@ -531,7 +534,7 @@ void VCFsolver::undo(Loc loc)
   Color color = board[loc];
   int   d           = (color == C_MY) ? 1 : 64;
   bool  isSixNotWin = basicRule == Rules::BASICRULE_STANDARD
-                     || (Rules::BASICRULE_RENJU && (isWhite ^ (color == C_MY)));
+      || (basicRule == Rules::BASICRULE_RENJU && (isWhite ^ (color == C_MY)));
 
   board[loc] = C_EMPTY;
 

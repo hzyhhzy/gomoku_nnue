@@ -1,21 +1,18 @@
 #pragma once
 #include "global.h"
 #include "Eva_nnuev2.h"
+#include "HashTable/NNUEHashTable.h"
 class Evaluator
 {
 public:
   Eva_nnuev2       *blackEvaluator;
   Eva_nnuev2       *whiteEvaluator;
-  Key               zobrist[2][MaxBS * MaxBS];
-  Key               key;
 
-  Color board[MaxBS * MaxBS];
 
 
   Evaluator(std::string type, std::string filepath);
   ~Evaluator() {delete blackEvaluator; delete whiteEvaluator;}
 
-  void initZobrist(uint64_t seed);
   bool loadParam(std::string filepathB, std::string filepathW);
   void clear();
   
@@ -45,7 +42,7 @@ public:
       return whiteEvaluator->evaluateValue();
   }
   void play(Color color, Loc loc); 
-  void undo(Loc loc);
+  void undo(Color color, Loc loc);
   
   //Color* board() const { return blackEvaluator->board; }
 

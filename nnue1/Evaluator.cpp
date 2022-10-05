@@ -5,7 +5,6 @@
 
 Evaluator::Evaluator(std::string type, std::string filepath):moveCacheBlength(0),moveCacheWlength(0)
 {
-  initZobrist(0x114514AA114514AA);
   if (type == "nnuev2") {
     blackEvaluator = new Eva_nnuev2();
     whiteEvaluator = new Eva_nnuev2();
@@ -18,17 +17,6 @@ Evaluator::Evaluator(std::string type, std::string filepath):moveCacheBlength(0)
 
 }
 
-void Evaluator::initZobrist(uint64_t seed)
-{
-  std::mt19937_64 prng {seed};
-  prng();
-  prng();
-  key = prng();
-  for (Key &k : zobrist[0])
-    k = prng();
-  for (Key &k : zobrist[1])
-    k = prng();
-}
 
 
 bool Evaluator::loadParam(std::string filepathB, std::string filepathW)
@@ -42,27 +30,19 @@ void Evaluator::clear()
 {
   moveCacheBlength = 0;
   moveCacheWlength = 0;
-  for (int i = 0; i < MaxBS * MaxBS; i++)board[i] = C_EMPTY;
   blackEvaluator->clear();
   whiteEvaluator->clear();
 }
 
 void Evaluator::play(Color color, Loc loc)
 {
-  key ^= zobrist[color - C_BLACK][loc];
-  if (board[loc] != C_EMPTY)std::cout << "Evaluator: Illegal Move\n";
-  board[loc] = color;
   addCache(false, color, loc);
   //blackEvaluator->play(color, loc); 
   //whiteEvaluator->play(getOpp(color), loc); 
 }
 
-void Evaluator::undo(Loc loc)
+void Evaluator::undo(Color color, Loc loc)
 {
-  Color color = board[loc];
-  if (color == C_EMPTY)std::cout << "Evaluator: Illegal Undo\n";
-  board[loc] = C_EMPTY;
-  key ^= zobrist[color - C_BLACK][loc];
   addCache(true, color, loc);
   //blackEvaluator->undo(loc); 
   //whiteEvaluator->undo(loc); 

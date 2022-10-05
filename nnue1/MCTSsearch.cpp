@@ -1,17 +1,21 @@
 #include "MCTSsearch.h"
 
-MCTSnode::MCTSnode(Evaluator* evaluator, Color nextColor,double policyTemp, Loc* locbuf, PolicyType* pbuf1, PolicyType* pbuf2, float* pbuf3) :nextColor(nextColor)
+MCTSnode::MCTSnode(MCTSsearch* search, Color nextColor,double policyTemp, Loc* locbuf, PolicyType* pbuf1, PolicyType* pbuf2, float* pbuf3) :nextColor(nextColor)
 {
   sureResult = MC_UNCERTAIN;
   childrennum = 0;
   for (int i = 0; i < MAX_MCTS_CHILDREN; i++)children[i].ptr = NULL;
   visits = 1;
 
+  
+
+
   //calculate policy
-  WRtotal = ValueSum(evaluator->evaluateFull(nextColor, pbuf1));
+  WRtotal = ValueSum(search->evaluator->evaluateFull(nextColor, pbuf1));
   for (Loc loc = 0; loc < MaxBS * MaxBS; loc++)
   {
-    if (evaluator->board[loc] != C_EMPTY)pbuf1[loc] = MIN_POLICY;
+    if (search->board[loc] != C_EMPTY)
+      pbuf1[loc] = MIN_POLICY;
   }
 
   //policy sort
@@ -25,7 +29,7 @@ MCTSnode::MCTSnode(Evaluator* evaluator, Color nextColor,double policyTemp, Loc*
   for (int i = 0; i < MAX_MCTS_CHILDREN; i++)
   {
     pbuf2[i] = pbuf1[locbuf[i]];
-    if (evaluator->board[locbuf[i]] != C_EMPTY)
+    if (search->board[locbuf[i]] != C_EMPTY)
     {
       legalChildrennum = i;
       break;
@@ -77,18 +81,20 @@ MCTSnode::~MCTSnode()
 }
 
 MCTSsearch::MCTSsearch(Evaluator *e)
-    : Search(e)
-    , rootNode(NULL)
+    :rootNode(NULL)
     , vcfSolver {{MaxBS, MaxBS, DEFAULT_RULE, C_BLACK}, {MaxBS, MaxBS, DEFAULT_RULE, C_WHITE}}
 {
-  vcfSolver[0].setBoard(boardPointer, false, true);
-  vcfSolver[1].setBoard(boardPointer, false, true);
+  for (int i = 0; i < MaxBS * MaxBS; i++)
+    board[i] = C_EMPTY;
+  evaluator = e;
+  vcfSolver[0].setBoard(board, false, true);
+  vcfSolver[1].setBoard(board, false, true);
 }
 
 float MCTSsearch::fullsearch(Color color, double factor, Loc& bestmove)
 {
-  vcfSolver[0].setBoard(boardPointer, false, true);
-  vcfSolver[1].setBoard(boardPointer, false, true);
+  vcfSolver[0].setBoard(board, false, true);
+  vcfSolver[1].setBoard(board, false, true);
 
   //check VCF
   VCF::SearchResult VCFresult=vcfSolver[color - 1].fullSearch(10000, 10, bestmove, false);
@@ -105,7 +111,7 @@ float MCTSsearch::fullsearch(Color color, double factor, Loc& bestmove)
   //if root node is NULL, create root node
   if (rootNode == NULL)
   {
-    rootNode=new MCTSnode(evaluator, color,params.policyTemp, locbuf, pbuf1, pbuf2, pbuf3);
+    rootNode=new MCTSnode(this, color,params.policyTemp, locbuf, pbuf1, pbuf2, pbuf3);
   }
   search(rootNode, option.maxNodes, true);
   bestmove = bestRootMove();
@@ -114,6 +120,10 @@ float MCTSsearch::fullsearch(Color color, double factor, Loc& bestmove)
 
 void MCTSsearch::play(Color color, Loc loc)
 {
+  if (board[loc] != C_EMPTY)
+    std::cout << "Evaluator: Illegal Move\n";
+  board[loc] = color;
+
   evaluator->play(color, loc);
   vcfSolver[0].playOutside(loc, color, 1, true);
   vcfSolver[1].playOutside(loc, color, 1, true);
@@ -161,9 +171,14 @@ void MCTSsearch::play(Color color, Loc loc)
 
 void MCTSsearch::undo(Loc loc)
 {
-  evaluator->undo(loc);
+  Color color = board[loc];
+  if (color == C_EMPTY)
+    std::cout << "Evaluator: Illegal Undo\n";
+  board[loc] = C_EMPTY;
+  evaluator->undo(color,loc);
   vcfSolver[0].undoOutside(loc, 1);
   vcfSolver[1].undoOutside(loc, 1);
+
   delete rootNode;
   rootNode = NULL;
 }
@@ -171,6 +186,8 @@ void MCTSsearch::undo(Loc loc)
 void MCTSsearch::clearBoard()
 {
   evaluator->clear();
+  for (int i = 0; i < MaxBS * MaxBS; i++)
+    board[i] = C_EMPTY;
   if (rootNode != NULL)delete rootNode;
   rootNode = NULL;
 }
@@ -234,6 +251,10 @@ void MCTSsearch::loadParamFile(std::string filename)
 
 void MCTSsearch::playForSearch(Color color, Loc loc)
 {
+  if (board[loc] != C_EMPTY)
+    std::cout << "Evaluator: Illegal Move\n";
+  board[loc] = color;
+
   evaluator->play(color, loc);
   vcfSolver[0].playOutside(loc, color, 1, true);
   vcfSolver[1].playOutside(loc, color, 1, true);
@@ -241,7 +262,12 @@ void MCTSsearch::playForSearch(Color color, Loc loc)
 
 void MCTSsearch::undoForSearch(Loc loc)
 {
-  evaluator->undo(loc);
+  Color color = board[loc];
+  if (color == C_EMPTY)
+    std::cout << "Evaluator: Illegal Undo\n";
+  board[loc] = C_EMPTY;
+
+  evaluator->undo(color, loc);
   vcfSolver[0].undoOutside(loc, 1);
   vcfSolver[1].undoOutside(loc, 1);
 }
@@ -279,7 +305,7 @@ MCTSsearch::SearchResult MCTSsearch::search(MCTSnode* node, uint64_t remainVisit
       else
       {
         playForSearch(color, nextChildLoc);
-        node->children[nextChildID].ptr = new MCTSnode(evaluator, opp,params.policyTemp, locbuf, pbuf1, pbuf2, pbuf3);
+        node->children[nextChildID].ptr = new MCTSnode(this, opp,params.policyTemp, locbuf, pbuf1, pbuf2, pbuf3);
         undoForSearch(nextChildLoc);
       }
 
