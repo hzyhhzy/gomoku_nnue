@@ -21,6 +21,6 @@ public:
 
   
   ExtraStates();
-  std::vector<float> getGlobalFeatureInput_States(Color nextPlayer); // 3个棋盘大小相关+katago的gf的13到37
+  void getGlobalFeatureInput_States(float* gf, Color nextPlayer);  // 3个棋盘大小相关gf[0:3]+katago的gf的13到37 gf[8:33]，还剩下VCF的gf[3:8](katago的gf的8到12)
 
 };

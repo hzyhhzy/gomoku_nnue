@@ -17,29 +17,29 @@ public:
   void clear();
   
   
-  ValueType evaluateFull(Color color, PolicyType *policy)
+  ValueType evaluateFull(const float *gf, Color color, PolicyType *policy)
   {
     clearCache(color);
     if (color == C_BLACK)
-      return blackEvaluator->evaluateFull(policy);
+      return blackEvaluator->evaluateFull(gf, policy);
     else
-      return whiteEvaluator->evaluateFull(policy);
+      return whiteEvaluator->evaluateFull(gf, policy);
   }
-  void evaluatePolicy(Color color, PolicyType *policy)
+  void evaluatePolicy(const float *gf, Color color, PolicyType *policy)
   {
     clearCache(color);
     if (color == C_BLACK)
-      blackEvaluator->evaluatePolicy(policy);
+      blackEvaluator->evaluatePolicy(gf, policy);
     else
-      whiteEvaluator->evaluatePolicy(policy);
+      whiteEvaluator->evaluatePolicy(gf,policy);
   }
-  ValueType evaluateValue(Color color)
+  ValueType evaluateValue(const float *gf, Color color)
   {
     clearCache(color);
     if (color == C_BLACK)
-      return blackEvaluator->evaluateValue();
+      return blackEvaluator->evaluateValue(gf);
     else
-      return whiteEvaluator->evaluateValue();
+      return whiteEvaluator->evaluateValue(gf);
   }
   void play(Color color, Loc loc); 
   void undo(Color color, Loc loc);

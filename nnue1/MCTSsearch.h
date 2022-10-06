@@ -56,7 +56,7 @@ struct MCTSnode
 
   Color nextColor;
   
-  MCTSnode(MCTSsearch* search,  Color nextColor,double policyTemp,Loc* locbuf,PolicyType* pbuf1,PolicyType* pbuf2,float* pbuf3);
+  MCTSnode(MCTSsearch* search,  Color nextColor,double policyTemp);
   MCTSnode(MCTSsureResult sureResult, Color nextColor);
   ~MCTSnode();
   
@@ -72,9 +72,6 @@ public:
   Evaluator *evaluator;  //在engine里析构这个evaluator，不在这里析构
   VCFsolver vcfSolver[2];
 
-  Loc        locbuf[MaxBS * MaxBS];
-  PolicyType pbuf1[MaxBS * MaxBS], pbuf2[MAX_MCTS_CHILDREN];
-  float      pbuf3[MAX_MCTS_CHILDREN];
 
   std::atomic_bool terminate;
 
@@ -111,6 +108,15 @@ public:
   ~MCTSsearch() { if(rootNode!=NULL)delete rootNode; }
 
 private:
+
+  Loc        locbuf[MaxBS * MaxBS];
+  PolicyType pbuf1[MaxBS * MaxBS], pbuf2[MAX_MCTS_CHILDREN];
+  float      pbuf3[MAX_MCTS_CHILDREN];
+  float      gfbuf[NNUEV2::globalFeatureNum];
+
+  friend MCTSnode::MCTSnode(MCTSsearch *search,
+                            Color       nextColor,
+                            double      policyTemp);
   struct SearchResult
   {
     uint64_t newVisits;
@@ -121,8 +127,8 @@ private:
 
   SearchResult search(MCTSnode* node, uint64_t remainVisits,bool isRoot);
   MCTSsureResult checkSureResult(Loc nextMove, Color color);//check VCF
-  int                selectChildIDToSearch(MCTSnode *node);
-  std::vector<float> getGlobalFeatureInput(Color nextPlayer);
+  int            selectChildIDToSearch(MCTSnode *node);
+  void      getGlobalFeatureInput(Color nextPlayer);
   Hash128            getStateHash(Color nextPlayer);
 
 

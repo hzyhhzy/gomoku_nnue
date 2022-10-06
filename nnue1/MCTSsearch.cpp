@@ -1,6 +1,6 @@
 #include "MCTSsearch.h"
 
-MCTSnode::MCTSnode(MCTSsearch* search, Color nextColor,double policyTemp, Loc* locbuf, PolicyType* pbuf1, PolicyType* pbuf2, float* pbuf3) :nextColor(nextColor)
+MCTSnode::MCTSnode(MCTSsearch* search, Color nextColor,double policyTemp) :nextColor(nextColor)
 {
   sureResult = MC_UNCERTAIN;
   childrennum = 0;
@@ -8,10 +8,15 @@ MCTSnode::MCTSnode(MCTSsearch* search, Color nextColor,double policyTemp, Loc* l
   visits = 1;
 
   
+  search->getGlobalFeatureInput(nextColor);
 
+  Loc *locbuf = search->locbuf;
+  PolicyType *pbuf1 = search->pbuf1;
+  PolicyType *pbuf2 = search->pbuf2;
+  float  *pbuf3 = search->pbuf3;
 
   //calculate policy
-  WRtotal = ValueSum(search->evaluator->evaluateFull(nextColor, pbuf1));
+  WRtotal = ValueSum(search->evaluator->evaluateFull(search->gfbuf,nextColor, pbuf1));
   for (Loc loc = 0; loc < MaxBS * MaxBS; loc++)
   {
     if (search->board[loc] != C_EMPTY)
@@ -111,7 +116,7 @@ float MCTSsearch::fullsearch(Color color, double factor, Loc& bestmove)
   //if root node is NULL, create root node
   if (rootNode == NULL)
   {
-    rootNode=new MCTSnode(this, color,params.policyTemp, locbuf, pbuf1, pbuf2, pbuf3);
+    rootNode=new MCTSnode(this, color,params.policyTemp);
   }
   search(rootNode, option.maxNodes, true);
   bestmove = bestRootMove();
@@ -305,7 +310,7 @@ MCTSsearch::SearchResult MCTSsearch::search(MCTSnode* node, uint64_t remainVisit
       else
       {
         playForSearch(color, nextChildLoc);
-        node->children[nextChildID].ptr = new MCTSnode(this, opp,params.policyTemp, locbuf, pbuf1, pbuf2, pbuf3);
+        node->children[nextChildID].ptr = new MCTSnode(this, opp,params.policyTemp);
         undoForSearch(nextChildLoc);
       }
 
@@ -426,4 +431,30 @@ int64_t MCTSsearch::getRootVisit() const
 {
   if (rootNode == NULL)return 0;
   return rootNode->visits;
+}
+
+
+void MCTSsearch::getGlobalFeatureInput(Color nextPlayer) {
+    states.getGlobalFeatureInput_States(gfbuf, nextPlayer);
+
+    for (int i = 3; i < 8; i++)gfbuf[i] = 0;
+
+
+    //disable gf
+    //for (int i = 0; i < NNUEV2::globalFeatureNum; i++)gfbuf[i] = 0;
+    //return;
+
+
+    //VCF::SearchResult myvcf = vcfSolver[nextPlayer - 1].fullSearch(5000, 4, tmp, false);
+    //assume nextPlayer has no vcf
+    gfbuf[3] = 1;
+    gfbuf[4] = 0;
+
+    Color opp = getOpp(nextPlayer);
+    Loc tmp;
+    VCF::SearchResult oppvcf = vcfSolver[opp - 1].fullSearch(5000, 4, tmp, false);
+    if (oppvcf == VCF::SR_Win)gfbuf[5] = 1;
+    else if (oppvcf == VCF::SR_Lose)gfbuf[6] = 1;
+    else gfbuf[7] = 1;
+
 }

@@ -47,7 +47,7 @@ void loss_oneSample(Eva_nnuev2 *eva,
   }
 
   PolicyType policy_int[MaxBS * MaxBS];
-  ValueType  value = eva->evaluateFull(policy_int);
+  ValueType  value = eva->evaluateFull(gf,policy_int);
   double      policy[MaxBS * MaxBS];
   for (Loc loc = 0; loc < MaxBS * MaxBS; loc++) {
     policy[loc] = policy_int[loc] / policyQuantFactor;
@@ -125,7 +125,7 @@ void  main_validation(string modelpath, string datapath)
   assert(bf_npy.shape[3] == MaxBS);
   assert(gf_npy.shape.size() == 2);
   assert(gf_npy.shape[0] == N);
-  assert(gf_npy.shape[1] == 1);
+  assert(gf_npy.shape[1] == NNUEV2::globalFeatureNum);
   assert(pt_npy.shape.size() == 2);
   assert(pt_npy.shape[0] == N);
   assert(pt_npy.shape[1] == MaxBS * MaxBS + 1);

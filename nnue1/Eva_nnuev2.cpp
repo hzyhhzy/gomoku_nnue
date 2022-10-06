@@ -68,14 +68,55 @@ void ModelBuf::update(Color                   oldcolor,
 }
 
 //变量命名与python训练代码相同，阅读时建议与python代码对照
-void Eva_nnuev2::calculateTrunk()
+void Eva_nnuev2::calculateTrunk(const float* gf)
 {
+  int16_t rv[groupSize];//规则向量
+
+  //rv=self.gfVector(gf)
+  {
+    // linear 1
+    float gflayer1[groupSize];
+    for (int i = 0; i < groupSize/8; i++) {
+      auto sum = simde_mm256_loadu_ps(weights.gfmlp_b1 + i * 8);
+      for (int j = 0; j < globalFeatureNum; j++) {
+        auto x = simde_mm256_set1_ps(gf[j]);
+        auto w = simde_mm256_loadu_ps(weights.gfmlp_w1[j] + i * 8);
+        sum    = simde_mm256_fmadd_ps(w, x, sum);
+      }
+      sum = simde_mm256_max_ps(simde_mm256_setzero_ps(), sum);  // relu
+      simde_mm256_storeu_ps(gflayer1 + i * 8, sum);
+    }
+
+    // linear 2
+    for (int i = 0; i < groupSize / 8; i++) {
+      auto sum = simde_mm256_loadu_ps(weights.gfmlp_b2 + i * 8);
+      for (int j = 0; j < groupSize; j++) {
+        auto x = simde_mm256_set1_ps(gflayer1[j]);
+        auto w = simde_mm256_loadu_ps(weights.gfmlp_w2[j] + i * 8);
+        sum    = simde_mm256_fmadd_ps(w, x, sum);
+      }
+      auto      sum_int = simde_mm256_cvtps_epi32(sum);
+      sum_int      = simde_mm256_packs_epi32(sum_int,sum_int);
+      sum_int           = simde_mm256_permute4x64_epi64(sum_int, 0b00001000);
+      simde_mm_storeu_si128(rv + i * 8, simde_mm256_extractf128_si256(sum_int,0));
+    }
+
+  }
+
+  //for (int i = 0; i < groupSize; i++)
+  //    std::cout << rv[i] << " ";
+  //std::cout << "\n";
+
   for (int batch = 0; batch < groupBatch; batch++) {  //一直到trunk计算完毕，不同batch之间都没有交互,所以放在最外层
     int addrBias = batch * 16;
 
+    
+    auto rv_batch = simde_mm256_loadu_si256(rv + addrBias);//gfVector
+
     //这个数组太大，就不直接int16_t[(MaxBS + 10) * (MaxBS + 10)][6][16]了
-    int16_t *h1m = new int16_t[(MaxBS + 10) * (MaxBS + 10)*6*16];  //完整的卷积是先乘再相加，此处是相乘但还没相加。h1m沿一条线相加得到h1c。加了5层padding方便后续处理
-    memset(h1m, 0, sizeof(int16_t) * (MaxBS + 10) * (MaxBS + 10) * 6 * 16);
+    //int16_t *h1m = new int16_t[(MaxBS + 10) * (MaxBS + 10)*6*16];  //完整的卷积是先乘再相加，此处是相乘但还没相加。h1m沿一条线相加得到h1c。加了5层padding方便后续处理
+    //h1m的定义移到Eva_nnuev2类内了
+    memset(buf.h1m, 0, sizeof(int16_t) * (MaxBS + 10) * (MaxBS + 10) * 6 * 16);
     //-------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // g1 prelu和h1conv的乘法部分
     auto g1lr_w   = simde_mm256_loadu_si256(weights.g1lr_w + addrBias);
@@ -89,9 +130,10 @@ void Eva_nnuev2::calculateTrunk()
       for (Loc locX = 0; locX < MaxBS; locX++) {
         Loc loc1 = locY * MaxBS + locX;             //原始loc
         Loc loc2 = (locY + 5)  * (MaxBS + 10) + locX + 5;  // padding后的loc
-        int16_t *h1mbias = h1m + loc2 * 6 * 16;
+        int16_t *h1mbias = buf.h1m + loc2 * 6 * 16;
 
         auto g1sum = simde_mm256_loadu_si256(buf.g1sum[loc1] + addrBias);
+        g1sum      = simde_mm256_add_epi16(g1sum, rv_batch);
         auto h1 = simde_mm256_max_epi16(g1sum, simde_mm256_mulhrs_epi16(g1sum, g1lr_w));
         simde_mm256_storeu_si256(h1mbias + 0 * 16,
                                  simde_mm256_mulhrs_epi16(h1, h1conv_w0));
@@ -120,7 +162,7 @@ void Eva_nnuev2::calculateTrunk()
       for (Loc locX = 0; locX < MaxBS; locX++) {
         Loc loc1 = locY * MaxBS + locX;             //原始loc
         Loc      loc2    = (locY + 5) * (MaxBS + 10) + locX + 5;  // padding后的loc
-        int16_t *h1mbias = h1m + loc2 * 6 * 16;
+        int16_t *h1mbias = buf.h1m + loc2 * 6 * 16;
 
         auto h2sum = h3lr_b;
 
@@ -173,7 +215,6 @@ void Eva_nnuev2::calculateTrunk()
       }
     }
 
-    delete[] h1m;
     
     //-------------------------------------------------------------------------------------------------------------------------------------------------------------------
     int16_t trunk1[(MaxBS+2) * (MaxBS+2)][16];//trunkconv2前的trunk，padding=1
@@ -404,20 +445,20 @@ void Eva_nnuev2::play(Color color, Loc loc)
   buf.update(C_EMPTY, color, loc, weights);
 }
 
-ValueType Eva_nnuev2::evaluateFull(PolicyType *policy)
+ValueType Eva_nnuev2::evaluateFull(const float *gf, PolicyType *policy)
 {
   if (policy != nullptr) {
-    evaluatePolicy(policy);
+    evaluatePolicy(gf,policy);
   }
-  return evaluateValue();
+  return evaluateValue(gf);
 }
 
-void Eva_nnuev2::evaluatePolicy(PolicyType *policy)
+void Eva_nnuev2::evaluatePolicy(const float *gf, PolicyType *policy)
 {
   if (policy == NULL)
     return;
   if (!buf.trunkUpToDate)
-    calculateTrunk();
+    calculateTrunk(gf);
   
   for (Loc loc = 0; loc < MaxBS * MaxBS; loc++) {
     auto psum = simde_mm256_setzero_si256();//int32
@@ -447,10 +488,10 @@ void Eva_nnuev2::evaluatePolicy(PolicyType *policy)
   }
 }
 
-ValueType Eva_nnuev2::evaluateValue()
+ValueType Eva_nnuev2::evaluateValue(const float *gf)
 {
   if (!buf.trunkUpToDate)
-    calculateTrunk();
+    calculateTrunk(gf);
 
 
   //trunklr2v, sum board
@@ -552,7 +593,8 @@ void Eva_nnuev2::debug_print()
   using namespace std;
   Loc loc = MakeLoc(0, 0);
   PolicyType p[MaxBS * MaxBS];
-  auto       v = evaluateFull(p);
+  float      gf[NNUEV2::globalFeatureNum] = {0};
+  auto       v = evaluateFull(gf,p);
   cout << "value: win=" << v.win << " loss=" << v.loss << " draw=" << v.draw << endl;
   //for (int i = 48; i < groupSize; i++)
   //  cout << buf.g1sum[loc][i] << "|" << buf.g2[loc][3][i] << "|" << buf.trunk[loc][i] << " ";
@@ -632,6 +674,46 @@ bool ModelWeight::loadParam(std::string filename)
     for (int j = 0; j < featureNum; j++)
       fs >> mapping[shapeID][j];
   }
+
+  //gfvector_w1
+  fs >> varname;
+  if (varname != "gfvector_w1") {
+      cout << "Wrong parameter name:" << varname << endl;
+      return false;
+  }
+  for (int j = 0; j < globalFeatureNum; j++)
+      for (int i = 0; i < groupSize; i++)
+          fs >> gfmlp_w1[j][i];
+
+  // gfvector_b1
+  fs >> varname;
+  if (varname != "gfvector_b1") {
+      cout << "Wrong parameter name:" << varname << endl;
+      return false;
+  }
+  for (int i = 0; i < groupSize; i++)
+      fs >> gfmlp_b1[i];
+
+
+  //gfvector_w2
+  fs >> varname;
+  if (varname != "gfvector_w2") {
+      cout << "Wrong parameter name:" << varname << endl;
+      return false;
+  }
+  for (int j = 0; j < groupSize; j++)
+      for (int i = 0; i < groupSize; i++)
+          fs >> gfmlp_w2[j][i];
+
+  // gfvector_b2
+  fs >> varname;
+  if (varname != "gfvector_b2") {
+      cout << "Wrong parameter name:" << varname << endl;
+      return false;
+  }
+  for (int i = 0; i < groupSize; i++)
+      fs >> gfmlp_b2[i];
+
 
   // g1lr_w
   fs >> varname;
@@ -878,7 +960,7 @@ bool ModelWeight::loadParam(std::string filename)
     return false;
   }
   for (int j = 0; j < mlpChannel; j++)
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 4; i++)
       fs >> mlpfinal_w[j][i];
 
   // mlpfinal_b
@@ -887,10 +969,10 @@ bool ModelWeight::loadParam(std::string filename)
     cout << "Wrong parameter name:" << varname << endl;
     return false;
   }
-  for (int i = 0; i < 3; i++)
+  for (int i = 0; i < 4; i++)
     fs >> mlpfinal_b[i];
 
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 4; i++) {
     mlpfinal_w_for_safety[i] = 0;
     mlpfinal_b_for_safety[i] = 0;
   }

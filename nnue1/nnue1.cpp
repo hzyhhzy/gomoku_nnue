@@ -195,6 +195,8 @@ int main_benchmark()
   PolicyType p[MaxBS * MaxBS];
   int64_t time_start=now();
 
+  float gf[NNUEV2::globalFeatureNum] = {0};
+
   // 平均每play和undo两次，然后eval一次
   for (int64_t i = 0; i < testnum; i++) {
     for (int j = 0; j < 3; j++) {
@@ -208,7 +210,7 @@ int main_benchmark()
         eva->play(newcolor, loc);
     }
 
-    auto v = eva->evaluateFull(p);
+    auto v = eva->evaluateFull(gf,p);
 
   }
 

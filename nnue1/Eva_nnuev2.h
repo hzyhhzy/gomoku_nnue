@@ -28,8 +28,14 @@ namespace NNUEV2 {
       // 2 
       //  g1=mapf[:,:,:self.groupc,:,:]#第一组通道
       //  g2=mapf[:,:,self.groupc:,:,:]#第二组通道
+      //  gfvector=mlp(gf)#gf表示规则
+      //  这里的gfvector是python的4倍，因为后续4线平均改成了4线求和
+      float gfmlp_w1[globalFeatureNum][groupSize];  // shape=(inc，outc)，相同的inc对应权重相邻
+      float gfmlp_b1[groupSize];
+      float gfmlp_w2[groupSize][groupSize];
+      float gfmlp_b2[groupSize];
 
-      // 3  h1 = self.g1lr(g1.mean(1)) #四线求和再leakyrelu
+      // 3  h1 = self.g1lr(g1.mean(1)+gfvector) #四线求和再加规则向量再leakyrelu
       int16_t g1lr_w[ groupSize];
 
       // 4  h1 = torch.stack(self.h1conv(h1), dim = 1) #沿着一条线卷积
@@ -81,12 +87,12 @@ namespace NNUEV2 {
       float mlp_b2[ mlpChannel];
       float mlp_w3[ mlpChannel][ mlpChannel];
       float mlp_b3[ mlpChannel];
-      float mlpfinal_w[ mlpChannel][3];
-      float mlpfinal_w_for_safety[5];  // mlp_w3在read的时候一次read
-                                   // 8个，会read到后续内存mlp_w3[mix6::valueNum-1][2]+5，
-      float mlpfinal_b[3];
-      float mlpfinal_b_for_safety[5];  // mlp_b3在read的时候一次read
-                                   // 8个，会read到后续内存mlp_b3[2]+5，
+      float mlpfinal_w[ mlpChannel][4];
+      float mlpfinal_w_for_safety[4];  // mlp_w3在read的时候一次read
+                                   // 8个，会read到后续内存mlp_w3[mix6::valueNum-1][3]+4，
+      float mlpfinal_b[4];
+      float mlpfinal_b_for_safety[4];  // mlp_b3在read的时候一次read
+                                   // 8个，会read到后续内存mlp_b3[3]+4，
 
       bool loadParam(std::string filename);
     };
@@ -110,6 +116,7 @@ namespace NNUEV2 {
 
       // 4  h1=self.g1lr(g1sum), shape=HWc
       //int16_t h1[MaxBS * MaxBS][groupSize];
+      int16_t h1m[(MaxBS + 10) * (MaxBS + 10) * 6 * 16];//只是开了一块空间，避免频繁new/delete，每次用的时候清零
 
       // 后面的部分几乎没法增量计算
 
@@ -140,14 +147,14 @@ public:
 
   //计算拆分为两部分，第一部分是可增量计算的，放在play函数里。第二部分是不易增量计算的，放在evaluate里。
   void      play(Color color, Loc loc);
-  ValueType evaluateFull(PolicyType *policy);    // policy通过函数参数返回
-  void      evaluatePolicy(PolicyType *policy);  // policy通过函数参数返回
-  ValueType evaluateValue();                     //
+  ValueType evaluateFull(const float *gf,PolicyType *policy);  // policy通过函数参数返回
+  void evaluatePolicy(const float *gf, PolicyType *policy);  // policy通过函数参数返回
+  ValueType evaluateValue(const float *gf);                //
 
   void undo(Loc loc);  // play的逆过程
 
   void debug_print();
 
 private:
-  void calculateTrunk();
+  void calculateTrunk(const float *gf);
 };
