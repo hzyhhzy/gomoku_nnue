@@ -1,15 +1,9 @@
 
-from dataset import trainset
 from model import Model_v2
 from model import boardH,boardW
 
 import argparse
-import glob
-import sys
 import numpy as np
-from torch.utils.data import Dataset, DataLoader
-import torch.functional as F
-import torch.nn as nn
 import torch
 import os
 import time
@@ -31,6 +25,7 @@ if __name__ == '__main__':
     parser.add_argument('--model', type=str ,default='test', help='model path')
     parser.add_argument('--export', type=str ,default='', help='export path')
     parser.add_argument('--copy', action='store_true', default=False, help='copy a backup for this model, for selfplay training')
+    parser.add_argument('--compat', action='store_true', default=False, help='whether disable global features. if true, use default rules and compat old engines')
     args = parser.parse_args()
 
     device = torch.device(f"cuda:{args.gpu}")
@@ -52,7 +47,7 @@ if __name__ == '__main__':
         data = torch.load(file_path, map_location=device)
         model_type = data['model_type']
         model_param = data['model_param']
-        if(model_type != "v2" and model_type != "v2beta0"):
+        if(model_type != "v2" and model_type != "v2_noOppVCF"):
             print(f"Invalid Model Type: {model_type}")
             exit(0)
         model = Model_v2(*model_param).to(device)
@@ -85,7 +80,10 @@ if __name__ == '__main__':
     time0=time.time()
     _, _, groupc, mlpc, _ = model_param
     print(f"Start: groupc={groupc}, mlpc={mlpc}")
-    exportPath='../export/'+exportname+'.txt'
+    exportPath='../export/'+exportname
+    if(args.compat):
+        exportPath+="_compat"
+    exportPath+='.txt'
     exportfile=open(exportPath,'w')
 
 # file head
@@ -147,11 +145,19 @@ if __name__ == '__main__':
 
     scale_now=1 #这个变量存储int16和float的换算比
     bound=np.abs(buf).max()#这个变量存储上界，时刻注意int16溢出
+    bound+=30 # h1 = g1.mean(1)+gfVector(gf),  |gfVector(gf)|<30
     print("Max=",bound)
     print(usefulcount,file=exportfile)
 
 
-    map_maxint=5000
+    if args.compat:
+        gfVector_bias=model.exportDefaultGFVector(device=device)
+    else: #calculate gfVector in engine
+        gfVector_bias=np.zeros((groupc,))
+
+
+
+    map_maxint=8000
     g2extrascale=0.8
     trunkconv1_extrabound=10 #允许少量超越bound
     trunkconv2_extrabound=30
@@ -170,17 +176,57 @@ if __name__ == '__main__':
         if useful[i]:
             print(i,end=' ',file=exportfile)
             for j in range(groupc):
-                print(int(buf[i,j]*w_scale),end=' ',file=exportfile)
+                print(int((buf[i,j]+gfVector_bias[j])*w_scale),end=' ',file=exportfile)
             for j in range(groupc):
                 print(int(buf[i,j+groupc]*g2scale),end=' ',file=exportfile)
             print('',file=exportfile)
     print("Bound after mapping = ",bound)
     print("Scale after mapping = ", scale_now)
+    if args.compat:
+        print("4*gfVector_bias =",(4*gfVector_bias*w_scale).astype(np.int64))
 
 
 # export others
     print("Finished mapping, now exporting others")
 # -------------------------------------------------------------
+#0  gfvector
+    if not args.compat:  # export gfVector mlp
+        assert (False, "Todo: implement for exporting gfVector mlp")
+
+        # gfVector mlp layer 1
+        w = model.gfVector.layer1.weight.data.cpu().numpy()
+        b = model.gfVector.layer1.bias.data.cpu().numpy()
+
+        print("gfvector_w1", file=exportfile)
+        for i in range(w.shape[1]):
+            for j in range(groupc):
+                print(w[j][i], end=' ', file=exportfile)
+        print('', file=exportfile)
+
+        print("gfvector_b1", file=exportfile)
+        for i in range(groupc):
+            print(b[i], end=' ', file=exportfile)
+        print('', file=exportfile)
+
+        # gfVector mlp layer 2
+        w = model.gfVector.layer2.weight.data.cpu().numpy()
+        b = model.gfVector.layer2.bias.data.cpu().numpy()
+
+        # pytorch里面是4线平均，c++里是4线求和，所以需要额外乘4
+        w=w*w_scale*4
+        b=b*w_scale*4
+
+        print("gfvector_w2", file=exportfile)
+        for i in range(groupc):
+            for j in range(groupc):
+                print(w[j][i], end=' ', file=exportfile)
+        print('', file=exportfile)
+
+        print("gfvector_b2", file=exportfile)
+        for i in range(groupc):
+            print(b[i], end=' ', file=exportfile)
+        print('', file=exportfile)
+
 #1 g1lr
     #pytorch里面是4线平均，c++里是4线求和
     #g1lr本身对scale和bound无影响，w_scale=1
@@ -538,14 +584,16 @@ if __name__ == '__main__':
     w=model.value_linearfinal.weight.data.cpu().numpy()
     b=model.value_linearfinal.bias.data.cpu().numpy()
 
+    mlp_outc=3 if args.compat else 4
+
     print("mlpfinal_w",file=exportfile)
     for i in range(mlpc):
-        for j in range(3):
+        for j in range(mlp_outc):
             print(w[j][i],end=' ',file=exportfile)
     print('',file=exportfile)
 
     print("mlpfinal_b",file=exportfile)
-    for i in range(3):
+    for i in range(mlp_outc):
         print(b[i],end=' ',file=exportfile)
     print('',file=exportfile)
 
