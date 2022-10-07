@@ -1,5 +1,7 @@
 #include "MCTSsearch.h"
 
+NNUEHashTable MCTSsearch::hashTable(22,5);
+
 MCTSnode::MCTSnode(MCTSsearch* search, Color nextColor,double policyTemp) :nextColor(nextColor)
 {
   sureResult = MC_UNCERTAIN;
@@ -7,6 +9,11 @@ MCTSnode::MCTSnode(MCTSsearch* search, Color nextColor,double policyTemp) :nextC
   for (int i = 0; i < MAX_MCTS_CHILDREN; i++)children[i].ptr = NULL;
   visits = 1;
 
+  Hash128 stateHash = search->posHash;
+  stateHash ^= NNUEHashTable::ZOBRIST_nextPlayer[nextColor];
+  //TODO: hash of search->states
+  bool suc=MCTSsearch::hashTable.get(stateHash, *this);
+  if (suc)return;//hash matches, skip calculating nnue
   
   search->getGlobalFeatureInput(nextColor);
 
@@ -67,6 +74,8 @@ MCTSnode::MCTSnode(MCTSsearch* search, Color nextColor,double policyTemp) :nextC
     children[i].loc = locbuf[i];
     children[i].policy = uint16_t(pbuf3[i] * policyQuant) + 1;
   }
+
+  MCTSsearch::hashTable.set(stateHash, *this);
 }
 
 MCTSnode::MCTSnode(MCTSsureResult sureResult, Color nextColor) :nextColor(nextColor), sureResult(sureResult)
@@ -91,6 +100,7 @@ MCTSsearch::MCTSsearch(Evaluator *e)
 {
   for (int i = 0; i < MaxBS * MaxBS; i++)
     board[i] = C_EMPTY;
+  posHash = Hash128(0, 0);
   evaluator = e;
   vcfSolver[0].setBoard(board, false, true);
   vcfSolver[1].setBoard(board, false, true);
@@ -125,13 +135,7 @@ float MCTSsearch::fullsearch(Color color, double factor, Loc& bestmove)
 
 void MCTSsearch::play(Color color, Loc loc)
 {
-  if (board[loc] != C_EMPTY)
-    std::cout << "Evaluator: Illegal Move\n";
-  board[loc] = color;
-
-  evaluator->play(color, loc);
-  vcfSolver[0].playOutside(loc, color, 1, true);
-  vcfSolver[1].playOutside(loc, color, 1, true);
+    playForSearch(color, loc);
 
 
   // ˜÷ÿ”√
@@ -176,13 +180,7 @@ void MCTSsearch::play(Color color, Loc loc)
 
 void MCTSsearch::undo(Loc loc)
 {
-  Color color = board[loc];
-  if (color == C_EMPTY)
-    std::cout << "Evaluator: Illegal Undo\n";
-  board[loc] = C_EMPTY;
-  evaluator->undo(color,loc);
-  vcfSolver[0].undoOutside(loc, 1);
-  vcfSolver[1].undoOutside(loc, 1);
+    undoForSearch(loc);
 
   delete rootNode;
   rootNode = NULL;
@@ -193,6 +191,7 @@ void MCTSsearch::clearBoard()
   evaluator->clear();
   for (int i = 0; i < MaxBS * MaxBS; i++)
     board[i] = C_EMPTY;
+  posHash = Hash128(0, 0);
   if (rootNode != NULL)delete rootNode;
   rootNode = NULL;
 }
@@ -257,8 +256,9 @@ void MCTSsearch::loadParamFile(std::string filename)
 void MCTSsearch::playForSearch(Color color, Loc loc)
 {
   if (board[loc] != C_EMPTY)
-    std::cout << "Evaluator: Illegal Move\n";
+    std::cout << "MCTSsearch: Illegal Move\n";
   board[loc] = color;
+  posHash ^= NNUEHashTable::ZOBRIST_loc[color][loc];
 
   evaluator->play(color, loc);
   vcfSolver[0].playOutside(loc, color, 1, true);
@@ -269,8 +269,10 @@ void MCTSsearch::undoForSearch(Loc loc)
 {
   Color color = board[loc];
   if (color == C_EMPTY)
-    std::cout << "Evaluator: Illegal Undo\n";
+    std::cout << "MCTSsearch: Illegal Undo\n";
   board[loc] = C_EMPTY;
+
+  posHash ^= NNUEHashTable::ZOBRIST_loc[color][loc];
 
   evaluator->undo(color, loc);
   vcfSolver[0].undoOutside(loc, 1);

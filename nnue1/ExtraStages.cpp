@@ -66,7 +66,6 @@ void ExtraStates::getGlobalFeatureInput_States(float* gf, Color nextPlayer)
   if (maxMoves != 0) {
     gf[25]    = 1.0;
     double boardArea = H * W;
-    double movenum   = movenum;
     gf[26]    = maxMoves / boardArea;
     gf[27]    = movenum / boardArea;
     gf[28]    = exp(-(maxMoves - movenum) / 50.0);

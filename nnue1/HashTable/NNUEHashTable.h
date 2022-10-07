@@ -29,7 +29,8 @@ class NNUEHashTable
   {
     uint64_t hash1;  // HASH相撞的概率极低，可以忽略
     MCTSsureResult sureResult;
-    int16_t        legalChildrennum;
+    int16_t        legalChildrennum; 
+    ValueSum WRtotal;
     Loc      locs[MAX_MCTS_CHILDREN];
     uint16_t policy[MAX_MCTS_CHILDREN];
     Entry() : hash1(0) {}
@@ -43,6 +44,25 @@ class NNUEHashTable
   uint32_t   mutexPoolMask;
 
 public:
+  static Hash128 ZOBRIST_loc[4][MaxBS * MaxBS];
+  static Hash128 ZOBRIST_nextPlayer[3];
+  static Hash128 ZOBRIST_boardH[MaxBS];
+  static Hash128 ZOBRIST_boardW[MaxBS];
+  static Hash128 ZOBRIST_basicRule[3];
+  static Hash128 ZOBRIST_VCN[20];
+  static Hash128 ZOBRIST_maxMoves[MaxBS * MaxBS * 2];
+  static Hash128 ZOBRIST_firstPassWin;
+
+  static Hash128 ZOBRIST_drawBlackWinlossrate_base;
+  static Hash128 ZOBRIST_pda_base;
+
+  static Hash128 ZOBRIST_movenum[MaxBS * MaxBS * 2];
+  static Hash128 ZOBRIST_blackPassNum[MaxBS * MaxBS * 2];
+  static Hash128 ZOBRIST_whitePassNum[MaxBS * MaxBS * 2];
+  static void initHash(int64_t seed);
+
+
+
   NNUEHashTable(int sizePowerOfTwo, int mutexPoolSizePowerOfTwo);
   // NNUEHashTable()
   //{

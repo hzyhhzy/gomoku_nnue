@@ -65,8 +65,16 @@ struct MCTSnode
 class MCTSsearch 
 {
 public:
+
+
+  static NNUEHashTable hashTable;
+
+
+
+
   MCTSnode   *rootNode;
   Color       board[MaxBS * MaxBS];
+  Hash128 posHash;// only board
   ExtraStates states;
 
   Evaluator *evaluator;  //在engine里析构这个evaluator，不在这里析构

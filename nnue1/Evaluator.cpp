@@ -103,5 +103,5 @@ bool Evaluator::isContraryMove(MoveCache a, MoveCache b)
   if (a.color != b.color)return false;
   if (a.isUndo != b.isUndo)return true;
   else std::cout<<"Evaluator::isContraryMove strange bugs";
-
+  return false;
 }
