@@ -1,6 +1,6 @@
 #pragma once
-#include "..\global.h"
-#include "..\HashTable\VCFHashTable.h"
+#include "../NNUEglobal.h"
+#include "../HashTable/VCFHashTable.h"
 static_assert(LOC_NULL >= (MaxBS + 6)* (MaxBS + 6)+1||LOC_NULL<0);//保证loc_null不是棋盘上的点
 namespace VCF {
 

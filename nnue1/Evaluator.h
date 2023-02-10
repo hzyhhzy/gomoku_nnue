@@ -1,5 +1,5 @@
 #pragma once
-#include "global.h"
+#include "NNUEglobal.h"
 #include "Eva_nnuev2.h"
 #include "HashTable/NNUEHashTable.h"
 class Evaluator

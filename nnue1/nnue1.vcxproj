@@ -150,7 +150,7 @@
     <ClCompile Include="Eva_nnuev2.cpp" />
     <ClCompile Include="external\cnpy\cnpy.cpp" />
     <ClCompile Include="ExtraStates.cpp" />
-    <ClCompile Include="global.cpp" />
+    <ClCompile Include="NNUEglobal.cpp" />
     <ClCompile Include="HashTable\hash.cpp" />
     <ClCompile Include="HashTable\mutexpool.cpp" />
     <ClCompile Include="HashTable\NNUEHashTable.cpp" />

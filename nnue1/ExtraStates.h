@@ -1,5 +1,5 @@
 #pragma once
-#include "global.h"
+#include "NNUEglobal.h"
 class ExtraStates //including rules,passes,movenums...
 {
 public:

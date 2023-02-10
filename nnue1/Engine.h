@@ -3,7 +3,7 @@
 #include "AllSearch.h"
 #include "Evaluator.h"
 #include "Search.h"
-#include "global.h"
+#include "NNUEglobal.h"
 
 class Engine
 {

@@ -8,7 +8,7 @@
 
 #include <iostream>
 
-#include "../global.h"
+#include "../NNUEglobal.h"
 
 namespace Hash
 {

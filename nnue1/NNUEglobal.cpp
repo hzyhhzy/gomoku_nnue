@@ -1,4 +1,4 @@
-#include "global.h"
+#include "NNUEglobal.h"
 
 ValueSum::ValueSum() : win(0), loss(0), draw(0) {}
 ValueSum::ValueSum(double win, double loss, double draw)

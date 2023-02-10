@@ -2,7 +2,7 @@
 #define SEARCH_MUTEXPOOL_H_
 #include <atomic>
 #include <mutex>
-#include "../global.h"
+#include "../NNUEglobal.h"
 //#include "../core/global.h"
 //#include "../core/multithread.h"
 

@@ -1,4 +1,4 @@
-#include "global.h"
+#include "NNUEglobal.h"
 using namespace std;
 namespace strOp {
 

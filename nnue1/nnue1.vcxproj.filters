@@ -57,7 +57,7 @@
     <ClCompile Include="validation.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="global.cpp">
+    <ClCompile Include="NNUEglobal.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="external\cnpy\cnpy.cpp">
