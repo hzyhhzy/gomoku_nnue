@@ -149,7 +149,7 @@
     <ClCompile Include="Evaluator.cpp" />
     <ClCompile Include="Eva_nnuev2.cpp" />
     <ClCompile Include="external\cnpy\cnpy.cpp" />
-    <ClCompile Include="ExtraStages.cpp" />
+    <ClCompile Include="ExtraStates.cpp" />
     <ClCompile Include="global.cpp" />
     <ClCompile Include="HashTable\hash.cpp" />
     <ClCompile Include="HashTable\mutexpool.cpp" />
@@ -157,7 +157,6 @@
     <ClCompile Include="HashTable\VCFHashTable.cpp" />
     <ClCompile Include="MCTSsearch.cpp" />
     <ClCompile Include="nnue1.cpp" />
-    <ClCompile Include="TT.cpp" />
     <ClCompile Include="utils.cpp" />
     <ClCompile Include="validation.cpp" />
     <ClCompile Include="VCF\VCFsolver.cpp" />

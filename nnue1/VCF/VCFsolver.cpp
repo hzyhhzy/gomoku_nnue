@@ -121,6 +121,8 @@ VCF::SearchResult VCFsolver::fullSearch(float factor, int maxLayer,Loc& bestmove
       return sr;
     }
   }
+  bestmove = LOC_NULL;
+  return SR_Uncertain;
 }
 
 std::vector<Loc> VCFsolver::getPV()

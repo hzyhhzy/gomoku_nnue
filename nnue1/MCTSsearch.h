@@ -1,7 +1,7 @@
 #pragma once
 #include "Evaluator.h"
 #include "VCF/VCFsolver.h"
-#include "ExtraStages.h"
+#include "ExtraStates.h"
 const double policyQuant = 50000;
 const double policyQuantInv = 1/policyQuant;
 

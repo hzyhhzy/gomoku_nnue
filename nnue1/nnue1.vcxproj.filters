@@ -42,9 +42,6 @@
     <ClCompile Include="Engine.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="TT.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="utils.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -66,9 +63,6 @@
     <ClCompile Include="external\cnpy\cnpy.cpp">
       <Filter>源文件\external</Filter>
     </ClCompile>
-    <ClCompile Include="ExtraStages.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="HashTable\hash.cpp">
       <Filter>源文件\HashTable</Filter>
     </ClCompile>
@@ -80,6 +74,9 @@
     </ClCompile>
     <ClCompile Include="HashTable\NNUEHashTable.cpp">
       <Filter>源文件\HashTable</Filter>
+    </ClCompile>
+    <ClCompile Include="ExtraStates.cpp">
+      <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
