@@ -162,8 +162,6 @@
     <ClCompile Include="VCF\VCFsolver.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AllEvaluator.h" />
-    <ClInclude Include="AllSearch.h" />
     <ClInclude Include="Engine.h" />
     <ClInclude Include="Evaluator.h" />
     <ClInclude Include="Eva_nnuev2.h" />

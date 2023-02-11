@@ -1,6 +1,6 @@
 #pragma once
 //功能同engine，只是可以在不删engine代码的同时进行测试
-#include "AllSearch.h"
+#include "MCTSsearch.h"
 #include "Evaluator.h"
 #include "Search.h"
 #include "NNUEglobal.h"

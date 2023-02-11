@@ -83,12 +83,6 @@
     <ClInclude Include="Evaluator.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="AllEvaluator.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="AllSearch.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="TT.h">
       <Filter>头文件</Filter>
     </ClInclude>
