@@ -4,11 +4,12 @@
 #include "external/simde_fma.h"
 
 #include <filesystem>
+using namespace NNUE;
 using namespace NNUEV2;
 
 void ModelBuf::update(Color                   oldcolor,
                            Color                   newcolor,
-                           Loc                     loc,
+                           NU_Loc                     loc,
                            const ModelWeight &weights)
 {
   trunkUpToDate = false;
@@ -126,10 +127,10 @@ void Eva_nnuev2::calculateTrunk(const float* gf)
     auto h1conv_w3 = simde_mm256_loadu_si256(weights.h1conv_w[3] + addrBias);
     auto h1conv_w4 = simde_mm256_loadu_si256(weights.h1conv_w[4] + addrBias);
     auto h1conv_w5 = simde_mm256_loadu_si256(weights.h1conv_w[5] + addrBias);
-    for (Loc locY = 0; locY < MaxBS; locY++) {
-      for (Loc locX = 0; locX < MaxBS; locX++) {
-        Loc loc1 = locY * MaxBS + locX;             //原始loc
-        Loc loc2 = (locY + 5)  * (MaxBS + 10) + locX + 5;  // padding后的loc
+    for (NU_Loc locY = 0; locY < MaxBS; locY++) {
+      for (NU_Loc locX = 0; locX < MaxBS; locX++) {
+        NU_Loc loc1 = locY * MaxBS + locX;             //原始loc
+        NU_Loc loc2 = (locY + 5)  * (MaxBS + 10) + locX + 5;  // padding后的loc
         int16_t *h1mbias = buf.h1m + loc2 * 6 * 16;
 
         auto g1sum = simde_mm256_loadu_si256(buf.g1sum[loc1] + addrBias);
@@ -158,10 +159,10 @@ void Eva_nnuev2::calculateTrunk(const float* gf)
     auto h1conv_b = simde_mm256_loadu_si256(weights.h1conv_b + addrBias);
     auto h3lr_b    = simde_mm256_loadu_si256(weights.h3lr_b + addrBias);
 
-    for (Loc locY = 0; locY < MaxBS; locY++) {
-      for (Loc locX = 0; locX < MaxBS; locX++) {
-        Loc loc1 = locY * MaxBS + locX;             //原始loc
-        Loc      loc2    = (locY + 5) * (MaxBS + 10) + locX + 5;  // padding后的loc
+    for (NU_Loc locY = 0; locY < MaxBS; locY++) {
+      for (NU_Loc locX = 0; locX < MaxBS; locX++) {
+        NU_Loc loc1 = locY * MaxBS + locX;             //原始loc
+        NU_Loc      loc2    = (locY + 5) * (MaxBS + 10) + locX + 5;  // padding后的loc
         int16_t *h1mbias = buf.h1m + loc2 * 6 * 16;
 
         auto h2sum = h3lr_b;
@@ -230,10 +231,10 @@ void Eva_nnuev2::calculateTrunk(const float* gf)
     auto trunklr1_w = simde_mm256_loadu_si256(weights.trunklr1_w + addrBias);
     h3lr_b   = simde_mm256_loadu_si256(weights.h3lr_b + addrBias);
 
-    for (Loc locY = 0; locY < MaxBS; locY++) {
-      for (Loc locX = 0; locX < MaxBS; locX++) {
-        Loc loc1 = locY * MaxBS + locX;             //原始loc
-        Loc  loc2  = (locY + 1) * (MaxBS + 2) + locX + 1;  // padding后的loc
+    for (NU_Loc locY = 0; locY < MaxBS; locY++) {
+      for (NU_Loc locX = 0; locX < MaxBS; locX++) {
+        NU_Loc loc1 = locY * MaxBS + locX;             //原始loc
+        NU_Loc  loc2  = (locY + 1) * (MaxBS + 2) + locX + 1;  // padding后的loc
         auto trunk  = simde_mm256_loadu_si256(h3[loc1]);
         // h3lr
         trunk = simde_mm256_max_epi16(trunk, simde_mm256_mulhrs_epi16(trunk, h3lr_w));
@@ -271,10 +272,10 @@ void Eva_nnuev2::calculateTrunk(const float* gf)
     auto trunkconv2_w1 = simde_mm256_loadu_si256(weights.trunkconv2_w[1] + addrBias);
     auto trunkconv2_w2 = simde_mm256_loadu_si256(weights.trunkconv2_w[2] + addrBias);
 
-    for (Loc locY = 0; locY < MaxBS; locY++) {
-      for (Loc locX = 0; locX < MaxBS; locX++) {
-        Loc  loc1  = locY * MaxBS + locX;            //原始loc
-        Loc  loc2   = (locY + 1) * (MaxBS + 2) + locX + 1;  // padding后的loc
+    for (NU_Loc locY = 0; locY < MaxBS; locY++) {
+      for (NU_Loc locX = 0; locX < MaxBS; locX++) {
+        NU_Loc  loc1  = locY * MaxBS + locX;            //原始loc
+        NU_Loc  loc2   = (locY + 1) * (MaxBS + 2) + locX + 1;  // padding后的loc
         auto trunka = simde_mm256_adds_epi16(
             simde_mm256_adds_epi16(simde_mm256_loadu_si256(trunk1[loc2 - (MaxBS + 2)]),
                                    simde_mm256_loadu_si256(trunk1[loc2 + (MaxBS + 2)])),
@@ -367,7 +368,7 @@ void ModelBuf::emptyboard(const ModelWeight &weights)
   }
 
   //g1 and g2
-  for (Loc loc = 0; loc < MaxBS*MaxBS; loc++) {
+  for (NU_Loc loc = 0; loc < MaxBS*MaxBS; loc++) {
 
     for (int i = 0; i < groupBatch; i++) {
       auto g1sum_ = simde_mm256_setzero_si256();
@@ -433,13 +434,13 @@ void Eva_nnuev2::recalculate()
   Color boardCopy[MaxBS * MaxBS];
   memcpy(boardCopy, board, MaxBS * MaxBS * sizeof(Color));
   clear();
-  for (Loc i = LOC_ZERO; i < MaxBS * MaxBS; ++i) {
+  for (NU_Loc i = 0; i < MaxBS * MaxBS; ++i) {
     if (boardCopy[i] != C_EMPTY)
       play(boardCopy[i], i);
   }
 }
 
-void Eva_nnuev2::play(Color color, Loc loc)
+void Eva_nnuev2::play(Color color, NU_Loc loc)
 {
   board[loc] = color;
   buf.update(C_EMPTY, color, loc, weights);
@@ -460,7 +461,7 @@ void Eva_nnuev2::evaluatePolicy(const float *gf, PolicyType *policy)
   if (!buf.trunkUpToDate)
     calculateTrunk(gf);
   
-  for (Loc loc = 0; loc < MaxBS * MaxBS; loc++) {
+  for (NU_Loc loc = 0; loc < MaxBS * MaxBS; loc++) {
     auto psum = simde_mm256_setzero_si256();//int32
     for (int batch = 0; batch < groupBatch; batch++) {
 
@@ -502,7 +503,7 @@ ValueType Eva_nnuev2::evaluateValue(const float *gf)
 
     auto trunklr2v_b = simde_mm256_loadu_si256(weights.trunklr2v_b + batch16 * 16);
     auto trunklr2v_w = simde_mm256_loadu_si256(weights.trunklr2v_w + batch16 * 16);
-    for (Loc loc = 0; loc < MaxBS * MaxBS; loc++) {
+    for (NU_Loc loc = 0; loc < MaxBS * MaxBS; loc++) {
       auto t = simde_mm256_loadu_si256(buf.trunk[loc] + batch16 * 16);
       // trunklr2p
       t = simde_mm256_adds_epi16(t, trunklr2v_b);
@@ -582,7 +583,7 @@ ValueType Eva_nnuev2::evaluateValue(const float *gf)
   return ValueType(value[0], value[1], value[2]);
 }
 
-void Eva_nnuev2::undo(Loc loc)
+void Eva_nnuev2::undo(NU_Loc loc)
 {
   buf.update(board[loc], C_EMPTY, loc, weights);
   board[loc] = C_EMPTY;
@@ -591,7 +592,7 @@ void Eva_nnuev2::undo(Loc loc)
 void Eva_nnuev2::debug_print()
 {
   using namespace std;
-  Loc loc = MakeLoc(0, 0);
+  NU_Loc loc = MakeLoc(0, 0);
   PolicyType p[MaxBS * MaxBS];
   float      gf[NNUEV2::globalFeatureNum] = {0};
   auto       v = evaluateFull(gf,p);

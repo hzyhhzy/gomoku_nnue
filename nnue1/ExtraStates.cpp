@@ -1,4 +1,5 @@
 #include "ExtraStates.h"
+using namespace NNUE;
 
 ExtraStates::ExtraStates() { 
 	H = MaxBS; 

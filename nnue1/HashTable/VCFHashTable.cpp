@@ -1,5 +1,6 @@
 #include "VCFHashTable.h"
 
+using namespace NNUE;
 using namespace std;
 
 

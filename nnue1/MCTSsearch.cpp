@@ -1,6 +1,33 @@
 #include "MCTSsearch.h"
-
+using namespace NNUE;
 NNUEHashTable MCTSsearch::hashTable(22,5);
+
+inline ValueSum sureResultWR(MCTSsureResult sr)
+{
+  if (sr == MC_Win)
+    return ValueSum(1, 0, 0);
+  else if (sr == MC_LOSE)
+    return ValueSum(0, 1, 0);
+  else if (sr == MC_DRAW)
+    return ValueSum(0, 0, 1);
+  else
+    return ValueSum(-1e100, -1e100, -1e100);
+}
+
+inline double MCTSpuctFactor(double totalVisit, double puct, double puctPow, double puctBase)
+{
+  return  puct * pow((totalVisit + puctBase) / puctBase, puctPow);
+}
+
+inline double MCTSselectionValue(double puctFactor,
+  double value,
+  double draw,
+  double   parentdraw,
+  double   childVisit,
+  double   childPolicy)
+{
+  return value - 0.5 * draw * (1 - parentdraw) + puctFactor * childPolicy / (childVisit + 1);
+}
 
 MCTSnode::MCTSnode(MCTSsearch* search, Color nextColor,double policyTemp) :nextColor(nextColor)
 {
@@ -17,22 +44,22 @@ MCTSnode::MCTSnode(MCTSsearch* search, Color nextColor,double policyTemp) :nextC
   
   search->getGlobalFeatureInput(nextColor);
 
-  Loc *locbuf = search->locbuf;
+  NU_Loc *locbuf = search->locbuf;
   PolicyType *pbuf1 = search->pbuf1;
   PolicyType *pbuf2 = search->pbuf2;
   float  *pbuf3 = search->pbuf3;
 
   //calculate policy
   WRtotal = ValueSum(search->evaluator->evaluateFull(search->gfbuf,nextColor, pbuf1));
-  for (Loc loc = 0; loc < MaxBS * MaxBS; loc++)
+  for (NU_Loc loc = 0; loc < MaxBS * MaxBS; loc++)
   {
     if (search->board[loc] != C_EMPTY)
       pbuf1[loc] = MIN_POLICY;
   }
 
   //policy sort
-  std::iota(locbuf, locbuf + MaxBS * MaxBS, LOC_ZERO);
-  std::partial_sort(locbuf,locbuf+MAX_MCTS_CHILDREN, locbuf + MaxBS * MaxBS, [&](Loc a, Loc b) {
+  std::iota(locbuf, locbuf + MaxBS * MaxBS, 0);
+  std::partial_sort(locbuf,locbuf+MAX_MCTS_CHILDREN, locbuf + MaxBS * MaxBS, [&](NU_Loc a, NU_Loc b) {
     return pbuf1[a] > pbuf1[b];
     });
 
@@ -106,7 +133,7 @@ MCTSsearch::MCTSsearch(Evaluator *e)
   vcfSolver[1].setBoard(board, false, true);
 }
 
-float MCTSsearch::fullsearch(Color color, double factor, Loc& bestmove)
+float MCTSsearch::fullsearch(Color color, double factor, NU_Loc& bestmove)
 {
   vcfSolver[0].setBoard(board, false, true);
   vcfSolver[1].setBoard(board, false, true);
@@ -133,7 +160,7 @@ float MCTSsearch::fullsearch(Color color, double factor, Loc& bestmove)
   return getRootValue();
 }
 
-void MCTSsearch::play(Color color, Loc loc)
+void MCTSsearch::play(Color color, NU_Loc loc)
 {
     playForSearch(color, loc);
 
@@ -178,7 +205,7 @@ void MCTSsearch::play(Color color, Loc loc)
   }
 }
 
-void MCTSsearch::undo(Loc loc)
+void MCTSsearch::undo(NU_Loc loc)
 {
     undoForSearch(loc);
 
@@ -253,7 +280,7 @@ void MCTSsearch::loadParamFile(std::string filename)
   fs >> params.policyTemp;
 }
 
-void MCTSsearch::playForSearch(Color color, Loc loc)
+void MCTSsearch::playForSearch(Color color, NU_Loc loc)
 {
   if (board[loc] != C_EMPTY)
     std::cout << "MCTSsearch: Illegal Move\n";
@@ -265,7 +292,7 @@ void MCTSsearch::playForSearch(Color color, Loc loc)
   vcfSolver[1].playOutside(loc, color, 1, true);
 }
 
-void MCTSsearch::undoForSearch(Loc loc)
+void MCTSsearch::undoForSearch(NU_Loc loc)
 {
   Color color = board[loc];
   if (color == C_EMPTY)
@@ -302,7 +329,7 @@ MCTSsearch::SearchResult MCTSsearch::search(MCTSnode* node, uint64_t remainVisit
   while (remainVisits > 0 && !terminate)
   {
     int nextChildID=selectChildIDToSearch(node);
-    Loc nextChildLoc = node->children[nextChildID].loc;
+    NU_Loc nextChildLoc = node->children[nextChildID].loc;
     SearchResult childSR;
     if (nextChildID >= node->childrennum)//new child
     {
@@ -337,14 +364,14 @@ MCTSsearch::SearchResult MCTSsearch::search(MCTSnode* node, uint64_t remainVisit
   return SR;
 }
 
-MCTSsureResult MCTSsearch::checkSureResult(Loc nextMove, Color color)
+MCTSsureResult MCTSsearch::checkSureResult(NU_Loc nextMove, Color color)
 {
   //return MC_UNCERTAIN;//to disable VCF
   
   //evaluator没有play，因为evaluator play的开销较大
   Color opp = getOpp(color);
   vcfSolver[opp-1].playOutside(nextMove, color, 1, true);
-  Loc vcfloc;
+  NU_Loc vcfloc;
   VCF::SearchResult sr=vcfSolver[opp - 1].fullSearch(5000, 4, vcfloc, false);
   vcfSolver[opp-1].undoOutside(nextMove, 1);
 
@@ -404,13 +431,13 @@ int MCTSsearch::selectChildIDToSearch(MCTSnode* node)
 
 }
 
-Loc MCTSsearch::bestRootMove() const
+NU_Loc MCTSsearch::bestRootMove() const
 {
-  if (rootNode == NULL)return LOC_NULL;
-  if (rootNode->legalChildrennum <= 0)return LOC_NULL;
+  if (rootNode == NULL)return NU_LOC_NULL;
+  if (rootNode->legalChildrennum <= 0)return NU_LOC_NULL;
   if (rootNode->childrennum <= 0)return rootNode->children[0].loc;
   uint64_t bestVisit = 0;
-  Loc bestLoc = LOC_NULL;
+  NU_Loc bestLoc = NU_LOC_NULL;
   for (int i = 0; i < rootNode->childrennum; i++)
   {
     uint64_t visit = rootNode->children[i].ptr->visits;
@@ -453,7 +480,7 @@ void MCTSsearch::getGlobalFeatureInput(Color nextPlayer) {
     gfbuf[4] = 0;
 
     Color opp = getOpp(nextPlayer);
-    Loc tmp;
+    NU_Loc tmp;
     VCF::SearchResult oppvcf = vcfSolver[opp - 1].fullSearch(5000, 4, tmp, false);
     if (oppvcf == VCF::SR_Win)gfbuf[5] = 1;
     else if (oppvcf == VCF::SR_Lose)gfbuf[6] = 1;

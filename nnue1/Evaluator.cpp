@@ -2,6 +2,7 @@
 #include "AllEvaluator.h"
 
 #include <random>
+using namespace NNUE;
 
 Evaluator::Evaluator(std::string type, std::string filepath):moveCacheBlength(0),moveCacheWlength(0)
 {
@@ -34,14 +35,14 @@ void Evaluator::clear()
   whiteEvaluator->clear();
 }
 
-void Evaluator::play(Color color, Loc loc)
+void Evaluator::play(Color color, NU_Loc loc)
 {
   addCache(false, color, loc);
   //blackEvaluator->play(color, loc); 
   //whiteEvaluator->play(getOpp(color), loc); 
 }
 
-void Evaluator::undo(Color color, Loc loc)
+void Evaluator::undo(Color color, NU_Loc loc)
 {
   addCache(true, color, loc);
   //blackEvaluator->undo(loc); 
@@ -72,7 +73,7 @@ void Evaluator::clearCache(Color color)
   }
 }
 
-void Evaluator::addCache(bool isUndo, Color color, Loc loc)
+void Evaluator::addCache(bool isUndo, Color color, NU_Loc loc)
 {
   MoveCache newcache(isUndo, color, loc);
 

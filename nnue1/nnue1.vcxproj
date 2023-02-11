@@ -172,12 +172,12 @@
     <ClInclude Include="external\simde_fma.h" />
     <ClInclude Include="external\zlib\include\zlib.h" />
     <ClInclude Include="ExtraStages.h" />
-    <ClInclude Include="global.h" />
     <ClInclude Include="HashTable\hash.h" />
     <ClInclude Include="HashTable\mutexpool.h" />
     <ClInclude Include="HashTable\NNUEHashTable.h" />
     <ClInclude Include="HashTable\VCFHashTable.h" />
     <ClInclude Include="MCTSsearch.h" />
+    <ClInclude Include="NNUEglobal.h" />
     <ClInclude Include="TT.h" />
     <ClInclude Include="validation.h" />
     <ClInclude Include="VCF\VCFsolver.h" />

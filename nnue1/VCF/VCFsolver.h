@@ -1,15 +1,15 @@
 #pragma once
 #include "../NNUEglobal.h"
 #include "../HashTable/VCFHashTable.h"
-static_assert(LOC_NULL >= (MaxBS + 6)* (MaxBS + 6)+1||LOC_NULL<0);//保证loc_null不是棋盘上的点
+static_assert(NNUE::NU_LOC_NULL >= (MaxBS + 6)* (MaxBS + 6)+1||NNUE::NU_LOC_NULL<0);//保证loc_null不是棋盘上的点
 namespace VCF {
 
   struct alignas(int64_t) PT
   {
     int16_t shapeDir;
-    Loc shapeLoc,loc1, loc2;
-    PT():shapeDir(0), shapeLoc(LOC_NULL),loc1(LOC_NULL),loc2(LOC_NULL){}
-    //PT(Loc loc1,Loc loc2):loc1(loc1),loc2(loc2){}
+    NU_Loc shapeLoc,loc1, loc2;
+    PT():shapeDir(0), shapeLoc(NNUE::NU_LOC_NULL),loc1(NNUE::NU_LOC_NULL),loc2(NNUE::NU_LOC_NULL){}
+    //PT(NU_Loc loc1,NU_Loc loc2):loc1(loc1),loc2(loc2){}
   };
 
   struct zobristTable
@@ -54,13 +54,13 @@ namespace VCF {
   };
 
 
-  inline Loc xytoshapeloc(int x, int y) { return Loc((MaxBS + 6) * (y + 3) + x + 3); }
-  static const Loc dirs[4] = { 1, MaxBS + 6, MaxBS + 6 + 1, -MaxBS - 6 + 1 };//+x +y +x+y +x-y
+  inline NU_Loc xytoshapeloc(int x, int y) { return NU_Loc((MaxBS + 6) * (y + 3) + x + 3); }
+  static const NU_Loc dirs[4] = { 1, MaxBS + 6, MaxBS + 6 + 1, -MaxBS - 6 + 1 };//+x +y +x+y +x-y
   //为了方便常量调用，分开再写一遍
-  static const Loc dir0 = 1;
-  static const Loc dir1 =  MaxBS + 6;
-  static const Loc dir2 =  MaxBS + 6 + 1;
-  static const Loc dir3 = -MaxBS - 6 + 1;
+  static const NU_Loc dir0 = 1;
+  static const NU_Loc dir1 =  MaxBS + 6;
+  static const NU_Loc dir2 =  MaxBS + 6 + 1;
+  static const NU_Loc dir3 = -MaxBS - 6 + 1;
   static const int ArrSize = (MaxBS + 6) * (MaxBS + 6);//考虑额外3圈后的棋盘格点数
 
 
@@ -90,10 +90,10 @@ public:
 
   int64_t nodeNumThisSearch;//记录这次搜索已经搜索了多少节点了，用来提前终止，每次fullSearch开始时清零
   int movenum;//手数，从开始vcf到现在的局面已经多少手了
-  Loc PV[MaxBS * MaxBS];//记录路线
+  NU_Loc PV[MaxBS * MaxBS];//记录路线
   int PVlen;
 
-  VCFsolver() :VCFsolver(C_BLACK,DEFAULT_RULE) {}
+  VCFsolver() :VCFsolver(C_BLACK,NNUE::DEFAULT_RULE) {}
   VCFsolver(int basicRule,Color pla) : VCFsolver(MaxBS, MaxBS, basicRule, pla) {}
   VCFsolver(int h, int w, int basicRule, Color pla);
   void reset();
@@ -105,17 +105,17 @@ public:
   void setBoard(const Color* b, bool katagoType, bool colorType);
 
 
-  VCF::SearchResult fullSearch(float factor,int maxLayer, Loc& bestmove, bool katagoType);//factor是搜索因数，保证factor正比于节点数。
+  VCF::SearchResult fullSearch(float factor,int maxLayer, NU_Loc& bestmove, bool katagoType);//factor是搜索因数，保证factor正比于节点数。
   inline int getPVlen() { return PVlen; };
-  std::vector<Loc> getPV();//比较慢
-  std::vector<Loc> getPVreduced();//进攻方的PV
+  std::vector<NU_Loc> getPV();//比较慢
+  std::vector<NU_Loc> getPVreduced();//进攻方的PV
 
   
   //用于外部调用，更新棋盘。保证shape正确，不保证pts正确。
   //locType=0 vcf内部loc格式，=1 x+y*MaxBS，=2 katago格式
   //colorType=false 己方对方，=true 黑色白色
-  void playOutside(Loc loc, Color color, int locType,bool colorType);
-  void undoOutside(Loc loc, int locType);//用于外部调用，更新棋盘。保证shape正确，不保证pts正确。
+  void playOutside(NU_Loc loc, Color color, int locType,bool colorType);
+  void undoOutside(NU_Loc loc, int locType);//用于外部调用，更新棋盘。保证shape正确，不保证pts正确。
 
   //debug
   void printboard();
@@ -124,22 +124,22 @@ private:
 
   //重置pts，完整搜索前一定调用这个。
   //同时检查己方，对方有没有连五冲四
-  VCF::SearchResult resetPts(Loc& onlyLoc);
+  VCF::SearchResult resetPts(NU_Loc& onlyLoc);
 
   //找两个空点
-  VCF::PT findEmptyPoint2(Loc loc,int dir);
+  VCF::PT findEmptyPoint2(NU_Loc loc,int dir);
   //找一个空点
-  Loc findEmptyPoint1(Loc loc,Loc bias);//bias=dirs[dir]
+  NU_Loc findEmptyPoint1(NU_Loc loc,NU_Loc bias);//bias=dirs[dir]
 
   //走一个回合，先冲四再防守
   //loc1是攻，loc2是守，nextForceLoc是白棋冲四
-  VCF::PlayResult playTwo(Loc loc1,Loc loc2, Loc& nextForceLoc);
-  void undo(Loc loc);
+  VCF::PlayResult playTwo(NU_Loc loc1,NU_Loc loc2, NU_Loc& nextForceLoc);
+  void undo(NU_Loc loc);
   //maxNoThree：最多maxNoThree步没有新眠三，挡对手反四的冲四不算
   //forceLoc：下一步必须走这里，因为白棋有冲四
   //winLoc：返回获胜点
   //ptNumOld：上一步活三个数，搜索之后还原
-  VCF::SearchResult search(int maxNoThree, Loc forceLoc);
+  VCF::SearchResult search(int maxNoThree, NU_Loc forceLoc);
 
   // shape=1*己方棋子+8*长连+64*对方棋子+512*对手长连+4096*出界
   inline bool shape_isMyFive(int16_t s) { return (s & 0170777) == 5; }

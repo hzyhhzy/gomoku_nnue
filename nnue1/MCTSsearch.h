@@ -4,60 +4,33 @@
 #include "ExtraStates.h"
 const double policyQuant = 50000;
 const double policyQuantInv = 1/policyQuant;
-
-inline ValueSum sureResultWR(MCTSsureResult sr)
-{
-  if (sr == MC_Win)
-    return ValueSum(1, 0, 0);
-  else if (sr == MC_LOSE)
-    return ValueSum(0, 1, 0);
-  else if (sr == MC_DRAW)
-    return ValueSum(0, 0, 1);
-  else
-    return ValueSum(-1e100, -1e100, -1e100);
-}
-
-inline double MCTSpuctFactor(double totalVisit, double puct, double puctPow, double puctBase)
-{
-  return  puct * pow((totalVisit+puctBase)/puctBase, puctPow);
-}
-
-inline double MCTSselectionValue(double puctFactor,
-                                 double value,
-                                 double draw,
-                                 double   parentdraw,
-                                 double   childVisit,
-                                 double   childPolicy)
-{
-  return value - 0.5 * draw * (1-parentdraw) + puctFactor * childPolicy / (childVisit + 1);
-}
-
+ 
 struct MCTSnode;
 class MCTSsearch;
 
 struct MCTSchild
 {
   MCTSnode* ptr;
-  Loc loc;
+  NU_Loc loc;
   uint16_t policy;//除以policyQuant是原始policy
 };
 
 struct MCTSnode
 {
-  MCTSsureResult sureResult;
+  NNUE::MCTSsureResult sureResult;
   int16_t childrennum;
   int16_t legalChildrennum;//=min(合法招法，MAX_MCTS_CHILDREN)
-  MCTSchild children[MAX_MCTS_CHILDREN];
+  MCTSchild children[NNUE::MAX_MCTS_CHILDREN];
   
 
   uint64_t visits;//包括自己
-  ValueSum WRtotal;//以下一次落子的这一方的视角,1胜-1负
+  NNUE::ValueSum WRtotal;//以下一次落子的这一方的视角,1胜-1负
   //平均胜率=WRtotal/visits
 
   Color nextColor;
   
   MCTSnode(MCTSsearch* search,  Color nextColor,double policyTemp);
-  MCTSnode(MCTSsureResult sureResult, Color nextColor);
+  MCTSnode(NNUE::MCTSsureResult sureResult, Color nextColor);
   ~MCTSnode();
   
 };
@@ -101,12 +74,12 @@ public:
 
 
   MCTSsearch(Evaluator *e);
-  float    fullsearch(Color color, double factor, Loc &bestmove);
-  void play(Color color, Loc loc);
-  void undo( Loc loc);
+  float    fullsearch(Color color, double factor, NU_Loc &bestmove);
+  void play(Color color, NU_Loc loc);
+  void undo( NU_Loc loc);
   void clearBoard(); 
 
-  Loc bestRootMove() const;
+  NU_Loc bestRootMove() const;
   float getRootValue() const;
   int64_t getRootVisit() const;
   void stop() { terminate.store(true, std::memory_order_relaxed); }
@@ -117,9 +90,9 @@ public:
 
 private:
 
-  Loc        locbuf[MaxBS * MaxBS];
-  PolicyType pbuf1[MaxBS * MaxBS], pbuf2[MAX_MCTS_CHILDREN];
-  float      pbuf3[MAX_MCTS_CHILDREN];
+  NU_Loc        locbuf[MaxBS * MaxBS];
+  NNUE::PolicyType pbuf1[MaxBS * MaxBS], pbuf2[NNUE::MAX_MCTS_CHILDREN];
+  float      pbuf3[NNUE::MAX_MCTS_CHILDREN];
   float      gfbuf[NNUEV2::globalFeatureNum];
 
   friend MCTSnode::MCTSnode(MCTSsearch *search,
@@ -128,13 +101,13 @@ private:
   struct SearchResult
   {
     uint64_t newVisits;
-    ValueSum WRchange;
+    NNUE::ValueSum WRchange;
   };
-  void playForSearch(Color color, Loc loc);
-  void undoForSearch(Loc loc);
+  void playForSearch(Color color, NU_Loc loc);
+  void undoForSearch(NU_Loc loc);
 
   SearchResult search(MCTSnode* node, uint64_t remainVisits,bool isRoot);
-  MCTSsureResult checkSureResult(Loc nextMove, Color color);//check VCF
+  NNUE::MCTSsureResult checkSureResult(NU_Loc nextMove, Color color);//check VCF
   int            selectChildIDToSearch(MCTSnode *node);
   void      getGlobalFeatureInput(Color nextPlayer);
   Hash128            getStateHash(Color nextPlayer);

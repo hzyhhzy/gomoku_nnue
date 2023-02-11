@@ -8,18 +8,8 @@
 #include <mutex>
 #include <thread>
 #include <vector>
-/*
-class MutexPool {
-  std::mutex* mutexes;
-  uint32_t numMutexes;
 
-public:
-  MutexPool(uint32_t n);
-  ~MutexPool();
 
-  uint32_t getNumMutexes() const;
-  std::mutex& getMutex(uint32_t idx);
-};*/
 
 struct MCTSnode;
 
@@ -28,17 +18,17 @@ class NNUEHashTable
   struct Entry
   {
     uint64_t hash1;  // HASH相撞的概率极低，可以忽略
-    MCTSsureResult sureResult;
-    int16_t        legalChildrennum; 
-    ValueSum WRtotal;
-    Loc      locs[MAX_MCTS_CHILDREN];
-    uint16_t policy[MAX_MCTS_CHILDREN];
+    NNUE::MCTSsureResult sureResult;
+    int16_t        legalChildrennum;
+    NNUE::ValueSum WRtotal;
+    NU_Loc      locs[NNUE::MAX_MCTS_CHILDREN];
+    uint16_t policy[NNUE::MAX_MCTS_CHILDREN];
     Entry() : hash1(0) {}
     ~Entry() {}
   };
 
-  Entry *    entries;
-  MutexPool *mutexPool;
+  Entry* entries;
+  MutexPool* mutexPool;
   uint64_t   tableSize;
   uint64_t   tableMask;
   uint32_t   mutexPoolMask;
@@ -70,10 +60,10 @@ public:
   //}
   ~NNUEHashTable();
 
-  NNUEHashTable(const NNUEHashTable &other) = delete;
-  NNUEHashTable &operator=(const NNUEHashTable &other) = delete;
+  NNUEHashTable(const NNUEHashTable& other) = delete;
+  NNUEHashTable& operator=(const NNUEHashTable& other) = delete;
 
   // These are thread-safe. For get, ret will be set to nullptr upon a failure to find.
-  bool get(Hash128 hash, MCTSnode &node);
+  bool get(Hash128 hash, MCTSnode& node);
   void    set(Hash128 hash, const MCTSnode& node);
 };

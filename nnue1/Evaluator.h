@@ -17,7 +17,7 @@ public:
   void clear();
   
   
-  ValueType evaluateFull(const float *gf, Color color, PolicyType *policy)
+  NNUE::ValueType evaluateFull(const float *gf, Color color, NNUE::PolicyType *policy)
   {
     clearCache(color);
     if (color == C_BLACK)
@@ -25,7 +25,7 @@ public:
     else
       return whiteEvaluator->evaluateFull(gf, policy);
   }
-  void evaluatePolicy(const float *gf, Color color, PolicyType *policy)
+  void evaluatePolicy(const float *gf, Color color, NNUE::PolicyType *policy)
   {
     clearCache(color);
     if (color == C_BLACK)
@@ -33,7 +33,7 @@ public:
     else
       whiteEvaluator->evaluatePolicy(gf,policy);
   }
-  ValueType evaluateValue(const float *gf, Color color)
+  NNUE::ValueType evaluateValue(const float *gf, Color color)
   {
     clearCache(color);
     if (color == C_BLACK)
@@ -41,8 +41,8 @@ public:
     else
       return whiteEvaluator->evaluateValue(gf);
   }
-  void play(Color color, Loc loc); 
-  void undo(Color color, Loc loc);
+  void play(Color color, NU_Loc loc); 
+  void undo(Color color, NU_Loc loc);
   
   //Color* board() const { return blackEvaluator->board; }
 
@@ -54,16 +54,16 @@ private:
   {
     bool isUndo;
     Color color;
-    Loc loc;
-    MoveCache() :isUndo(false), color(C_EMPTY), loc(LOC_NULL){}
-    MoveCache(bool isUndo,Color color,Loc loc) :isUndo(isUndo), color(color), loc(loc){}
+    NU_Loc loc;
+    MoveCache() :isUndo(false), color(C_EMPTY), loc(NNUE::NU_LOC_NULL){}
+    MoveCache(bool isUndo,Color color,NU_Loc loc) :isUndo(isUndo), color(color), loc(loc){}
   };
 
   MoveCache moveCacheB[MaxBS * MaxBS], moveCacheW[MaxBS * MaxBS];
   int moveCacheBlength, moveCacheWlength;
 
   void clearCache(Color color);//把所有缓存的步数清空，使得evaluatorOneSide的board与这里的board相同
-  void addCache(bool isUndo, Color color, Loc loc);
+  void addCache(bool isUndo, Color color, NU_Loc loc);
   bool isContraryMove(MoveCache a, MoveCache b);//是不是可以抵消的一对操作
 };
 

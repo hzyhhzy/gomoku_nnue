@@ -11,6 +11,7 @@
 
 #include "Eva_nnuev2.h"
 
+using namespace NNUE;
 using namespace std;
 void loss_oneSample(Eva_nnuev2 *eva,
                     double      *totalVloss,
@@ -21,7 +22,7 @@ void loss_oneSample(Eva_nnuev2 *eva,
                     const float *vt)
 {
   //set board
-  for (Loc loc = 0; loc < MaxBS * MaxBS; loc++) {
+  for (NU_Loc loc = 0; loc < MaxBS * MaxBS; loc++) {
     float bf0 = bf[loc];
     float bf1 = bf[loc+MaxBS*MaxBS];
     Color c   = C_WALL;
@@ -49,7 +50,7 @@ void loss_oneSample(Eva_nnuev2 *eva,
   PolicyType policy_int[MaxBS * MaxBS];
   ValueType  value = eva->evaluateFull(gf,policy_int);
   double      policy[MaxBS * MaxBS];
-  for (Loc loc = 0; loc < MaxBS * MaxBS; loc++) {
+  for (NU_Loc loc = 0; loc < MaxBS * MaxBS; loc++) {
     policy[loc] = policy_int[loc] / policyQuantFactor;
   }
 
@@ -57,33 +58,33 @@ void loss_oneSample(Eva_nnuev2 *eva,
 
   //output logsoftmax
   double policyMax = -1e30;
-  for (Loc loc = 0; loc < MaxBS * MaxBS; loc++) {
+  for (NU_Loc loc = 0; loc < MaxBS * MaxBS; loc++) {
     if (policy[loc] > policyMax)
       policyMax = policy[loc];
   }
   double policyTotal=0;
-  for (Loc loc = 0; loc < MaxBS * MaxBS; loc++) {
+  for (NU_Loc loc = 0; loc < MaxBS * MaxBS; loc++) {
     policyTotal+=exp(policy[loc]-policyMax);
   }
   policyTotal = log(policyTotal);
-  for (Loc loc = 0; loc < MaxBS * MaxBS; loc++) {
+  for (NU_Loc loc = 0; loc < MaxBS * MaxBS; loc++) {
     policy[loc] -= (policyTotal+policyMax);
   }
 
   //pt sum=1
   double ptTotal = 0;
-  for (Loc loc = 0; loc < MaxBS * MaxBS; loc++) {
+  for (NU_Loc loc = 0; loc < MaxBS * MaxBS; loc++) {
     ptTotal += double(pt[loc]);
   }
   //cout << ptTotal << endl;
   double pt_n[MaxBS * MaxBS];
-  for (Loc loc = 0; loc < MaxBS * MaxBS; loc++) {
+  for (NU_Loc loc = 0; loc < MaxBS * MaxBS; loc++) {
     pt_n[loc] = pt[loc]/ptTotal;
   }
 
   //cross entropy loss
   double ploss = 0;
-  for (Loc loc = 0; loc < MaxBS * MaxBS; loc++) {
+  for (NU_Loc loc = 0; loc < MaxBS * MaxBS; loc++) {
     double a = policy[loc];
     double b = pt_n[loc];
     ploss += (-a * b + b * log(b + 1e-30));

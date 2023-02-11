@@ -98,7 +98,7 @@ namespace NNUEV2 {
     };
     struct OnePointChange
     {
-      Loc      loc;
+      NU_Loc      loc;
       int16_t  dir;
       uint32_t oldshape;
       uint32_t newshape;
@@ -125,7 +125,7 @@ namespace NNUEV2 {
       bool    trunkUpToDate;
       int16_t trunk[MaxBS * MaxBS][groupSize];  
 
-      void update(Color oldcolor, Color newcolor, Loc loc, const ModelWeight &weights);
+      void update(Color oldcolor, Color newcolor, NU_Loc loc, const ModelWeight &weights);
 
       void emptyboard(const ModelWeight &weights);  // init
     };
@@ -146,12 +146,12 @@ public:
   void recalculate();  //根据board完全重新计算棋形表
 
   //计算拆分为两部分，第一部分是可增量计算的，放在play函数里。第二部分是不易增量计算的，放在evaluate里。
-  void      play(Color color, Loc loc);
-  ValueType evaluateFull(const float *gf,PolicyType *policy);  // policy通过函数参数返回
-  void evaluatePolicy(const float *gf, PolicyType *policy);  // policy通过函数参数返回
-  ValueType evaluateValue(const float *gf);                //
+  void      play(Color color, NU_Loc loc);
+  NNUE::ValueType evaluateFull(const float *gf, NNUE::PolicyType *policy);  // policy通过函数参数返回
+  void evaluatePolicy(const float *gf, NNUE::PolicyType *policy);  // policy通过函数参数返回
+  NNUE::ValueType evaluateValue(const float *gf);                //
 
-  void undo(Loc loc);  // play的逆过程
+  void undo(NU_Loc loc);  // play的逆过程
 
   void debug_print();
 

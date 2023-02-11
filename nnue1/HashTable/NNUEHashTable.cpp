@@ -2,6 +2,7 @@
 #include "../MCTSsearch.h"
 #include <random>
 
+using namespace NNUE;
 using namespace std;
 
 

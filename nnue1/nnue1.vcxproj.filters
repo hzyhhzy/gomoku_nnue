@@ -83,9 +83,6 @@
     <ClInclude Include="Evaluator.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="global.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="AllEvaluator.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -136,6 +133,9 @@
     </ClInclude>
     <ClInclude Include="HashTable\NNUEHashTable.h">
       <Filter>头文件\HashTable</Filter>
+    </ClInclude>
+    <ClInclude Include="NNUEglobal.h">
+      <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

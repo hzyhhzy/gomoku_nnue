@@ -1,6 +1,6 @@
 #include "NNUEglobal.h"
 using namespace std;
-namespace strOp {
+namespace NNUE::strOp {
 
 string trim(const string &s)
 {

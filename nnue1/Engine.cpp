@@ -3,6 +3,7 @@
 
 #include <chrono>
 #include <future>
+using namespace NNUE;
 using namespace std;
 
 Engine::Engine(std::string evaluator_type, std::string weightfile, std::string configfile,bool writeLogEnable): writeLogEnable(writeLogEnable)
@@ -37,27 +38,27 @@ void Engine::writeLog(std::string str)
 std::string Engine::genmove()
 {
   
-  Time   tic         = now();
+  int64_t   tic         = now_ms();
   double bestvalue   = 0;
-  Loc    bestloc     = LOC_NULL;
+  NU_Loc    bestloc     = NU_LOC_NULL;
   int    maxTurnTime = min(timeout_turn - ReservedTime, time_left / 7);
   int    maxWaitTime = max(maxTurnTime - AsyncWaitReservedTime, 0);
   int    optimalTime = maxTurnTime * 2 / 5;
 
     auto result = std::async(std::launch::async, [&]() {
-      Loc    loc;
+      NU_Loc    loc;
       double value = search->fullsearch(nextColor, 0, loc);
       return std::make_pair(value, loc);
     });
 
     if (result.wait_for(chrono::milliseconds(
-            max(maxWaitTime + tic - now(), 10LL)))
+            max(maxWaitTime + tic - now_ms(), 10LL)))
         == future_status::timeout) {
       search->stop();
     }
 
     std::tie(bestvalue, bestloc) = result.get();
-    Time toc                     = now();
+    int64_t toc                     = now_ms();
     // search->evaluator->recalculate();
     std::cout << "MESSAGE Nodes = " << search->getRootVisit()
       << " Value = " << bestvalue
@@ -71,10 +72,10 @@ std::string Engine::genmove()
 
   
 
-  if (bestloc != LOC_NULL)
+  if (bestloc != NU_LOC_NULL)
     search->play(nextColor, bestloc);
   else
-    bestloc = LOC_PASS;
+    bestloc = NU_LOC_PASS;
   nextColor = getOpp(nextColor);
 
   int bestx = bestloc % MaxBS, besty = bestloc / MaxBS;
@@ -139,7 +140,7 @@ void Engine::protocolLoop()
           || !strOp::tryStringToInt(pieces[1], oppy))
         response = "ERROR Bad command";
       else {
-        Loc opploc = MakeLoc(oppx, oppy);
+        NU_Loc opploc = MakeLoc(oppx, oppy);
         search->play(nextColor, opploc);
         nextColor = getOpp(nextColor);
         response  = genmove();
@@ -178,7 +179,7 @@ void Engine::protocolLoop()
           cout << "ERROR Bad command";
         }
         else {  // normal move
-          Loc loc = MakeLoc(x, y);
+          NU_Loc loc = MakeLoc(x, y);
           search->play(nextColor, loc);
           nextColor = getOpp(nextColor);
         }

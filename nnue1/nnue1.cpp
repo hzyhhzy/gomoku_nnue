@@ -12,6 +12,7 @@
 #include <iostream>
 
 
+using namespace NNUE;
 using namespace std;
 
 std::string appPath(int argc, const char **argv)
@@ -106,11 +107,11 @@ int main_testMCTS(int argc, const char **argv)
         search->play(color, MakeLoc(x, y));
     }
 
-  Time tic = now();
+  int64_t tic = now_ms();
   for (int depth = 0; depth < 100000; depth++) {
-    Loc    loc;
+    NU_Loc    loc;
     double value = search->fullsearch(C_BLACK, 10000, loc);
-    Time      toc   = now();
+    int64_t      toc   = now_ms();
     MCTSnode *rootNode = search->rootNode;
     cout << "Depth = " << depth << " Value = " << value
          << " Draw = " << rootNode->WRtotal.draw / rootNode->visits
@@ -187,12 +188,12 @@ int main_benchmark()
 
   int64_t testnum = 500000;
 
-  std::mt19937_64 prng {uint64_t(now())};
+  std::mt19937_64 prng {uint64_t(now_ms())};
   prng();
   prng();
 
   PolicyType p[MaxBS * MaxBS];
-  int64_t time_start=now();
+  int64_t time_start=now_ms();
 
   float gf[NNUEV2::globalFeatureNum] = {0};
 
@@ -200,7 +201,7 @@ int main_benchmark()
   for (int64_t i = 0; i < testnum; i++) {
     for (int j = 0; j < 3; j++) {
       uint64_t rand  = prng();
-      Loc      loc   = rand % (MaxBS * MaxBS);
+      NU_Loc      loc   = rand % (MaxBS * MaxBS);
       rand           = rand / (MaxBS * MaxBS);
       Color newcolor = (eva->board[loc] + 1 + rand % 2) % 3;
       if (eva->board[loc] != C_EMPTY)
@@ -213,7 +214,7 @@ int main_benchmark()
 
   }
 
-  int64_t time_end = now();
+  int64_t time_end = now_ms();
   double  time_used = time_end - time_start;
   cout << "NNevals = " << testnum << " Time = " << time_used / 1000 << " s" << endl;
   cout << "Speed = " << testnum/time_used * 1000 << " eval/s" << endl;
@@ -305,7 +306,7 @@ int main_testvcf()
     }
   VCFsolver v(MaxBS,MaxBS,DEFAULT_RULE, C_BLACK);
   v.setBoard(board, false,true);
-  Loc bestloc;
+  NU_Loc bestloc;
   int result;
   result = v.fullSearch(1e38,0, bestloc,false);
   cout << "Initial Board:" << endl;
