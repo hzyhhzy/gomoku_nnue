@@ -1,0 +1,132 @@
+conda activate t
+python train.py --savename ren_b --gpu 1 --tdatadir "../data/renju100b/tdata_blackNormal" --vdatadir "../data/renju100b/vdata_blackNormal/part_0.npz"
+
+conda activate t
+python train.py --savename ren_w --gpu 2 --tdatadir "../data/renju100b/tdata_whiteNormal" --vdatadir "../data/renju100b/vdata_whiteNormal/part_0.npz"
+
+conda activate t
+python train.py --savename gomf1 --gpu 0 --tdatadir "../data/gomf1/tdata_choosed" --vdatadir "../data/gomf1/vdata_choosed/part_0.npz"
+
+conda activate t
+python train.py --savename stdf1 --gpu 3 --tdatadir "../data/stdf1/tdata_choosed" --vdatadir "../data/stdf1/vdata_choosed/part_0.npz"
+
+conda activate t
+tensorboard --logdir=saved_models
+
+conda activate t
+python export_v2.py --model gomf1 --cpu
+
+
+
+
+conda activate t
+python train.py --savename ren_b_c16 --gpu 1 --modelparam 5 128 16 32 --tdatadir "../data/renju100b/tdata_blackNormal" --vdatadir "../data/renju100b/vdata_blackNormal/part_0.npz"
+
+conda activate t
+python train.py --savename ren_w_c16 --gpu 2 --modelparam 5 128 16 32 --tdatadir "../data/renju100b/tdata_whiteNormal" --vdatadir "../data/renju100b/vdata_whiteNormal/part_0.npz"
+
+conda activate t
+python train.py --savename gomf1_c16 --gpu 0 --modelparam 5 128 16 32 --tdatadir "../data/gomf1/tdata_choosed" --vdatadir "../data/gomf1/vdata_choosed/part_0.npz"
+
+conda activate t
+python train.py --savename stdf1_c16 --gpu 3 --modelparam 5 128 16 32 --tdatadir "../data/stdf1/tdata_choosed" --vdatadir "../data/stdf1/vdata_choosed/part_0.npz"
+
+conda activate t
+tensorboard --logdir=saved_models
+
+
+
+
+conda activate t
+python train.py --savename gomf1_c16 --gpu 0 --modelparam 5 128 16 32 --tdatadir "../data/gomf1/tdata_choosed" --vdatadir "../data/gomf1/vdata_choosed/part_0.npz"
+
+conda activate t
+python train.py --savename gomf1_c32 --gpu 1 --modelparam 5 192 32 48 --tdatadir "../data/gomf1/tdata_choosed" --vdatadir "../data/gomf1/vdata_choosed/part_0.npz"
+
+conda activate t
+python train.py --savename gomf1 --gpu 2 --tdatadir "../data/gomf1/tdata_choosed" --vdatadir "../data/gomf1/vdata_choosed/part_0.npz"
+
+conda activate t
+python train.py --savename gomf1_c128 --gpu 3 --modelparam 5 256 128 96 --tdatadir "../data/gomf1/tdata_choosed" --vdatadir "../data/gomf1/vdata_choosed/part_0.npz"
+
+conda activate t
+tensorboard --logdir=saved_models
+
+
+
+
+
+
+
+
+
+conda activate t
+python train.py --savename 3b32f --gpu 0 --modeltype res --modelparam 3 32 --tdatadir "../data/gomf1/tdata_choosed" --vdatadir "../data/gomf1/vdata_choosed/part_0.npz" --lr 2e-3  --batchsize 512
+
+conda activate t
+python train.py --savename 4b32f --gpu 1 --modeltype res --modelparam 4 32 --tdatadir "../data/gomf1/tdata_choosed" --vdatadir "../data/gomf1/vdata_choosed/part_0.npz" --lr 2e-3  --batchsize 512
+
+conda activate t
+python train.py --savename 5b48f --gpu 2 --modeltype res --modelparam 5 48 --tdatadir "../data/gomf1/tdata_choosed" --vdatadir "../data/gomf1/vdata_choosed/part_0.npz" --lr 2e-3  --batchsize 512
+
+
+conda activate t
+python train.py --savename gomf1_c128 --gpu 3 --modelparam 5 256 128 96 --tdatadir "../data/gomf1/tdata_choosed" --vdatadir "../data/gomf1/vdata_choosed/part_0.npz" --lr 1e-4
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+conda activate t
+python train.py --savename ren_b --gpu 2 --tdatadir "../data/renju100b/tdata_blackNormal" --vdatadir "../data/renju100b/vdata_blackNormal/part_0.npz"
+
+
+conda activate t
+python train.py --savename gomf1_c128 --gpu 3 --modelparam 5 256 128 96 --tdatadir "../data/gomf1/tdata_choosed" --vdatadir "../data/gomf1/vdata_choosed/part_0.npz" --lr 2e-5
+
+
+conda activate t
+python train.py --savename 3b32f --gpu 0 --modeltype res --modelparam 3 32 --tdatadir "../data/gomf1/tdata_choosed" --vdatadir "../data/gomf1/vdata_choosed/part_0.npz" --lr 5e-4  --batchsize 512
+
+
+conda activate t
+python train.py --savename stdf1 --gpu 1 --tdatadir "../data/stdf1/tdata_choosed" --vdatadir "../data/stdf1/vdata_choosed/part_0.npz"
+
+
+
+python -u train.py --savename fs40b --gpu 1 --modeltype v2 --modelparam 5 256 128 96 --tdatadir "../data/fs40b_allbs/tdata_choosed" --vdatadir "../data/fs40b_allbs/vdata_choosed/part_0.npz" --lr 0
+
+conda activate t
+
+python -u train.py --savename fs40b_v2t1_c128 --gpu 2 --modeltype v2t1 --modelparam 5 256 128 96 --tdatadir "../data/fs40b_allbs/tdata_choosed" --vdatadir "../data/fs40b_allbs/vdata_choosed/part_0.npz" --lr 5e-4
+python -u train.py --savename fs40b_v2t1_c64 --gpu 1 --modeltype v2t1 --modelparam 5 256 64 64 --tdatadir "../data/fs40b_allbs/tdata_choosed" --vdatadir "../data/fs40b_allbs/vdata_choosed/part_0.npz" --lr 5e-4
+python -u train.py --savename fs40b_v2t1_c128_highlr --gpu 1 --modeltype v2t1 --modelparam 5 256 128 96 --tdatadir "../data/fs40b_allbs/tdata_choosed" --vdatadir "../data/fs40b_allbs/vdata_choosed/part_0.npz" --lr 2e-3
+
+
+
+python -u train.py --savename fs40b_v3_c128 --gpu 1 --modeltype v3 --modelparam 5 256 128 96 --lr 1.4e-3
+python -u train.py --savename fs40b_v3_c64 --gpu 2 --modeltype v3 --modelparam 5 256 64 64 --lr 1.0e-3
+
+
+python -u train.py --savename 5x64 --gpu 2 --modeltype res --modelparam 5 64 --lr 2e-3 --batchsize 512
+
+
+
+
+
+
+
+
+

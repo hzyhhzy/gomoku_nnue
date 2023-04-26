@@ -45,17 +45,18 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     #data settings
-    parser.add_argument('--tdatadir', type=str, default='../data/gomf1/tdata_choosed', help='train dataset path: dir include dataset files or single dataset file')
-    parser.add_argument('--vdatadir', type=str, default='../data/gomf1/vdata_choosed/part_0.npz', help='validation dataset path: dir include dataset files or single dataset file')
+    parser.add_argument('--tdatadir', type=str, default='../data/fs40b_allbs/tdata_choosed', help='train dataset path: dir include dataset files or single dataset file')
+    parser.add_argument('--vdatadir', type=str, default='../data/fs40b_allbs/vdata_choosed/part_0.npz', help='validation dataset path: dir include dataset files or single dataset file')
+    parser.add_argument('--maxvalsamp', type=int, default=20000, help='validation sample num')
     parser.add_argument('--maxstep', type=int, default=5000000000, help='max step to train')
-    parser.add_argument('--savestep', type=int, default=10000, help='step to save and validation')
+    parser.add_argument('--savestep', type=int, default=2000, help='step to save and validation')
     parser.add_argument('--infostep', type=int, default=500, help='step to logger')
 
     parser.add_argument('--sampling', type=float, default=1, help='sampling rate(to avoid overfitting)')
     parser.add_argument('--valuesampling', type=float, default=1, help='value sampling rate(to avoid overfitting)')
 
     #model parameters
-    parser.add_argument('--modeltype', type=str, default='v2',help='model type defined in model.py')
+    parser.add_argument('--modeltype', type=str, default='v3',help='model type defined in model.py')
     parser.add_argument('--modelparam', nargs='+',type=int,
                         default=(5,256), help='model size')
 
@@ -67,7 +68,7 @@ if __name__ == '__main__':
                         default=0, help='which gpu, -1 means cpu')
     parser.add_argument('--batchsize', type=int,
                         default=128, help='batch size')
-    parser.add_argument('--lr', type=float, default=5e-4, help='learning rate')
+    parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
     parser.add_argument('--weightdecay', type=float, default=3e-5, help='weight decay')
     parser.add_argument('--rollbackthreshold', type=float, default=0.08, help='if loss increased this value, roll back 2*infostep steps')
     args = parser.parse_args()
@@ -155,7 +156,7 @@ if __name__ == '__main__':
         optimizer = optim.Adam([{'params':otherparam},
                                 {'params': lowl2param,'lr':args.lr,'weight_decay':1e-7}],
                                 lr=args.lr,weight_decay=args.weightdecay)
-    elif model_type[0:2]=='v2':
+    elif model_type[0:2]=='v2' or model_type[0:2]=='v3' :
         highl2param = list(map(id,[model.h1conv.w,
                      model.trunkconv1.weight,
                      model.trunkconv2.w]))
@@ -284,11 +285,13 @@ if __name__ == '__main__':
                     print(f"{vDataset.__len__()} rows")
                     vDataloader = DataLoader(vDataset, shuffle=False, batch_size=args.batchsize)
                     loss_record_val = loss_record_init.copy()
+                    vsamp=0
                     model.eval()
                     with torch.no_grad():
                         for s, (board, valueTarget, policyTarget) in enumerate(vDataloader):
                             if(board.shape[0]!=args.batchsize): #只要完整的batch
                                 continue
+                            vsamp+=args.batchsize
                             board = board.to(device)
                             valueTarget = valueTarget.to(device)
                             policyTarget = policyTarget.to(device)
@@ -303,6 +306,8 @@ if __name__ == '__main__':
                             loss_record_val[1]+=vloss.detach().item()
                             loss_record_val[2]+=ploss.detach().item()
                             loss_record_val[3]+=1
+                            if(vsamp>=args.maxvalsamp):
+                                break
 
                     time1 = time.time()
                     time_used = time1 - time0
