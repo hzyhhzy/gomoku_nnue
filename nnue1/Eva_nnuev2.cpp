@@ -75,25 +75,13 @@ void Eva_nnuev2::calculateTrunk(const float* gf)
 
   //rv=self.gfVector(gf)
   {
-    // linear 1
-    float gflayer1[groupSize];
-    for (int i = 0; i < groupSize/8; i++) {
-      auto sum = simde_mm256_loadu_ps(weights.gfmlp_b1 + i * 8);
+
+    // linear
+    for (int i = 0; i < groupBatch32; i++) {
+      auto sum = simde_mm256_loadu_ps(weights.gfmlp_b + i * 8);
       for (int j = 0; j < globalFeatureNum; j++) {
         auto x = simde_mm256_set1_ps(gf[j]);
-        auto w = simde_mm256_loadu_ps(weights.gfmlp_w1[j] + i * 8);
-        sum    = simde_mm256_fmadd_ps(w, x, sum);
-      }
-      sum = simde_mm256_max_ps(simde_mm256_setzero_ps(), sum);  // relu
-      simde_mm256_storeu_ps(gflayer1 + i * 8, sum);
-    }
-
-    // linear 2
-    for (int i = 0; i < groupSize / 8; i++) {
-      auto sum = simde_mm256_loadu_ps(weights.gfmlp_b2 + i * 8);
-      for (int j = 0; j < groupSize; j++) {
-        auto x = simde_mm256_set1_ps(gflayer1[j]);
-        auto w = simde_mm256_loadu_ps(weights.gfmlp_w2[j] + i * 8);
+        auto w = simde_mm256_loadu_ps(weights.gfmlp_w[j] + i * 8);
         sum    = simde_mm256_fmadd_ps(w, x, sum);
       }
       auto      sum_int = simde_mm256_cvtps_epi32(sum);
@@ -108,6 +96,9 @@ void Eva_nnuev2::calculateTrunk(const float* gf)
   //    std::cout << rv[i] << " ";
   //std::cout << "\n";
 
+  
+  float vsum[groupSize];//sum of trunk, mlp input
+
   for (int batch = 0; batch < groupBatch; batch++) {  //一直到trunk计算完毕，不同batch之间都没有交互,所以放在最外层
     int addrBias = batch * 16;
 
@@ -118,6 +109,7 @@ void Eva_nnuev2::calculateTrunk(const float* gf)
     //int16_t *h1m = new int16_t[(MaxBS + 10) * (MaxBS + 10)*6*16];  //完整的卷积是先乘再相加，此处是相乘但还没相加。h1m沿一条线相加得到h1c。加了5层padding方便后续处理
     //h1m的定义移到Eva_nnuev2类内了
     memset(buf.h1m, 0, sizeof(int16_t) * (MaxBS + 10) * (MaxBS + 10) * 6 * 16);
+
     //-------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // g1 prelu和h1conv的乘法部分
     auto g1lr_w   = simde_mm256_loadu_si256(weights.g1lr_w + addrBias);
@@ -271,7 +263,11 @@ void Eva_nnuev2::calculateTrunk(const float* gf)
     auto trunkconv2_w0 = simde_mm256_loadu_si256(weights.trunkconv2_w[0] + addrBias);
     auto trunkconv2_w1 = simde_mm256_loadu_si256(weights.trunkconv2_w[1] + addrBias);
     auto trunkconv2_w2 = simde_mm256_loadu_si256(weights.trunkconv2_w[2] + addrBias);
+    auto trunklr2_b = simde_mm256_loadu_si256(weights.trunklr2_b + batch * 16);
+    auto trunklr2_w = simde_mm256_loadu_si256(weights.trunklr2_w + batch * 16);
 
+    auto vsum0 = simde_mm256_setzero_si256();
+    auto vsum1 = simde_mm256_setzero_si256();
     for (NU_Loc locY = 0; locY < MaxBS; locY++) {
       for (NU_Loc locX = 0; locX < MaxBS; locX++) {
         NU_Loc  loc1  = locY * MaxBS + locX;            //原始loc
@@ -292,13 +288,77 @@ void Eva_nnuev2::calculateTrunk(const float* gf)
         trunk = simde_mm256_adds_epi16(simde_mm256_mulhrs_epi16(trunka, trunkconv2_w1), trunk);
         trunk = simde_mm256_adds_epi16(simde_mm256_mulhrs_epi16(trunkb, trunkconv2_w2), trunk);
 
+        trunk = simde_mm256_adds_epi16(trunk, trunklr2_b);
+        trunk = simde_mm256_max_epi16(trunk, simde_mm256_mulhrs_epi16(trunk, trunklr2_w));
+
+        vsum0 = simde_mm256_add_epi32(
+          vsum0,
+          simde_mm256_cvtepi16_epi32(simde_mm256_extractf128_si256(trunk, 0)));
+        vsum1 = simde_mm256_add_epi32(
+          vsum1,
+          simde_mm256_cvtepi16_epi32(simde_mm256_extractf128_si256(trunk, 1)));
+
         // save
         simde_mm256_storeu_si256(buf.trunk[loc1]+addrBias, trunk);
       }
     }
+    simde_mm256_storeu_ps(vsum + batch * 16, simde_mm256_cvtepi32_ps(vsum0));
+    simde_mm256_storeu_ps(vsum + batch * 16 + 8, simde_mm256_cvtepi32_ps(vsum1));
 
   }
-    
+
+
+  //scale, valuelr
+  auto scale = simde_mm256_set1_ps(weights.scale_beforemlpInv / (MaxBS * MaxBS));
+  for (int batch32 = 0; batch32 < groupBatch * 2; batch32++) {
+    auto valuelr_b = simde_mm256_loadu_ps(weights.valuelr_b + batch32 * 8);
+    auto valuelr_w = simde_mm256_loadu_ps(weights.valuelr_w + batch32 * 8);
+    auto v = simde_mm256_loadu_ps(vsum + batch32 * 8);
+    v = simde_mm256_mul_ps(v, scale);
+    v = simde_mm256_add_ps(v, valuelr_b);
+    v = simde_mm256_max_ps(v, simde_mm256_mul_ps(v, valuelr_w));
+    simde_mm256_storeu_ps(vsum + batch32 * 8, v);
+
+  }
+
+  // linear 1
+  float layer1[mlpChannel];
+  for (int i = 0; i < mlpBatch32; i++) {
+    auto sum = simde_mm256_loadu_ps(weights.mlp_b1 + i * 8);
+    for (int j = 0; j < groupSize; j++) {
+      auto x = simde_mm256_set1_ps(vsum[j]);
+      auto w = simde_mm256_loadu_ps(weights.mlp_w1[j] + i * 8);
+      sum = simde_mm256_fmadd_ps(w, x, sum);
+    }
+    sum = simde_mm256_max_ps(simde_mm256_setzero_ps(), sum);  // relu
+    simde_mm256_storeu_ps(layer1 + i * 8, sum);
+  }
+
+  // linear 2
+  float layer2[mlpChannel];
+  for (int i = 0; i < mlpBatch32; i++) {
+    auto sum = simde_mm256_loadu_ps(weights.mlp_b2 + i * 8);
+    for (int j = 0; j < mlpChannel; j++) {
+      auto x = simde_mm256_set1_ps(layer1[j]);
+      auto w = simde_mm256_loadu_ps(weights.mlp_w2[j] + i * 8);
+      sum = simde_mm256_fmadd_ps(w, x, sum);
+    }
+    sum = simde_mm256_max_ps(simde_mm256_setzero_ps(), sum);  // relu
+    simde_mm256_storeu_ps(layer2 + i * 8, sum);
+  }
+
+  // linear 3
+  for (int i = 0; i < mlpBatch32; i++) {
+    auto sum = simde_mm256_loadu_ps(weights.mlp_b3 + i * 8);
+    for (int j = 0; j < mlpChannel; j++) {
+      auto x = simde_mm256_set1_ps(layer2[j]);
+      auto w = simde_mm256_loadu_ps(weights.mlp_w3[j] + i * 8);
+      sum = simde_mm256_fmadd_ps(w, x, sum);
+    }
+    sum = simde_mm256_max_ps(simde_mm256_setzero_ps(), sum);  // relu
+    simde_mm256_storeu_ps(buf.mlp_layer3 + i * 8, sum);
+  }
+
   buf.trunkUpToDate = true;
   return;
 
@@ -460,20 +520,40 @@ void Eva_nnuev2::evaluatePolicy(const float *gf, PolicyType *policy)
     return;
   if (!buf.trunkUpToDate)
     calculateTrunk(gf);
-  
+
+  // mlp_p linear 
+  float p_w_float[groupSize];
+  int16_t p_w[groupSize];
+  for (int i = 0; i < groupBatch32; i++) {
+    auto sum = simde_mm256_loadu_ps(weights.mlp_p_b + i * 8);
+    for (int j = 0; j < mlpChannel; j++) {
+      auto x = simde_mm256_set1_ps(buf.mlp_layer3[j]);
+      auto w = simde_mm256_loadu_ps(weights.mlp_p_w[j] + i * 8);
+      sum = simde_mm256_fmadd_ps(w, x, sum);
+    }
+    auto prelu_w = simde_mm256_loadu_ps(weights.mlp_plr_w + i * 8);
+    sum = simde_mm256_max_ps(simde_mm256_mul_ps(sum, prelu_w), sum);  // prelu
+    simde_mm256_storeu_ps(p_w_float + i * 8, sum);
+  }
+
+  //too lazy to write avx2 code
+  const float clipBound = 32768 * 0.99;
+  for (int i = 0; i < groupSize; i++) {
+    float t = p_w_float[i];
+    t = t > clipBound ? clipBound : t;
+    t = t < -clipBound ? -clipBound : t;
+    p_w[i] = int16_t(t);
+  }
+
+
   for (NU_Loc loc = 0; loc < MaxBS * MaxBS; loc++) {
     auto psum = simde_mm256_setzero_si256();//int32
     for (int batch = 0; batch < groupBatch; batch++) {
 
       //load
       auto t = simde_mm256_loadu_si256(buf.trunk[loc] + batch * 16);
-      auto trunklr2p_b = simde_mm256_loadu_si256(weights.trunklr2p_b + batch * 16);
-      auto trunklr2p_w = simde_mm256_loadu_si256(weights.trunklr2p_w + batch * 16);
-      auto policy_linear_w = simde_mm256_loadu_si256(weights.policy_linear_w + batch * 16);
+      auto policy_linear_w = simde_mm256_loadu_si256(p_w + batch * 16);
 
-      //trunklr2p
-      t = simde_mm256_adds_epi16(t, trunklr2p_b);
-      t = simde_mm256_max_epi16(t, simde_mm256_mulhrs_epi16(t, trunklr2p_w));
 
       //policy linear
       t          = simde_mm256_madd_epi16(t, policy_linear_w); 
@@ -485,7 +565,7 @@ void Eva_nnuev2::evaluatePolicy(const float *gf, PolicyType *policy)
     psum = simde_mm256_hadd_epi32(psum, psum);
 
     auto  p = simde_mm256_extract_epi32(psum, 0) + simde_mm256_extract_epi32(psum, 4);
-    policy[loc] = p * weights.scale_policyInv * policyQuantFactor / 32768;
+    policy[loc] = p * weights.scale_beforemlpInv * policyQuantFactor / 32768;
   }
 }
 
@@ -495,86 +575,11 @@ ValueType Eva_nnuev2::evaluateValue(const float *gf)
     calculateTrunk(gf);
 
 
-  //trunklr2v, sum board
-  float vsum[groupSize];
-  for (int batch16 = 0; batch16 < groupBatch; batch16++) {
-    auto vsum0 = simde_mm256_setzero_si256();
-    auto vsum1 = simde_mm256_setzero_si256();
-
-    auto trunklr2v_b = simde_mm256_loadu_si256(weights.trunklr2v_b + batch16 * 16);
-    auto trunklr2v_w = simde_mm256_loadu_si256(weights.trunklr2v_w + batch16 * 16);
-    for (NU_Loc loc = 0; loc < MaxBS * MaxBS; loc++) {
-      auto t = simde_mm256_loadu_si256(buf.trunk[loc] + batch16 * 16);
-      // trunklr2p
-      t = simde_mm256_adds_epi16(t, trunklr2v_b);
-      t     = simde_mm256_max_epi16(t, simde_mm256_mulhrs_epi16(t, trunklr2v_w));
-      vsum0 = simde_mm256_add_epi32(
-          vsum0,
-          simde_mm256_cvtepi16_epi32(simde_mm256_extractf128_si256(t, 0)));
-      vsum1 = simde_mm256_add_epi32(
-          vsum1,
-          simde_mm256_cvtepi16_epi32(simde_mm256_extractf128_si256(t, 1)));
-    }
-    simde_mm256_storeu_ps(vsum + batch16 * 16, simde_mm256_cvtepi32_ps(vsum0));
-    simde_mm256_storeu_ps(vsum + batch16 * 16 + 8, simde_mm256_cvtepi32_ps(vsum1));
-  }
-
-  //scale, valuelr
-  auto scale       = simde_mm256_set1_ps(weights.scale_beforemlpInv / MaxBS / MaxBS);
-  for (int batch32 = 0; batch32 < groupBatch * 2; batch32++) {
-    auto valuelr_b = simde_mm256_loadu_ps(weights.valuelr_b + batch32 * 8);
-    auto valuelr_w = simde_mm256_loadu_ps(weights.valuelr_w + batch32 * 8);
-    auto v         = simde_mm256_loadu_ps(vsum + batch32 * 8);
-    v              = simde_mm256_mul_ps(v, scale);
-    v              = simde_mm256_add_ps(v, valuelr_b);
-    v              = simde_mm256_max_ps(v, simde_mm256_mul_ps(v, valuelr_w));
-    simde_mm256_storeu_ps(vsum + batch32 * 8, v);
-  }
-
-  // linear 1
-  float layer1[mlpChannel];
-  for (int i = 0; i < mlpBatch32; i++) {
-    auto sum = simde_mm256_loadu_ps(weights.mlp_b1 + i * 8);
-    for (int j = 0; j < groupSize; j++) {
-      auto x = simde_mm256_set1_ps(vsum[j]);
-      auto w = simde_mm256_loadu_ps(weights.mlp_w1[j] + i * 8);
-      sum    = simde_mm256_fmadd_ps(w, x, sum);
-    }
-    sum = simde_mm256_max_ps(simde_mm256_setzero_ps(), sum);  // relu
-    simde_mm256_storeu_ps(layer1 + i * 8, sum);
-  }
-
-  // linear 2
-  float layer2[mlpChannel];
-  for (int i = 0; i < mlpBatch32; i++) {
-    auto sum = simde_mm256_loadu_ps(weights.mlp_b2 + i * 8);
-    for (int j = 0; j < mlpChannel; j++) {
-      auto x = simde_mm256_set1_ps(layer1[j]);
-      auto w = simde_mm256_loadu_ps(weights.mlp_w2[j] + i * 8);
-      sum    = simde_mm256_fmadd_ps(w, x, sum);
-    }
-    sum = simde_mm256_max_ps(simde_mm256_setzero_ps(), sum);  // relu
-    simde_mm256_storeu_ps(layer2 + i * 8, sum);
-  }
-
-  // linear 3
-  float layer3[mlpChannel];
-  for (int i = 0; i < mlpBatch32; i++) {
-    auto sum = simde_mm256_loadu_ps(weights.mlp_b3 + i * 8);
-    for (int j = 0; j < mlpChannel; j++) {
-      auto x = simde_mm256_set1_ps(layer2[j]);
-      auto w = simde_mm256_loadu_ps(weights.mlp_w3[j] + i * 8);
-      sum    = simde_mm256_fmadd_ps(w, x, sum);
-    }
-    sum = simde_mm256_max_ps(simde_mm256_setzero_ps(), sum);  // relu
-    simde_mm256_storeu_ps(layer3 + i * 8, sum);
-  }
-
   // final linear
 
   auto v = simde_mm256_loadu_ps(weights.mlpfinal_b);
   for (int inc = 0; inc < mlpChannel; inc++) {
-    auto x = simde_mm256_set1_ps(layer3[inc]);
+    auto x = simde_mm256_set1_ps(buf.mlp_layer3[inc]);
     auto w = simde_mm256_loadu_ps(weights.mlpfinal_w[inc]);
     v      = simde_mm256_fmadd_ps(w, x, v);
   }
@@ -640,7 +645,7 @@ bool ModelWeight::loadParam(std::string filename)
 
   string modelname;
   fs >> modelname;
-  if (modelname != "v2") {
+  if (modelname != "v3") {
     cout << "Wrong model type:" << modelname << endl;
     return false;
   }
@@ -676,44 +681,24 @@ bool ModelWeight::loadParam(std::string filename)
       fs >> mapping[shapeID][j];
   }
 
-  //gfvector_w1
+  //gfvector_w
   fs >> varname;
-  if (varname != "gfvector_w1") {
+  if (varname != "gfvector_w") {
       cout << "Wrong parameter name:" << varname << endl;
       return false;
   }
   for (int j = 0; j < globalFeatureNum; j++)
       for (int i = 0; i < groupSize; i++)
-          fs >> gfmlp_w1[j][i];
+          fs >> gfmlp_w[j][i];
 
   // gfvector_b1
   fs >> varname;
-  if (varname != "gfvector_b1") {
+  if (varname != "gfvector_b") {
       cout << "Wrong parameter name:" << varname << endl;
       return false;
   }
   for (int i = 0; i < groupSize; i++)
-      fs >> gfmlp_b1[i];
-
-
-  //gfvector_w2
-  fs >> varname;
-  if (varname != "gfvector_w2") {
-      cout << "Wrong parameter name:" << varname << endl;
-      return false;
-  }
-  for (int j = 0; j < groupSize; j++)
-      for (int i = 0; i < groupSize; i++)
-          fs >> gfmlp_w2[j][i];
-
-  // gfvector_b2
-  fs >> varname;
-  if (varname != "gfvector_b2") {
-      cout << "Wrong parameter name:" << varname << endl;
-      return false;
-  }
-  for (int i = 0; i < groupSize; i++)
-      fs >> gfmlp_b2[i];
+      fs >> gfmlp_b[i];
 
 
   // g1lr_w
@@ -820,56 +805,22 @@ bool ModelWeight::loadParam(std::string filename)
 
   // trunklr2p_w
   fs >> varname;
-  if (varname != "trunklr2p_w") {
+  if (varname != "trunklr2_w") {
     cout << "Wrong parameter name:" << varname << endl;
     return false;
   }
   for (int i = 0; i < groupSize; i++)
-    fs >> trunklr2p_w[i];
+    fs >> trunklr2_w[i];
 
   // trunklr2p_b
   fs >> varname;
-  if (varname != "trunklr2p_b") {
+  if (varname != "trunklr2_b") {
     cout << "Wrong parameter name:" << varname << endl;
     return false;
   }
   for (int i = 0; i < groupSize; i++)
-    fs >> trunklr2p_b[i];
+    fs >> trunklr2_b[i];
 
-  // trunklr2v_w
-  fs >> varname;
-  if (varname != "trunklr2v_w") {
-    cout << "Wrong parameter name:" << varname << endl;
-    return false;
-  }
-  for (int i = 0; i < groupSize; i++)
-    fs >> trunklr2v_w[i];
-
-  // trunklr2v_b
-  fs >> varname;
-  if (varname != "trunklr2v_b") {
-    cout << "Wrong parameter name:" << varname << endl;
-    return false;
-  }
-  for (int i = 0; i < groupSize; i++)
-    fs >> trunklr2v_b[i];
-
-  // policy_linear_w
-  fs >> varname;
-  if (varname != "policy_linear_w") {
-    cout << "Wrong parameter name:" << varname << endl;
-    return false;
-  }
-  for (int i = 0; i < groupSize; i++)
-    fs >> policy_linear_w[i];
-
-  // scale_policyInv
-  fs >> varname;
-  if (varname != "scale_policyInv") {
-    cout << "Wrong parameter name:" << varname << endl;
-    return false;
-  }
-  fs >> scale_policyInv;
 
   // scale_beforemlpInv
   fs >> varname;
@@ -977,6 +928,36 @@ bool ModelWeight::loadParam(std::string filename)
     mlpfinal_w_for_safety[i] = 0;
     mlpfinal_b_for_safety[i] = 0;
   }
+
+  // mlp_p_w
+  fs >> varname;
+  if (varname != "mlp_p_w") {
+    cout << "Wrong parameter name:" << varname << endl;
+    return false;
+  }
+  for (int j = 0; j < mlpChannel; j++)
+    for (int i = 0; i < groupSize; i++)
+      fs >> mlp_p_w[j][i];
+
+  // mlp_p_b
+  fs >> varname;
+  if (varname != "mlp_p_b") {
+    cout << "Wrong parameter name:" << varname << endl;
+    return false;
+  }
+  for (int i = 0; i < groupSize; i++)
+    fs >> mlp_p_b[i];
+
+  // mlp_plr_w
+  fs >> varname;
+  if (varname != "mlp_plr_w") {
+    cout << "Wrong parameter name:" << varname << endl;
+    return false;
+  }
+  for (int i = 0; i < groupSize; i++)
+    fs >> mlp_plr_w[i];
+
+
 
   return true;
 }

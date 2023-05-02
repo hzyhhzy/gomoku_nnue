@@ -3,15 +3,16 @@
 #include <vector>
 
 namespace NNUEV2 {
-    const int shapeNum     = 708588;
+    const int shapeNum     = 708588; //4*3^11
     const int globalFeatureNum           = 33;
-    const int groupSize    = 64;
-    const int groupBatch   = groupSize / 16;
+    const int groupSize    = 128;
+    const int groupBatch = groupSize / 16;
+    const int groupBatch32 = groupSize / 8;
     const int featureNum   = groupSize*2;
     const int featureBatch = featureNum / 16;
     const int trunkconv1GroupSize = 4;
 
-    const int mlpChannel = 64;
+    const int mlpChannel = 96;
     const int mlpBatch32 = mlpChannel / 8;
 
     /*
@@ -22,7 +23,7 @@ namespace NNUEV2 {
     struct ModelWeight
     {
       // 1  mapf = self.mapping(x), shape=H*W*4*2g
-      static const int16_t IllegalShapeFeature = 11454;  //>6000
+      static const int16_t IllegalShapeFeature = 11454;  //any number >6000
       int16_t mapping[ shapeNum][ featureNum];
 
       // 2 
@@ -30,10 +31,8 @@ namespace NNUEV2 {
       //  g2=mapf[:,:,self.groupc:,:,:]#第二组通道
       //  gfvector=mlp(gf)#gf表示规则
       //  这里的gfvector是python的4倍，因为后续4线平均改成了4线求和
-      float gfmlp_w1[globalFeatureNum][groupSize];  // shape=(inc，outc)，相同的inc对应权重相邻
-      float gfmlp_b1[groupSize];
-      float gfmlp_w2[groupSize][groupSize];
-      float gfmlp_b2[groupSize];
+      float gfmlp_w[globalFeatureNum][groupSize];  // shape=(inc，outc)，相同的inc对应权重相邻
+      float gfmlp_b[groupSize];
 
       // 3  h1 = self.g1lr(g1.mean(1)+gfvector) #四线求和再加规则向量再leakyrelu
       int16_t g1lr_w[ groupSize];
@@ -63,16 +62,10 @@ namespace NNUEV2 {
       // 10 trunk = self.trunkconv2(trunk)
       int16_t trunkconv2_w[3][ groupSize];//对称的3x3卷积
 
-      // 11 p = self.trunklr2p(trunk) 
-      //    v = self.trunklr2v(trunk)
-      int16_t trunklr2p_w[ groupSize];
-      int16_t trunklr2p_b[ groupSize];
-      int16_t trunklr2v_w[ groupSize];
-      int16_t trunklr2v_b[ groupSize]; 
+      // 11 trunk = self.trunklr2(trunk) 
+      int16_t trunklr2_w[ groupSize];
+      int16_t trunklr2_b[ groupSize];
 
-      // 12 p = self.policy_linear(p)
-      int16_t policy_linear_w[groupSize];
-      float   scale_policyInv;
 
       // 13  v=v.mean((2,3))
       float scale_beforemlpInv;
@@ -93,6 +86,20 @@ namespace NNUEV2 {
       float mlpfinal_b[4];
       float mlpfinal_b_for_safety[4];  // mlp_b3在read的时候一次read
                                    // 8个，会read到后续内存mlp_b3[3]+4，
+
+
+      // 15  mlp policy head
+      float mlp_p_w[mlpChannel][groupSize];
+      float mlp_p_b[groupSize];
+
+      // 16 policy head prelu
+      float mlp_plr_w[groupSize];
+
+      // 17 policy=sum(int16(y)*trunk*scale_beforemlpInv)
+
+
+
+
 
       bool loadParam(std::string filename);
     };
@@ -124,6 +131,9 @@ namespace NNUEV2 {
       // value头和policy头共享trunk，所以也放在缓存里
       bool    trunkUpToDate;
       int16_t trunk[MaxBS * MaxBS][groupSize];  
+
+      // value头和policy头共享mlp的前三层，所以把第三层的输出也放在缓存里
+      float mlp_layer3[mlpChannel];
 
       void update(Color oldcolor, Color newcolor, NU_Loc loc, const ModelWeight &weights);
 

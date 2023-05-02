@@ -198,21 +198,21 @@ if __name__ == '__main__':
         b = model.gfVector.layer1.bias.data.cpu().numpy()
 
         # pytorch里面是4线平均，c++里是4线求和，所以需要额外乘4
-        w=w*w_scale*4
-        b=b*w_scale*4
+        w=w*scale_now*4
+        b=b*scale_now*4
 
-        gfscale=0.3  #sometimes gf may larger than 1, so let gf multiply gfscale then convert to int16, then multiply gfweight
-        w=w/gfscale
-        gfscale*=2**15 #mulhrs右移15位
+        #gfscale=0.3  #sometimes gf may larger than 1, so let gf multiply gfscale then convert to int16, then multiply gfweight
+        #w=w/gfscale
+        #gfscale*=2**15 #mulhrs右移15位
 
         maxint=np.abs(w).max()
         maxint=max(maxint,np.abs(b).max())
         print(f"gf max = {maxint}")
 
 
-        print("gfscale", file=exportfile)
-        print(int(gfscale), end=' ', file=exportfile)
-        print('', file=exportfile)
+        #print("gfscale", file=exportfile)
+        #print(int(gfscale), end=' ', file=exportfile)
+        #print('', file=exportfile)
 
         print("gfvector_w", file=exportfile)
         for i in range(w.shape[1]):

@@ -14,13 +14,7 @@ def processSingleFile(loadpath,savepath):
     pt = data["pt"]
 
     useful=np.all(bf[:,0],axis=(1,2)) #15路
-    useful=useful&(gf[:,3]==0) #有禁
-    useful=useful&(gf[:,4]==1) #有禁
-    useful=useful&(gf[:,5]==1) #有禁白
     useful=useful&(gf[:,7]==0) #不要直接输入vcf胜点的局面
-    useful=useful&(gf[:,17]==0) #不要firstpasswin
-    useful=useful&(np.all(gf[:,20:30]==0,axis=1)) #不要vcn
-    useful=useful&(gf[:,30]==0) #不要maxmoves
 
     print("File "+loadpath+" "+str(sum(useful))+" of "+str(bf.shape[0])+" is useful")
 
@@ -30,7 +24,7 @@ def processSingleFile(loadpath,savepath):
     vt=vt[useful]
 
     bf=bf[:,[1,2]]
-    gf=gf[:,[0]]*0.0
+    gf=gf[:,8:38]
     pt=pt
     vt=vt[:,[3,4,5]]
 
@@ -64,9 +58,10 @@ def processDir(loaddir,savedir,num_threads):
 
     print("Processing-------------------------------------------------------------------------")
     filenum=len(all_files)
-    if(filenum<num_threads):
-        num_threads=filenum
-    file_each_thread=filenum//num_threads
+    #if(filenum<num_threads):
+    #    num_threads=filenum
+    file_each_thread=1+(filenum-1)//num_threads
+    num_threads=1+(filenum-1)//file_each_thread
     start_ids=list(range(0,num_threads*file_each_thread,file_each_thread))
     end_ids=start_ids[1:]
     end_ids.append(filenum)
@@ -80,5 +75,5 @@ def processDir(loaddir,savedir,num_threads):
 
 
 if __name__ == '__main__':
-    processDir("vdata_processed","vdata_whiteNormal",12)
-    processDir("tdata_processed","tdata_whiteNormal",12)
+    processDir("vdata_processed","vdata_choosed",12)
+    processDir("tdata_processed","tdata_choosed",12)

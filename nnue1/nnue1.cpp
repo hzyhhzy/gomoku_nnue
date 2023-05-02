@@ -128,7 +128,7 @@ int main_testMCTS(int argc, const char **argv)
 int main_testeval()
 {
   Eva_nnuev2 *eva = new Eva_nnuev2();
-  eva->loadParam("D:/gomtrain/renju100b/export/v2t1.txt");
+  eva->loadParam("D:/gomtrain/gomoku/export/v3.txt");
   /*
   const char boardstr[] = ""
                           ". . . . . . . . . . . . . . . "
@@ -155,11 +155,11 @@ int main_testeval()
     ". . . . . . . . . . . . . . . "
     ". . . . . . . . . . . . . . . "
     ". . . . . . . . . . . . . . . "
-    ". . . . . . . o x x . . . . . "
-    ". . . . . . x o o . . . . . . "
-    ". . . . . . . x . x o . . . . "
-    ". . . . . . . . o . . . . . . "
+    ". . . . . . . . . x . . . . . "
     ". . . . . . . . . . . . . . . "
+    ". . . . . . . x . . . . . . . "
+    ". . . . . . o . . . . . . . . "
+    ". . . . . . o . . . . . . . . "
     ". . . . . . . . . . . . . . . "
     ". . . . . . . . . . . . . . . "
     ". . . . . . . . . . . . . . . "
@@ -182,9 +182,9 @@ int main_testeval()
 int main_benchmark()
 {
   Eva_nnuev2 *eva = new Eva_nnuev2();
-  eva->loadParam("v2_c16.txt");
+  eva->loadParam("D:/gomtrain/gomoku/export/v3.txt");
 
-  int64_t testnum = 500000;
+  int64_t testnum = 50000;
 
   std::mt19937_64 prng {uint64_t(now_ms())};
   prng();
@@ -319,11 +319,11 @@ int main(int argc, const char **argv)
 {
   //main_testvcf();
   //main_testMCTS(argc, argv);
-  return maingtp(argc, argv);
-   //return main_testeval();
+  //return maingtp(argc, argv);
+  //return main_testeval();
    //main_testsearch();
   //main_testsearchvct();
-   //return main_benchmark();
+  return main_benchmark();
   //main_validation("D:/gomtrain/export/gomf1.txt", "D:/gomtrain/data/gomf1/vdata.npz");
   return 0;
 }

@@ -91,5 +91,5 @@ def processDir(loadbasedir,savedir,num_threads,filesplitnum):
 
 
 if __name__ == '__main__':
-    processDir("vdata_1","vdata_processed",8,8)
-    processDir("tdata_1","tdata_processed",8,256)
+    processDir("vdata_1","vdata_processed",16,32)
+    processDir("tdata_1","tdata_processed",16,256)

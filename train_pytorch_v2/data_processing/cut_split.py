@@ -37,7 +37,7 @@ def unpackBoardFeatures(packedData):
 def unpackGlobalFeatures(packedData):
 
     # 原来19个通道，大部分没用
-    usefulChannels = [i for i in range(39)]  # all
+    usefulChannels = [i for i in range(packedData.shape[1])]  # all
     if(not usefulChannels):
         return 0.0*packedData[:, [0]]
     return packedData[:, usefulChannels]
@@ -128,5 +128,5 @@ def processDir(loaddir,savedir,num_threads,filesplitnum):
 
 
 if __name__ == '__main__':
-    processDir("vdata","vdata_1",32,8)
+    processDir("vdata","vdata_1",32,32)
     processDir("tdata","tdata_1",32,256)
