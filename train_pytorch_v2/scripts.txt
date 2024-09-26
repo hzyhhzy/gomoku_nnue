@@ -1,4 +1,9 @@
 conda activate t
+python -u train.py --savename fs40b_v3a_c128 --gpu 2 --lr 1e-4
+conda activate t
+python -u train.py --savename auto --modeltype res --modelparam 6 128 --gpu 1 --batchsize 512
+
+conda activate t
 python train.py --savename ren_b --gpu 1 --tdatadir "../data/renju100b/tdata_blackNormal" --vdatadir "../data/renju100b/vdata_blackNormal/part_0.npz"
 
 conda activate t
