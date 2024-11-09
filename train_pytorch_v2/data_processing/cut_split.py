@@ -2,10 +2,11 @@
 import os
 import multiprocessing
 import numpy as np
+import config
 
-boardH =15
-boardW = 15
-dataL =15
+boardH = config.boardH
+boardW = config.boardW
+dataL = config.dataL
 assert(dataL == boardW)
 
 
@@ -15,7 +16,7 @@ def unpackBoardFeatures(packedData):
     dataNum, featureNum, dataLen = np.shape(packedData)
 
     # 原来22个通道，大部分没用
-    usefulChannels = [i for i in range(6)]  # onboard my opp myforbidden oppforbidden mywinloc
+    usefulChannels = [0,1,2,3,4]  # onboard my opp lastmove islegal
     packedData = packedData[:, usefulChannels, :]
     featureNum = len(usefulChannels)
 
@@ -35,8 +36,7 @@ def unpackBoardFeatures(packedData):
 
 
 def unpackGlobalFeatures(packedData):
-
-    # 原来19个通道，大部分没用
+    assert(packedData.shape[1]==39)
     usefulChannels = [i for i in range(packedData.shape[1])]  # all
     if(not usefulChannels):
         return 0.0*packedData[:, [0]]
@@ -50,11 +50,10 @@ def unpackValueTarget(packedData):
 def unpackPolicyTarget(packedData):
     #print("unpacking PolicyTarget")
     dataNum, featureNum, dataLen = np.shape(packedData)
-    packedData = packedData[:, 0, 0:boardW * boardH+1]
-    #packedData = np.reshape(packedData, ([dataNum, boardH, boardW]))
-    packedData = packedData+1e-8
+    assert(packedData.shape[2]==boardW * boardH+1)
+    packedData = packedData[:,0]
+    packedData = packedData+1e-10
     wsum = np.sum(packedData, axis=(1), keepdims=True)
-    #print(f"\twsum.shape = {wsum.shape}")
     packedData = packedData/wsum
     return packedData.astype(np.float32)
 
@@ -128,5 +127,5 @@ def processDir(loaddir,savedir,num_threads,filesplitnum):
 
 
 if __name__ == '__main__':
-    processDir("vdata","vdata_1",32,32)
-    processDir("tdata","tdata_1",32,256)
+    processDir("vdata_origin","vdata_tmp1",num_threads=config.cpuThread,filesplitnum=config.vdataFileNum)
+    processDir("tdata_origin","tdata_tmp1",num_threads=config.cpuThread,filesplitnum=config.tdataFileNum)

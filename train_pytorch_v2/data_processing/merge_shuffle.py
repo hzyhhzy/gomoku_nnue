@@ -91,5 +91,6 @@ def processDir(loadbasedir,savedir,num_threads,filesplitnum):
 
 
 if __name__ == '__main__':
-    processDir("vdata_1","vdata_processed",16,32)
-    processDir("tdata_1","tdata_processed",16,256)
+    import config
+    processDir("vdata_tmp1","vdata_merged",num_threads=config.cpuThread,filesplitnum=config.vdataFileNum)
+    processDir("tdata_tmp1","tdata_merged",num_threads=config.cpuThread,filesplitnum=config.tdataFileNum)

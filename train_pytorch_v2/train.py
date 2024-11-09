@@ -1,7 +1,7 @@
 
 from dataset import trainset
 from model import ModelDic
-from config import boardH,boardW
+from config import *
 
 import argparse
 from torch.utils.data import Dataset, DataLoader
@@ -13,11 +13,8 @@ import time
 import random
 import copy
 
-backup_checkpoints=[50000*i for i in range(500)]
+backup_checkpoints=[50000*i for i in range(5000)]
 
-
-if not os.path.exists("../saved_models"):
-    os.mkdir("../saved_models")
 
 def lossSoftFunction(losses):
     #losses=torch.pow(losses+0.25,0.5)-0.5
@@ -32,21 +29,40 @@ def cross_entropy_loss(output, target):
 
 def calculatePolicyLoss(output,pt):
     output=torch.flatten(output,start_dim=1)
-    if(output.shape[1]==boardW * boardH): #no pass
-        pt = pt[:, 0:boardW * boardH]
+    if(output.shape[1]==BoardW * BoardH): #the model does not support pass
+        pt = pt[:, 0:BoardW * BoardH]
     pt = pt+1e-10
     wsum = torch.sum(pt, dim=1, keepdims=True)
     pt = pt/wsum
 
     return cross_entropy_loss(output,pt)
 
+def save_checkpoint(model, optimizer, path):
+    savedic={'totalstep': totalstep,
+            'state_dict': model.state_dict(),
+            'model_type': model.model_type,
+            'model_param':model.model_param}
+    if(optimizer is not None):
+        savedic['optimizer_state_dict']=optimizer.state_dict()
+
+    torch.save(
+        savedic,
+        path)
+    print('Model saved in {}\n'.format(path))
 
 if __name__ == '__main__':
+    #把工作目录设为此文件所在的目录
+    script_path = os.path.abspath(__file__)
+    script_dir = os.path.dirname(script_path)
+    os.chdir(script_dir)
+    print(f"当前工作目录已更改为: {os.getcwd()}")
+
+
     parser = argparse.ArgumentParser()
 
     #data settings
-    parser.add_argument('--tdatadir', type=str, default='../data/fs40b_allbs/tdata_choosed', help='train dataset path: dir include dataset files or single dataset file')
-    parser.add_argument('--vdatadir', type=str, default='../data/fs40b_allbs/vdata_choosed/part_0.npz', help='validation dataset path: dir include dataset files or single dataset file')
+    parser.add_argument('--tdatadir', type=str, default='../data/tdata_filtered', help='train dataset path: dir include dataset files or single dataset file')
+    parser.add_argument('--vdatadir', type=str, default='../data/vdata_filtered/part_0.npz', help='validation dataset path: dir include dataset files or single dataset file')
     parser.add_argument('--maxvalsamp', type=int, default=20000, help='validation sample num')
     parser.add_argument('--maxstep', type=int, default=5000000000, help='max step to train')
     parser.add_argument('--savestep', type=int, default=2000, help='step to save and validation')
@@ -56,9 +72,9 @@ if __name__ == '__main__':
     parser.add_argument('--valuesampling', type=float, default=1, help='value sampling rate(to avoid overfitting)')
 
     #model parameters
-    parser.add_argument('--modeltype', type=str, default='v3',help='model type defined in model.py')
+    parser.add_argument('--modeltype', type=str, default='res',help='model type defined in model.py')
     parser.add_argument('--modelparam', nargs='+',type=int,
-                        default=(5,256), help='model size')
+                        default=(10,128), help='model size')
 
     parser.add_argument('--savename', type=str ,default='null', help='model save pth, ""null"" means does not save, ""auto"" means modeltype+modelparam')
     parser.add_argument('--new', action='store_true', default=False, help='whether to retrain')
@@ -67,7 +83,7 @@ if __name__ == '__main__':
     parser.add_argument('--gpu', type=int,
                         default=0, help='which gpu, -1 means cpu')
     parser.add_argument('--batchsize', type=int,
-                        default=128, help='batch size')
+                        default=256, help='batch size')
     parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
     parser.add_argument('--weightdecay', type=float, default=3e-5, help='weight decay')
     parser.add_argument('--rollbackthreshold', type=float, default=0.08, help='if loss increased this value, roll back 2*infostep steps')
@@ -109,26 +125,29 @@ if __name__ == '__main__':
                 vdata_files.extend(filenames)
     print("Finished counting data")
 
+    os.makedirs("../saved_models",exist_ok=True)
     basepath = f'../saved_models/{args.savename}/'
-    if not os.path.exists(basepath):
-        os.mkdir(basepath)
+    os.makedirs(basepath,exist_ok=True)
     backuppath=os.path.join(basepath,"backup")
-    if not os.path.exists(backuppath):
-        os.mkdir(backuppath)
-    tensorboardpath=os.path.join(basepath,"tensorboardData")
+    os.makedirs(backuppath,exist_ok=True)
 
     #tensorboard writer
-    if not os.path.exists(tensorboardpath):
-        os.mkdir(tensorboardpath)
+    tensorboardpath=os.path.join(basepath,"tensorboardData")
+    os.makedirs(tensorboardpath,exist_ok=True)
     train_writer=SummaryWriter(os.path.join(tensorboardpath,"train"))
     val_writer=SummaryWriter(os.path.join(tensorboardpath,"val"))
 
     print("Building model..............................................................................................")
+    optimizer_state_dict_initial=None
     modelpath=os.path.join(basepath,"model.pth")
+    modelpath_modelonly=os.path.join(basepath,"param.pth")
     if os.path.exists(modelpath) and (not args.new) and (args.savename != 'null'):
         modeldata = torch.load(modelpath,map_location="cpu")
         model_type=modeldata['model_type']
         model_param=modeldata['model_param']
+        if("optimizer_state_dict" in modeldata):
+            optimizer_state_dict_initial=modeldata["optimizer_state_dict"]
+            print("Loaded optimizer state dict")
         model = ModelDic[model_type](*model_param).to(device)
 
         model.load_state_dict(modeldata['state_dict'])
@@ -143,31 +162,51 @@ if __name__ == '__main__':
     startstep=totalstep
 
     if model_type=='mix6' or model_type=='v1':
+        print("Using mix6-like model, MLP uses lower(0.05x) weight decay")
         #lowl2param是一些密集型神经网络参数(mlp,cnn等)，对lr和weightdecay更敏感，使用float32计算，几乎不需要weightdecay
         #otherparam因为在c++代码中需要用int16计算，容易溢出，所以需要高的weightdecay控制范围
         lowl2param = list(map(id, model.mapping.parameters()))+\
-                     list(map(id, model.value_leakyrelu.parameters()))+\
                      list(map(id, model.value_linear1.parameters()))+\
                      list(map(id, model.value_linear2.parameters()))+\
                      list(map(id, model.value_linearfinal.parameters()))
         otherparam=list(filter(lambda p:id(p) not in lowl2param,model.parameters()))
         lowl2param=list(filter(lambda p:id(p) in lowl2param,model.parameters()))
-
-        optimizer = optim.Adam([{'params':otherparam},
-                                {'params': lowl2param,'lr':args.lr,'weight_decay':1e-7}],
+        optimizer = optim.AdamW([{'params':otherparam},
+                                {'params': lowl2param,'lr':args.lr,'weight_decay':0.05*args.weightdecay}],
                                 lr=args.lr,weight_decay=args.weightdecay)
-    elif model_type[0:2]=='v2' or model_type[0:2]=='v3' :
+    elif model_type.startswith('v2') or model_type.startswith('v3'):
+        print("Using v2-like model, MLP uses lower(0.05x) weight decay")
         highl2param = list(map(id,[model.h1conv.w,
                      model.trunkconv1.weight,
                      model.trunkconv2.w]))
         otherparam=list(filter(lambda p:id(p) not in highl2param,model.parameters()))
         highl2param=list(filter(lambda p:id(p) in highl2param,model.parameters()))
 
-        optimizer = optim.Adam([{'params':highl2param},
-                                {'params': otherparam,'lr':args.lr,'weight_decay':3e-7}],
+        optimizer = optim.AdamW([{'params':highl2param},
+                                {'params': otherparam,'lr':args.lr,'weight_decay':0.05*args.weightdecay}],
                                 lr=args.lr,weight_decay=args.weightdecay)
+    elif model_type=='res':
+        print("Using resnet model, Uses 0.2*default weight decay")
+        optimizer = optim.AdamW(model.parameters(),lr=args.lr,weight_decay=0.2*args.weightdecay)
     else:
-        optimizer = optim.Adam(model.parameters(),lr=args.lr,weight_decay=args.weightdecay)
+        print("Need weight decay settings for new model type")
+        assert(False)
+
+    # 加载优化器状态并恢复学习率和权重衰减
+    if optimizer_state_dict_initial is not None:
+        optimizer.load_state_dict(optimizer_state_dict_initial)
+        # 恢复初始学习率和权重衰减
+        for i, param_group in enumerate(optimizer.param_groups):
+            param_group['lr'] = args.lr
+            if i == 1 and (model_type == 'mix6' or model_type == 'v1'):
+                param_group['weight_decay'] = 0.05 * args.weightdecay
+            elif i == 1 and (model_type.startswith('v2') or model_type.startswith('v3')):
+                param_group['weight_decay'] = 0.05 * args.weightdecay
+            elif model_type == 'res':
+                param_group['weight_decay'] = 0.2 * args.weightdecay
+            else:
+                param_group['weight_decay'] = args.weightdecay
+    
     model.train()
 
     #for rollbacking if loss explodes
@@ -189,26 +228,27 @@ if __name__ == '__main__':
         print(f"{tDataset.__len__()} rows")
         tDataloader = DataLoader(tDataset, shuffle=True, batch_size=args.batchsize)
 
-        for _ , (board, valueTarget, policyTarget) in enumerate(tDataloader):
-            if(board.shape[0]!=args.batchsize): #只要完整的batch
+        for _ , (bf, gf, valueTarget, policyTarget) in enumerate(tDataloader):
+            if(bf.shape[0]!=args.batchsize): #只要完整的batch
                 continue
             if(random.random()>args.sampling): #随机舍去1-args.sampling的数据
                 continue
             # data
-            board = board.to(device)
+            bf = bf.to(device)
+            gf = gf.to(device)
             valueTarget = valueTarget.to(device)
             policyTarget = policyTarget.to(device)
 
             # optimize
             optimizer.zero_grad()
-            value, policy = model(board)
+            value, policy = model(bf, gf)
 
             vloss = cross_entropy_loss(value, valueTarget)
             ploss = calculatePolicyLoss(policy, policyTarget)
 
             loss = 1.0*ploss
             if(random.random()<=args.valuesampling):
-                loss=loss+vloss*1.2
+                loss=loss+vloss*VlossWeight
             loss_record[0]+=(vloss.detach().item()+ploss.detach().item())
             loss_record[1]+=vloss.detach().item()
             loss_record[2]+=ploss.detach().item()
@@ -233,6 +273,8 @@ if __name__ == '__main__':
                 train_writer.add_scalar("totalloss",totalloss_train,global_step=totalstep)
                 train_writer.add_scalar("vloss",vloss_train,global_step=totalstep)
                 train_writer.add_scalar("ploss",ploss_train,global_step=totalstep)
+                train_writer.add_scalar("lr",args.lr,global_step=totalstep)
+                train_writer.add_scalar("batchsize",args.batchsize,global_step=totalstep)
 
                 loss_record = loss_record_init.copy()
 
@@ -257,23 +299,13 @@ if __name__ == '__main__':
             if((totalstep % args.savestep == 0) or (totalstep-startstep==args.maxstep) or (totalstep in backup_checkpoints)):
 
                 print(f"Finished training {totalstep} steps")
-                torch.save(
-                    {'totalstep': totalstep,
-                     'state_dict': model.state_dict(),
-                     'model_type': model.model_type,
-                     'model_param':model.model_param},
-                    modelpath)
-                print('Model saved in {}\n'.format(modelpath))
+                save_checkpoint(model,optimizer,modelpath)
+                save_checkpoint(model,None,modelpath_modelonly)
 
                 if(totalstep in backup_checkpoints):
                     modelpath_backup=os.path.join(backuppath,str(totalstep)+".pth")
-                    torch.save(
-                        {'totalstep': totalstep,
-                         'state_dict': model.state_dict(),
-                         'model_type': model.model_type,
-                         'model_param':model.model_param},
-                        modelpath_backup)
-                    print('Model saved in {}\n'.format(modelpath_backup))
+                    save_checkpoint(model,optimizer,modelpath_backup)
+                    print('Backup model saved in {}\n'.format(modelpath_backup))
 
 
                 if vdata_files:
@@ -288,19 +320,20 @@ if __name__ == '__main__':
                     vsamp=0
                     model.eval()
                     with torch.no_grad():
-                        for s, (board, valueTarget, policyTarget) in enumerate(vDataloader):
-                            if(board.shape[0]!=args.batchsize): #只要完整的batch
+                        for s, (bf, gf, valueTarget, policyTarget) in enumerate(vDataloader):
+                            if(bf.shape[0]!=args.batchsize): #只要完整的batch
                                 continue
                             vsamp+=args.batchsize
-                            board = board.to(device)
+                            bf = bf.to(device)
+                            gf = gf.to(device)
                             valueTarget = valueTarget.to(device)
                             policyTarget = policyTarget.to(device)
 
-                            value, policy = model(board)
+                            value, policy = model(bf,gf)
 
                             vloss = cross_entropy_loss(value, valueTarget)
                             ploss = calculatePolicyLoss(policy, policyTarget)
-                            loss = 1.2*vloss+1.0*ploss
+                            loss = VlossWeight*vloss+1.0*ploss
 
                             loss_record_val[0]+=(vloss.detach().item()+ploss.detach().item())
                             loss_record_val[1]+=vloss.detach().item()

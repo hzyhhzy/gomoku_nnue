@@ -1,9 +1,22 @@
-
 import os
 import multiprocessing
 import numpy as np
+import config
 
+filter_singleSize=False #only use 19x19 games
 
+filter_noFPW=True #no "first pass win" rule
+filter_noVCN=False #no VCF/VCT/VC2 rule
+filter_noMM=False #no MaxMove rule
+
+filter_noVC6=True #no "VC6" (win in this move, or lose)
+filter_noSimpleWin=True #no single-move winning positions
+filter_noPDA=True #no PDA mode games
+
+bfReserveCh=[0,1,2,3,4] #onboard my opp lastmove islegal
+assert(0 in bfReserveCh or filter_singleSize)
+gfReserveCh=[i for i in range(39)] #all 
+vtReserveCh=[3,4,5] # win loss draw wr_win wr_loss wr_draw
 
 def processSingleFile(loadpath,savepath):
 
@@ -13,8 +26,22 @@ def processSingleFile(loadpath,savepath):
     vt = data["vt"]
     pt = data["pt"]
 
-    useful=np.all(bf[:,0],axis=(1,2)) #15路
-    useful=useful&(gf[:,7]==0) #不要直接输入vcf胜点的局面
+    useful=np.any(bf[:,0],axis=(1,2)) #all-True
+    if(filter_singleSize):
+        useful=useful & np.all(bf[:,0],axis=(1,2)) 
+    if(filter_noFPW):
+        useful=useful & (gf[:,17]==0) 
+    if(filter_noVCN):
+        useful=useful & np.all(gf[:,20:30]==0,axis=1) 
+    if(filter_noMM):
+        useful=useful & (gf[:,30]==0) 
+    if(filter_noVC6):
+        useful=useful & (gf[:,24]==0) 
+        useful=useful & (gf[:,29]==0) 
+    if(filter_noSimpleWin):
+        useful=useful&(gf[:,11]==0) 
+    if(filter_noPDA):
+        useful=useful&(gf[:,15]==0)
 
     print("File "+loadpath+" "+str(sum(useful))+" of "+str(bf.shape[0])+" is useful")
 
@@ -23,10 +50,17 @@ def processSingleFile(loadpath,savepath):
     pt=pt[useful]
     vt=vt[useful]
 
-    bf=bf[:,[1,2]]
-    gf=gf[:,8:38]
+    bf=bf[:,bfReserveCh]
+    gf=gf[:,gfReserveCh]
     pt=pt
-    vt=vt[:,[3,4,5]]
+    vt=vt[:,vtReserveCh]
+
+    if(config.NoPass):
+        pt = pt[:, 0, :-1]
+        assert(pt.shape[2]==config.boardW * config.boardH)
+        pt = pt+1e-10
+        wsum = np.sum(pt, axis=(1), keepdims=True)
+        pt = pt/wsum
 
     np.savez_compressed(savepath,bf=bf,gf=gf,vt=vt,pt=pt)
 
@@ -75,5 +109,5 @@ def processDir(loaddir,savedir,num_threads):
 
 
 if __name__ == '__main__':
-    processDir("vdata_processed","vdata_choosed",12)
-    processDir("tdata_processed","tdata_choosed",12)
+    processDir("vdata_merged","vdata_filtered",num_threads=config.cpuThread)
+    processDir("tdata_merged","tdata_filtered",num_threads=config.cpuThread)

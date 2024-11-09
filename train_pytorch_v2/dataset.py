@@ -27,11 +27,14 @@ def apply_sym_policyTarget(pt,sym):
     if(sym==0):
         return pt
     assert(pt.ndim==1)
-    assert(pt.shape[0]==boardH*boardW+1)
-    ptboard=pt[0:boardH*boardW].reshape(boardH,boardW)
+    ptboard=pt[0:BoardH*BoardW].reshape(BoardH,BoardW)
     ptboard=apply_sym(ptboard,sym,0,1)
     ptboard=ptboard.reshape(-1)
-    pt=np.append(ptboard,pt[-1])
+    if(pt.shape[0]==BoardH*BoardW+1):
+        pt=np.append(ptboard,pt[-1])
+    else:
+        assert(pt.shape[0]==BoardH*BoardW)
+        pt=ptboard
     return pt.copy()
 
 class trainset(Dataset):
@@ -51,7 +54,7 @@ class trainset(Dataset):
         if randomsym:
             self.syms=np.random.randint(0,8,self.vt.shape[0])
         else:
-            self.syms=np.zeros(self.vt.shape[0],dtype=np.int)
+            self.syms=np.zeros(self.vt.shape[0],dtype=int)
 
         #print(f"Total {self.vt.shape[0]} rows")
     def __getitem__(self, index):
@@ -67,16 +70,12 @@ class trainset(Dataset):
 
         #apply symmetry
         bf1=apply_sym(bf1,sym,1,2)
-        pt1=apply_sym_policyTarget(pt1,sym=sym)
-
-        #concat bf and gf
         gf1=self.gf[index].astype(np.float32)
-        gf1 = gf1.reshape((gf1.shape[0], 1, 1)).repeat(bf1.shape[1], axis=1).repeat(bf1.shape[2], axis=2)
-        bf1 = np.concatenate((bf1, gf1), axis=0)
 
+        pt1=apply_sym_policyTarget(pt1,sym=sym)
         vt1=self.vt[index].astype(np.float32)
 
-        return bf1,vt1,pt1
+        return bf1,gf1,vt1,pt1
     def __len__(self):
         if self.symcopy:
             return 8*self.vt.shape[0]
