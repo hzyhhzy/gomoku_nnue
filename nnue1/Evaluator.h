@@ -5,14 +5,8 @@
 class Evaluator
 {
 public:
-  Eva_nnuev2 *blackEvaluator;
-  Eva_nnuev2 *whiteEvaluator;
-
-  ExtraStates states; //all information except the board itself
-  Color board[MaxBS * MaxBS];
-
-
-  Hash128 posHash;// only board
+  Eva_nnuev2       *blackEvaluator;
+  Eva_nnuev2       *whiteEvaluator;
 
 
 

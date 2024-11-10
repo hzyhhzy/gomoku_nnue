@@ -15,14 +15,9 @@ public:
   float pda;
 
   //stages
-  bool isSecondStone;//whether to play the second stone of one move for connect6
-  NU_Loc firstStoneLoc;//location of the first stone 
   int movenum;
   int blackPassNum;
   int whitePassNum;
-
-  uint32_t xsum;
-  uint32_t ysum;
 
   
   ExtraStates();
