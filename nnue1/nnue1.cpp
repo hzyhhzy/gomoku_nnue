@@ -182,9 +182,9 @@ int main_testeval()
 int main_benchmark()
 {
   Eva_nnuev2 *eva = new Eva_nnuev2();
-  eva->loadParam("D:/gomtrain/gomoku/export/v3.txt");
+  eva->loadParam("J:/gomtrain2024/connectsix/export/v2_5_256_64_64_64.txt");
 
-  int64_t testnum = 50000;
+  int64_t testnum = 500000;
 
   std::mt19937_64 prng {uint64_t(now_ms())};
   prng();
@@ -194,7 +194,7 @@ int main_benchmark()
   int64_t time_start=now_ms();
 
   float gf[NNUEV2::globalFeatureNum] = {0};
-
+  bool illegalMap[MaxBS * MaxBS] = { false };
   // 平均每play和undo两次，然后eval一次
   for (int64_t i = 0; i < testnum; i++) {
     for (int j = 0; j < 3; j++) {
@@ -208,7 +208,7 @@ int main_benchmark()
         eva->play(newcolor, loc);
     }
 
-    auto v = eva->evaluateFull(gf,p);
+    auto v = eva->evaluateFull(gf, illegalMap,p);
 
   }
 

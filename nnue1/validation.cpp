@@ -48,7 +48,7 @@ void loss_oneSample(Eva_nnuev2 *eva,
   }
 
   PolicyType policy_int[MaxBS * MaxBS];
-  ValueType  value = eva->evaluateFull(gf,policy_int);
+  ValueType  value = eva->evaluateFull(gf, NULL,policy_int);
   double      policy[MaxBS * MaxBS];
   for (NU_Loc loc = 0; loc < MaxBS * MaxBS; loc++) {
     policy[loc] = policy_int[loc] / policyQuantFactor;

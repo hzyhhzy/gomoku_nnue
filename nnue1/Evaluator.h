@@ -21,25 +21,25 @@ public:
   {
     clearCache(color);
     if (color == C_BLACK)
-      return blackEvaluator->evaluateFull(gf, policy);
+      return blackEvaluator->evaluateFull(gf, NULL, policy);
     else
-      return whiteEvaluator->evaluateFull(gf, policy);
+      return whiteEvaluator->evaluateFull(gf, NULL, policy);
   }
   void evaluatePolicy(const float *gf, Color color, NNUE::PolicyType *policy)
   {
     clearCache(color);
     if (color == C_BLACK)
-      blackEvaluator->evaluatePolicy(gf, policy);
+      blackEvaluator->evaluatePolicy(gf, NULL, policy);
     else
-      whiteEvaluator->evaluatePolicy(gf,policy);
+      whiteEvaluator->evaluatePolicy(gf, NULL,policy);
   }
   NNUE::ValueType evaluateValue(const float *gf, Color color)
   {
     clearCache(color);
     if (color == C_BLACK)
-      return blackEvaluator->evaluateValue(gf);
+      return blackEvaluator->evaluateValue(gf, NULL);
     else
-      return whiteEvaluator->evaluateValue(gf);
+      return whiteEvaluator->evaluateValue(gf, NULL);
   }
   void play(Color color, NU_Loc loc); 
   void undo(Color color, NU_Loc loc);

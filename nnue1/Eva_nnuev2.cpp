@@ -675,7 +675,7 @@ bool ModelWeight::loadParam(std::string filename)
 
   string modelname;
   fs >> modelname;
-  if (modelname != "v3") {
+  if (modelname != "v2") {
     cout << "Wrong model type:" << modelname << endl;
     return false;
   }
@@ -711,17 +711,6 @@ bool ModelWeight::loadParam(std::string filename)
       fs >> mapping[shapeID][j];
   }
 
-
-  // illegalvector
-  fs >> varname;
-  if (varname != "illegalVector") {
-    cout << "Wrong parameter name:" << varname << endl;
-    return false;
-  }
-  for (int i = 0; i < featureNum; i++)
-    fs >> illegalVector[i];
-
-
   //gfvector_w
   fs >> varname;
   if (varname != "gfvector_w") {
@@ -742,6 +731,17 @@ bool ModelWeight::loadParam(std::string filename)
       fs >> gfmlp_b[i];
 
 
+  // illegalvector
+  fs >> varname;
+  if (varname != "illegalVector") {
+    cout << "Wrong parameter name:" << varname << endl;
+    return false;
+  }
+  for (int i = 0; i < featureNum; i++)
+    fs >> illegalVector[i];
+
+
+
   // g1lr_w
   fs >> varname;
   if (varname != "g1lr_w") {
@@ -757,7 +757,7 @@ bool ModelWeight::loadParam(std::string filename)
     cout << "Wrong parameter name:" << varname << endl;
     return false;
   }
-  for (int j = 0; j < 6; j++)
+  for (int j = 0; j < featureHalfLen + 1; j++)
     for (int i = 0; i < groupSize; i++)
       fs >> h1conv_w[j][i];
 
