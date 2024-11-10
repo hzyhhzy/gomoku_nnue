@@ -46,12 +46,9 @@ public:
 
 
   MCTSnode   *rootNode;
-  Color       board[MaxBS * MaxBS];
-  Hash128 posHash;// only board
-  ExtraStates states;
+  //Color       board[MaxBS * MaxBS];
 
   Evaluator *evaluator;  //在engine里析构这个evaluator，不在这里析构
-  VCFsolver vcfSolver[2];
 
 
   std::atomic_bool terminate;
