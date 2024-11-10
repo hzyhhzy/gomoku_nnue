@@ -7,34 +7,31 @@
 using namespace NNUE;
 using namespace NNUEV2;
 
-void ModelBuf::update(Color                   oldcolor,
-                           Color                   newcolor,
-                           NU_Loc                     loc,
-                           const ModelWeight &weights)
+void ModelBuf::update(Color oldcolor, Color newcolor, NU_Loc loc, const ModelWeight& weights)
 {
   trunkUpToDate = false;
 
   // update shapeTable
-  std::vector<OnePointChange> changeTable(44);
+  std::vector<OnePointChange> changeTable(4 * featureLen);
   int                         changenum = 0;
 
   {
     int x0 = loc % MaxBS;
     int y0 = loc / MaxBS;
 
-    int dxs[4] = {1, 0, 1, 1};
-    int dys[4] = {0, 1, 1, -1};
+    int dxs[4] = { 1, 0, 1, 1 };
+    int dys[4] = { 0, 1, 1, -1 };
 
     for (int dir = 0; dir < 4; dir++) {
-      for (int dist = -5; dist <= 5; dist++) {
+      for (int dist = -featureHalfLen; dist <= featureHalfLen; dist++) {
         int x = x0 - dist * dxs[dir];
         int y = y0 - dist * dys[dir];
         if (x < 0 || x >= MaxBS || y < 0 || y >= MaxBS)
           continue;
         OnePointChange c;
         c.dir = dir, c.loc = MakeLoc(x, y);
-        c.oldshape             = shapeTable[c.loc][dir];
-        c.newshape             = c.oldshape + (newcolor - oldcolor) * pow3[dist + 5];
+        c.oldshape = shapeTable[c.loc][dir];
+        c.newshape = c.oldshape + (newcolor - oldcolor) * pow3[dist + featureHalfLen];
         shapeTable[c.loc][dir] = c.newshape;
         changeTable[changenum] = c;
         changenum++;
@@ -56,10 +53,10 @@ void ModelBuf::update(Color                   oldcolor,
       // g1 update
       auto  oldw = simde_mm256_loadu_si256(weights.mapping[c.oldshape] + i * 16);
       neww = simde_mm256_loadu_si256(weights.mapping[c.newshape] + i * 16);
-      void *wp   = g1sum[c.loc] + i * 16;
+      void* wp = g1sum[c.loc] + i * 16;
       auto  sumw = simde_mm256_loadu_si256(wp);
-      sumw       = simde_mm256_sub_epi16(sumw, oldw);
-      sumw       = simde_mm256_add_epi16(sumw, neww);
+      sumw = simde_mm256_sub_epi16(sumw, oldw);
+      sumw = simde_mm256_add_epi16(sumw, neww);
       simde_mm256_storeu_si256(wp, sumw);
 
 
@@ -69,7 +66,7 @@ void ModelBuf::update(Color                   oldcolor,
 }
 
 //变量命名与python训练代码相同，阅读时建议与python代码对照
-void Eva_nnuev2::calculateTrunk(const float* gf)
+void Eva_nnuev2::calculateTrunk(const float* gf, const bool* illegalMap)
 {
   int16_t rv[groupSize];//规则向量
 
@@ -102,13 +99,14 @@ void Eva_nnuev2::calculateTrunk(const float* gf)
   for (int batch = 0; batch < groupBatch; batch++) {  //一直到trunk计算完毕，不同batch之间都没有交互,所以放在最外层
     int addrBias = batch * 16;
 
-    
+
     auto rv_batch = simde_mm256_loadu_si256(rv + addrBias);//gfVector
+    auto iv1_batch = simde_mm256_loadu_si256(weights.illegalVector + addrBias);//illegalVector
 
     //这个数组太大，就不直接int16_t[(MaxBS + 10) * (MaxBS + 10)][6][16]了
     //int16_t *h1m = new int16_t[(MaxBS + 10) * (MaxBS + 10)*6*16];  //完整的卷积是先乘再相加，此处是相乘但还没相加。h1m沿一条线相加得到h1c。加了5层padding方便后续处理
     //h1m的定义移到Eva_nnuev2类内了
-    memset(buf.h1m, 0, sizeof(int16_t) * (MaxBS + 10) * (MaxBS + 10) * 6 * 16);
+    memset(buf.h1m, 0, sizeof(int16_t) * (MaxBS + 2 * featureHalfLen) * (MaxBS + 2 * featureHalfLen) * (featureHalfLen + 1) * 16);
 
     //-------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // g1 prelu和h1conv的乘法部分
@@ -119,14 +117,19 @@ void Eva_nnuev2::calculateTrunk(const float* gf)
     auto h1conv_w3 = simde_mm256_loadu_si256(weights.h1conv_w[3] + addrBias);
     auto h1conv_w4 = simde_mm256_loadu_si256(weights.h1conv_w[4] + addrBias);
     auto h1conv_w5 = simde_mm256_loadu_si256(weights.h1conv_w[5] + addrBias);
+    auto h1conv_w6 = simde_mm256_loadu_si256(weights.h1conv_w[6] + addrBias);
+    static_assert(featureHalfLen == 6, "h1conv group = featureHalfLen + 1");
     for (NU_Loc locY = 0; locY < MaxBS; locY++) {
       for (NU_Loc locX = 0; locX < MaxBS; locX++) {
         NU_Loc loc1 = locY * MaxBS + locX;             //原始loc
-        NU_Loc loc2 = (locY + 5)  * (MaxBS + 10) + locX + 5;  // padding后的loc
-        int16_t *h1mbias = buf.h1m + loc2 * 6 * 16;
+        NU_Loc loc2 = (locY + featureHalfLen)  * (MaxBS + 2 * featureHalfLen) + locX + featureHalfLen;  // padding后的loc
+        int16_t* h1mbias = buf.h1m + loc2 * (featureHalfLen + 1) * 16;
 
         auto g1sum = simde_mm256_loadu_si256(buf.g1sum[loc1] + addrBias);
         g1sum      = simde_mm256_add_epi16(g1sum, rv_batch);
+        if(illegalMap[loc1])
+          g1sum = simde_mm256_add_epi16(g1sum, iv1_batch);
+
         auto h1 = simde_mm256_max_epi16(g1sum, simde_mm256_mulhrs_epi16(g1sum, g1lr_w));
         simde_mm256_storeu_si256(h1mbias + 0 * 16,
                                  simde_mm256_mulhrs_epi16(h1, h1conv_w0));
@@ -140,6 +143,9 @@ void Eva_nnuev2::calculateTrunk(const float* gf)
                                  simde_mm256_mulhrs_epi16(h1, h1conv_w4));
         simde_mm256_storeu_si256(h1mbias + 5 * 16,
                                  simde_mm256_mulhrs_epi16(h1, h1conv_w5));
+        simde_mm256_storeu_si256(h1mbias + 6 * 16,
+                                 simde_mm256_mulhrs_epi16(h1, h1conv_w6));
+        static_assert(featureHalfLen == 6, "h1conv group = featureHalfLen + 1");
       }
     }
 
@@ -150,48 +156,58 @@ void Eva_nnuev2::calculateTrunk(const float* gf)
     auto h1lr2_w = simde_mm256_loadu_si256(weights.h1lr2_w + addrBias);
     auto h1conv_b = simde_mm256_loadu_si256(weights.h1conv_b + addrBias);
     auto h3lr_b    = simde_mm256_loadu_si256(weights.h3lr_b + addrBias);
+    auto iv2_batch = simde_mm256_loadu_si256(weights.illegalVector + groupSize + addrBias);//illegalVector
 
     for (NU_Loc locY = 0; locY < MaxBS; locY++) {
       for (NU_Loc locX = 0; locX < MaxBS; locX++) {
         NU_Loc loc1 = locY * MaxBS + locX;             //原始loc
-        NU_Loc      loc2    = (locY + 5) * (MaxBS + 10) + locX + 5;  // padding后的loc
-        int16_t *h1mbias = buf.h1m + loc2 * 6 * 16;
+        NU_Loc      loc2    = (locY + featureHalfLen) * (MaxBS + 2 * featureHalfLen) + locX + featureHalfLen;  // padding后的loc
+        int16_t* h1mbias = buf.h1m + loc2 * (featureHalfLen + 1) * 16;
 
         auto h2sum = h3lr_b;
+        if (illegalMap[loc1])
+          h2sum = simde_mm256_add_epi16(h2sum, iv2_batch);
 
-        const int dloc2s[4] = {1, MaxBS + 10, MaxBS + 10 + 1, -MaxBS - 10 + 1};
+        const int dloc2s[4] = {1, MaxBS + 2 * featureHalfLen, MaxBS + 2 * featureHalfLen + 1, -MaxBS - 2 * featureHalfLen + 1};
         for (int dir=0;dir<4;dir++)
         {
           const int dloc2 = dloc2s[dir];  
 
           //把所有需要的全都load出来
           auto      g2    = simde_mm256_loadu_si256(buf.g2[loc1][dir] + addrBias);
-          auto h1cm5  = simde_mm256_loadu_si256(h1mbias - 5 * 16 * (6 * dloc2 - 1));
-          auto h1cm4  = simde_mm256_loadu_si256(h1mbias - 4 * 16 * (6 * dloc2 - 1));
-          auto h1cm3  = simde_mm256_loadu_si256(h1mbias - 3 * 16 * (6 * dloc2 - 1));
-          auto h1cm2  = simde_mm256_loadu_si256(h1mbias - 2 * 16 * (6 * dloc2 - 1));
-          auto h1cm1  = simde_mm256_loadu_si256(h1mbias - 1 * 16 * (6 * dloc2 - 1));
+          auto h1cm6  = simde_mm256_loadu_si256(h1mbias - 6 * 16 * ((featureHalfLen + 1) * dloc2 - 1));
+          auto h1cm5  = simde_mm256_loadu_si256(h1mbias - 5 * 16 * ((featureHalfLen + 1) * dloc2 - 1));
+          auto h1cm4  = simde_mm256_loadu_si256(h1mbias - 4 * 16 * ((featureHalfLen + 1) * dloc2 - 1));
+          auto h1cm3  = simde_mm256_loadu_si256(h1mbias - 3 * 16 * ((featureHalfLen + 1) * dloc2 - 1));
+          auto h1cm2  = simde_mm256_loadu_si256(h1mbias - 2 * 16 * ((featureHalfLen + 1) * dloc2 - 1));
+          auto h1cm1  = simde_mm256_loadu_si256(h1mbias - 1 * 16 * ((featureHalfLen + 1) * dloc2 - 1));
           auto h1c0   = simde_mm256_loadu_si256(h1mbias);
-          auto h1c1   = simde_mm256_loadu_si256(h1mbias + 1 * 16 * (6 * dloc2 + 1));
-          auto h1c2   = simde_mm256_loadu_si256(h1mbias + 2 * 16 * (6 * dloc2 + 1));
-          auto h1c3   = simde_mm256_loadu_si256(h1mbias + 3 * 16 * (6 * dloc2 + 1));
-          auto h1c4   = simde_mm256_loadu_si256(h1mbias + 4 * 16 * (6 * dloc2 + 1));
-          auto h1c5   = simde_mm256_loadu_si256(h1mbias + 5 * 16 * (6 * dloc2 + 1));
+          auto h1c1   = simde_mm256_loadu_si256(h1mbias + 1 * 16 * ((featureHalfLen + 1) * dloc2 + 1));
+          auto h1c2   = simde_mm256_loadu_si256(h1mbias + 2 * 16 * ((featureHalfLen + 1) * dloc2 + 1));
+          auto h1c3   = simde_mm256_loadu_si256(h1mbias + 3 * 16 * ((featureHalfLen + 1) * dloc2 + 1));
+          auto h1c4   = simde_mm256_loadu_si256(h1mbias + 4 * 16 * ((featureHalfLen + 1) * dloc2 + 1));
+          auto h1c5   = simde_mm256_loadu_si256(h1mbias + 5 * 16 * ((featureHalfLen + 1) * dloc2 + 1));
+          auto h1c6   = simde_mm256_loadu_si256(h1mbias + 6 * 16 * ((featureHalfLen + 1) * dloc2 + 1));
+          static_assert(featureHalfLen == 6, "h1conv group = featureHalfLen + 1");
 
-          //11个h1c和h1conv_b全部相加，使用“二叉树”式加法
-          h1cm5 = simde_mm256_adds_epi16(h1cm5, h1conv_b);
-          h1cm3 = simde_mm256_adds_epi16(h1cm3, h1cm4);
-          h1cm1 = simde_mm256_adds_epi16(h1cm1, h1cm2);
-          h1c1  = simde_mm256_adds_epi16(h1c1, h1c0);
-          h1c3  = simde_mm256_adds_epi16(h1c3, h1c2);
-          h1c5 = simde_mm256_adds_epi16(h1c5, h1c4);
+          //13个h1c和h1conv_b全部相加，使用“二叉树”式加法
+          h1cm6 = simde_mm256_adds_epi16(h1cm6, h1conv_b);
+          h1cm4 = simde_mm256_adds_epi16(h1cm4, h1cm5);
+          h1cm2 = simde_mm256_adds_epi16(h1cm2, h1cm3);
+          h1c0  = simde_mm256_adds_epi16(h1c0, h1cm1);
+          h1c2  = simde_mm256_adds_epi16(h1c2, h1c1);
+          h1c4 = simde_mm256_adds_epi16(h1c4, h1c3);
+          h1c6 = simde_mm256_adds_epi16(h1c6, h1c5);
 
-          h1cm5 = simde_mm256_adds_epi16(h1cm5, h1cm3);
-          h1cm1 = simde_mm256_adds_epi16(h1cm1, h1c1);
-          h1c3 = simde_mm256_adds_epi16(h1c3, h1c5);
+          h1cm6 = simde_mm256_adds_epi16(h1cm6, h1cm4);
+          h1cm6 = simde_mm256_adds_epi16(h1cm6, h1c6);
+          h1cm2 = simde_mm256_adds_epi16(h1cm2, h1c0);
+          h1c4 = simde_mm256_adds_epi16(h1c4, h1c2);
 
-          auto h2 = simde_mm256_adds_epi16(h1cm1, h1c3);
-          h2      = simde_mm256_adds_epi16(h1cm5, h2);
+
+          auto h2 = simde_mm256_adds_epi16(h1cm6, h1cm2);
+          h2      = simde_mm256_adds_epi16(h1c4, h2);
+          static_assert(featureHalfLen == 6, "h1conv group = featureHalfLen + 1");
 
           //h1lr1
           h2 = simde_mm256_max_epi16(h2, simde_mm256_mulhrs_epi16(h2, h1lr1_w));
@@ -348,6 +364,7 @@ void Eva_nnuev2::calculateTrunk(const float* gf)
   }
 
   // linear 3
+  float layer3[mlpChannel];
   for (int i = 0; i < mlpBatch32; i++) {
     auto sum = simde_mm256_loadu_ps(weights.mlp_b3 + i * 8);
     for (int j = 0; j < mlpChannel; j++) {
@@ -356,8 +373,30 @@ void Eva_nnuev2::calculateTrunk(const float* gf)
       sum = simde_mm256_fmadd_ps(w, x, sum);
     }
     sum = simde_mm256_max_ps(simde_mm256_setzero_ps(), sum);  // relu
-    simde_mm256_storeu_ps(buf.mlp_layer3 + i * 8, sum);
+    sum = simde_mm256_add_ps(sum, simde_mm256_loadu_ps(layer1 + i * 8));//resnet connection
+    simde_mm256_storeu_ps(layer3 + i * 8, sum);
   }
+
+  // linear 4
+  for (int i = 0; i < mlpBatch32; i++) {
+    auto sum = simde_mm256_loadu_ps(weights.mlp_b4 + i * 8);
+    for (int j = 0; j < mlpChannel; j++) {
+      auto x = simde_mm256_set1_ps(layer2[j]);
+      auto w = simde_mm256_loadu_ps(weights.mlp_w4[j] + i * 8);
+      sum = simde_mm256_fmadd_ps(w, x, sum);
+    }
+    sum = simde_mm256_max_ps(simde_mm256_setzero_ps(), sum);  // relu
+    simde_mm256_storeu_ps(buf.mlp_layer4 + i * 8, sum);
+  }
+
+  // final linear(value head)
+  auto v = simde_mm256_loadu_ps(weights.mlpfinal_b);
+  for (int inc = 0; inc < mlpChannel; inc++) {
+    auto x = simde_mm256_set1_ps(buf.mlp_layer4[inc]);
+    auto w = simde_mm256_loadu_ps(weights.mlpfinal_w[inc]);
+    v = simde_mm256_fmadd_ps(w, x, v);
+  }
+  simde_mm256_storeu_ps(buf.mlp_value, v);
 
   buf.trunkUpToDate = true;
   return;
@@ -506,20 +545,20 @@ void Eva_nnuev2::play(Color color, NU_Loc loc)
   buf.update(C_EMPTY, color, loc, weights);
 }
 
-ValueType Eva_nnuev2::evaluateFull(const float *gf, PolicyType *policy)
+ValueType Eva_nnuev2::evaluateFull(const float *gf, const bool* illegalMap, PolicyType *policy)
 {
   if (policy != nullptr) {
-    evaluatePolicy(gf,policy);
+    evaluatePolicy(gf, illegalMap, policy);
   }
-  return evaluateValue(gf);
+  return evaluateValue(gf, illegalMap);
 }
 
-void Eva_nnuev2::evaluatePolicy(const float *gf, PolicyType *policy)
+void Eva_nnuev2::evaluatePolicy(const float *gf, const bool* illegalMap, PolicyType *policy)
 {
   if (policy == NULL)
     return;
   if (!buf.trunkUpToDate)
-    calculateTrunk(gf);
+    calculateTrunk(gf, illegalMap);
 
   // mlp_p linear 
   float p_w_float[groupSize];
@@ -527,7 +566,7 @@ void Eva_nnuev2::evaluatePolicy(const float *gf, PolicyType *policy)
   for (int i = 0; i < groupBatch32; i++) {
     auto sum = simde_mm256_loadu_ps(weights.mlp_p_b + i * 8);
     for (int j = 0; j < mlpChannel; j++) {
-      auto x = simde_mm256_set1_ps(buf.mlp_layer3[j]);
+      auto x = simde_mm256_set1_ps(buf.mlp_layer4[j]);
       auto w = simde_mm256_loadu_ps(weights.mlp_p_w[j] + i * 8);
       sum = simde_mm256_fmadd_ps(w, x, sum);
     }
@@ -569,23 +608,13 @@ void Eva_nnuev2::evaluatePolicy(const float *gf, PolicyType *policy)
   }
 }
 
-ValueType Eva_nnuev2::evaluateValue(const float *gf)
+ValueType Eva_nnuev2::evaluateValue(const float *gf, const bool* illegalMap)
 {
   if (!buf.trunkUpToDate)
-    calculateTrunk(gf);
+    calculateTrunk(gf, illegalMap);
 
 
-  // final linear
-
-  auto v = simde_mm256_loadu_ps(weights.mlpfinal_b);
-  for (int inc = 0; inc < mlpChannel; inc++) {
-    auto x = simde_mm256_set1_ps(buf.mlp_layer3[inc]);
-    auto w = simde_mm256_loadu_ps(weights.mlpfinal_w[inc]);
-    v      = simde_mm256_fmadd_ps(w, x, v);
-  }
-  float value[8];
-  simde_mm256_storeu_ps(value, v);
-  return ValueType(value[0], value[1], value[2]);
+  return ValueType(buf.mlp_value[0], buf.mlp_value[1], buf.mlp_value[2]);
 }
 
 void Eva_nnuev2::undo(NU_Loc loc)
@@ -599,8 +628,9 @@ void Eva_nnuev2::debug_print()
   using namespace std;
   NU_Loc loc = MakeLoc(0, 0);
   PolicyType p[MaxBS * MaxBS];
-  float      gf[NNUEV2::globalFeatureNum] = {0};
-  auto       v = evaluateFull(gf,p);
+  float gf[NNUEV2::globalFeatureNum] = { 0 };
+  bool illegalMap[MaxBS*MaxBS] = { false };
+  auto       v = evaluateFull(gf, illegalMap, p);
   cout << "value: win=" << v.win << " loss=" << v.loss << " draw=" << v.draw << endl;
   //for (int i = 48; i < groupSize; i++)
   //  cout << buf.g1sum[loc][i] << "|" << buf.g2[loc][3][i] << "|" << buf.trunk[loc][i] << " ";
@@ -680,6 +710,17 @@ bool ModelWeight::loadParam(std::string filename)
     for (int j = 0; j < featureNum; j++)
       fs >> mapping[shapeID][j];
   }
+
+
+  // illegalvector
+  fs >> varname;
+  if (varname != "illegalVector") {
+    cout << "Wrong parameter name:" << varname << endl;
+    return false;
+  }
+  for (int i = 0; i < featureNum; i++)
+    fs >> illegalVector[i];
+
 
   //gfvector_w
   fs >> varname;
@@ -904,6 +945,25 @@ bool ModelWeight::loadParam(std::string filename)
   }
   for (int i = 0; i < mlpChannel; i++)
     fs >> mlp_b3[i];
+
+  // mlp_w4
+  fs >> varname;
+  if (varname != "mlp_w4") {
+    cout << "Wrong parameter name:" << varname << endl;
+    return false;
+  }
+  for (int j = 0; j < mlpChannel; j++)
+    for (int i = 0; i < mlpChannel; i++)
+      fs >> mlp_w4[j][i];
+
+  // mlp_b4
+  fs >> varname;
+  if (varname != "mlp_b4") {
+    cout << "Wrong parameter name:" << varname << endl;
+    return false;
+  }
+  for (int i = 0; i < mlpChannel; i++)
+    fs >> mlp_b4[i];
 
   // mlpfinal_w
   fs >> varname;

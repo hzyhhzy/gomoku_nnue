@@ -18,7 +18,7 @@ static constexpr Color C_WALL = 3;
 static inline Color getOpp(Color c) { return c ^ 3; }
 
 typedef int16_t NU_Loc;
-const int MaxBS = 15; // = Board::MAX_LEN when in KataGo
+const int MaxBS = 19; // = Board::MAX_LEN when in KataGo
 
 namespace NNUE
 {
@@ -28,9 +28,7 @@ namespace NNUE
   static constexpr NU_Loc NU_LOC_NULL = -1;
   static constexpr NU_Loc NU_LOC_PASS = MaxBS * MaxBS;
 
-
-
-  const int MAX_MCTS_CHILDREN = 32;
+  const int MAX_MCTS_CHILDREN = 64;
 
   const float policyQuantFactor = 32;
 
@@ -136,7 +134,7 @@ namespace NNUE
   }
 
   const int32_t pow3[] =
-  { 1, 3, 9, 27, 81, 243, 729, 2187, 6561, 19683, 59049, 177147, 531441 };
+  { 1, 3, 9, 27, 81, 243, 729, 2187, 6561, 19683, 59049, 177147, 531441, 1594323, 4782969 };
 
   namespace strOp {
     using namespace std;
