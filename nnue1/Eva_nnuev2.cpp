@@ -217,7 +217,7 @@ void Eva_nnuev2::calculateTrunk(const float* gf, const bool* illegalMap)
           h2 = simde_mm256_max_epi16(h2, simde_mm256_mulhrs_epi16(h2, h1lr2_w));
 
           
-          h2sum = simde_mm256_adds_epi16(h2sum, simde_mm256_srai_epi16(h2,2)); //h2sum=mean(h2)=(h2+h2+h2+h2)/4
+          h2sum = simde_mm256_adds_epi16(h2sum, h2); //h2sum=mean(h2)=(h2+h2+h2+h2)/4
         }
         //save h3
         simde_mm256_storeu_si256(h3[loc1],h2sum);
@@ -381,7 +381,7 @@ void Eva_nnuev2::calculateTrunk(const float* gf, const bool* illegalMap)
   for (int i = 0; i < mlpBatch32; i++) {
     auto sum = simde_mm256_loadu_ps(weights.mlp_b4 + i * 8);
     for (int j = 0; j < mlpChannel; j++) {
-      auto x = simde_mm256_set1_ps(layer2[j]);
+      auto x = simde_mm256_set1_ps(layer3[j]);
       auto w = simde_mm256_loadu_ps(weights.mlp_w4[j] + i * 8);
       sum = simde_mm256_fmadd_ps(w, x, sum);
     }
@@ -417,52 +417,53 @@ void ModelBuf::emptyboard(const ModelWeight &weights)
     //以下不可交换次序，因为存在覆盖
 
     //正方向的墙（右墙，下墙，右下墙，右上墙）
-
-    for (int thick = 1; thick <= 5; thick++) {
+    const int fhl = featureHalfLen;
+    const int fhlp1 = featureHalfLen + 1;
+    for (int thick = 1; thick <= fhl; thick++) {
       for (int i = 0; i < MaxBS; i++) {
         int c = 0;
         for (int j = 0; j < thick; j++)
-          c += pow3[11 - j];
-        shapeTable[(MaxBS - 6 + thick) + i * MaxBS][0] = c;  //右墙
-        shapeTable[i + (MaxBS - 6 + thick) * MaxBS][1] = c;  //下墙
-        shapeTable[(MaxBS - 6 + thick) + i * MaxBS][2] = c;  //右下墙靠右
-        shapeTable[i + (MaxBS - 6 + thick) * MaxBS][2] = c;  //右下墙靠下
-        shapeTable[(MaxBS - 6 + thick) + i * MaxBS][3] = c;  //右上墙靠右
-        shapeTable[i + (6 - 1 - thick) * MaxBS][3]  = c;  //右下墙靠上
+          c += pow3[featureLen - j];
+        shapeTable[(MaxBS - fhlp1 + thick) + i * MaxBS][0] = c;  //右墙
+        shapeTable[i + (MaxBS - fhlp1 + thick) * MaxBS][1] = c;  //下墙
+        shapeTable[(MaxBS - fhlp1 + thick) + i * MaxBS][2] = c;  //右下墙靠右
+        shapeTable[i + (MaxBS - fhlp1 + thick) * MaxBS][2] = c;  //右下墙靠下
+        shapeTable[(MaxBS - fhlp1 + thick) + i * MaxBS][3] = c;  //右上墙靠右
+        shapeTable[i + (fhlp1 - 1 - thick) * MaxBS][3]  = c;  //右下墙靠上
       }
     }
 
     //负方向的墙（左墙，上墙，左上墙，左下墙）
 
     //厚度1
-    for (int thick = 1; thick <= 5; thick++) {
+    for (int thick = 1; thick <= fhl; thick++) {
       for (int i = 0; i < MaxBS; i++) {
-        int c = 2 * pow3[11];  // 3进制2000000000
+        int c = 2 * pow3[featureLen];  // 3进制2000000000
         for (int j = 0; j < thick - 1; j++)
           c += pow3[j];
-        shapeTable[(6 - 1 - thick) + i * MaxBS][0]  = c;  //左墙
-        shapeTable[i + (6 - 1 - thick) * MaxBS][1]  = c;  //上墙
-        shapeTable[(6 - 1 - thick) + i * MaxBS][2]  = c;  //左上墙靠左
-        shapeTable[i + (6 - 1 - thick) * MaxBS][2]  = c;  //左上墙靠上
-        shapeTable[(6 - 1 - thick) + i * MaxBS][3]  = c;  //左下墙靠左
-        shapeTable[i + (MaxBS - 6 + thick) * MaxBS][3] = c;  //左下墙靠下
+        shapeTable[(fhlp1 - 1 - thick) + i * MaxBS][0]  = c;  //左墙
+        shapeTable[i + (fhlp1 - 1 - thick) * MaxBS][1]  = c;  //上墙
+        shapeTable[(fhlp1 - 1 - thick) + i * MaxBS][2]  = c;  //左上墙靠左
+        shapeTable[i + (fhlp1 - 1 - thick) * MaxBS][2]  = c;  //左上墙靠上
+        shapeTable[(fhlp1 - 1 - thick) + i * MaxBS][3]  = c;  //左下墙靠左
+        shapeTable[i + (MaxBS - fhlp1 + thick) * MaxBS][3] = c;  //左下墙靠下
       }
     }
 
     //两边都有墙
 
-    for (int a = 1; a <= 5; a++)    //正方向墙厚
-      for (int b = 1; b <= 5; b++)  //负方向墙厚
+    for (int a = 1; a <= fhl; a++)    //正方向墙厚
+      for (int b = 1; b <= fhl; b++)  //负方向墙厚
       {
-        int c = 3 * pow3[11];
+        int c = 3 * pow3[featureLen];
         for (int i = 0; i < a - 1; i++)
-          c += pow3[10 - i];
+          c += pow3[featureLen - 1 - i];
         for (int i = 0; i < b - 1; i++)
           c += pow3[i];
-        shapeTable[(MaxBS - 6 + a) + (5 - b) * MaxBS][2]      = c;  //右上角
-        shapeTable[(MaxBS - 6 + a) * MaxBS + (5 - b)][2]      = c;  //左下角
-        shapeTable[(5 - b) + (5 - a) * MaxBS][3]           = c;  //左上角
-        shapeTable[(MaxBS - 6 + a) + (MaxBS - 6 + b) * MaxBS][3] = c;  //右下角
+        shapeTable[(MaxBS - fhlp1 + a) + (fhl - b) * MaxBS][2]      = c;  //右上角
+        shapeTable[(MaxBS - fhlp1 + a) * MaxBS + (fhl - b)][2]      = c;  //左下角
+        shapeTable[(fhl - b) + (fhl - a) * MaxBS][3]           = c;  //左上角
+        shapeTable[(MaxBS - fhlp1 + a) + (MaxBS - fhlp1 + b) * MaxBS][3] = c;  //右下角
       }
   }
 
@@ -605,7 +606,11 @@ void Eva_nnuev2::evaluatePolicy(const float *gf, const bool* illegalMap, PolicyT
 
     auto  p = simde_mm256_extract_epi32(psum, 0) + simde_mm256_extract_epi32(psum, 4);
     policy[loc] = p * weights.scale_beforemlpInv * policyQuantFactor / 32768;
+    if (illegalMap[loc])
+      policy[loc] -= 100.0 * policyQuantFactor;
   }
+
+  policy[MaxBS * MaxBS] = buf.mlp_value[3] * policyQuantFactor;//pass
 }
 
 ValueType Eva_nnuev2::evaluateValue(const float *gf, const bool* illegalMap)

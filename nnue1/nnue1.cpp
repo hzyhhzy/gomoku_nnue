@@ -323,7 +323,7 @@ int main(int argc, const char **argv)
   //return main_testeval();
    //main_testsearch();
   //main_testsearchvct();
-  return main_benchmark();
-  //main_validation("D:/gomtrain/export/gomf1.txt", "D:/gomtrain/data/gomf1/vdata.npz");
+  //main_benchmark();
+  main_validation("J:/gomtrain2024/connectsix/export/v2_64_highwd2.txt", "J:/gomtrain2024/connectsix/data/val.npz");
   return 0;
 }
