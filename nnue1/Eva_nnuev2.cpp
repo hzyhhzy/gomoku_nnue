@@ -9,6 +9,7 @@ using namespace NNUEV2;
 
 void ModelBuf::update(Color oldcolor, Color newcolor, NU_Loc loc, const ModelWeight& weights)
 {
+  if (loc < 0 || loc >= MaxBS * MaxBS)return;
   trunkUpToDate = false;
 
   // update shapeTable
@@ -542,6 +543,7 @@ void Eva_nnuev2::recalculate()
 
 void Eva_nnuev2::play(Color color, NU_Loc loc)
 {
+  if (loc < 0 || loc >= MaxBS * MaxBS)return;
   board[loc] = color;
   buf.update(C_EMPTY, color, loc, weights);
 }
@@ -624,6 +626,7 @@ ValueType Eva_nnuev2::evaluateValue(const float *gf, const bool* illegalMap)
 
 void Eva_nnuev2::undo(NU_Loc loc)
 {
+  if (loc < 0 || loc >= MaxBS * MaxBS)return;
   buf.update(board[loc], C_EMPTY, loc, weights);
   board[loc] = C_EMPTY;
 }

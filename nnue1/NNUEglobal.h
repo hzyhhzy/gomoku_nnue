@@ -32,24 +32,6 @@ namespace NNUE
 
   const float policyQuantFactor = 32;
 
-  namespace Rules {
-
-    const int BASICRULE_FREESTYLE = 0;
-    const int BASICRULE_STANDARD = 1;
-    const int BASICRULE_RENJU = 2;
-
-    const int VCNRULE_NOVC = 0;
-    const int VCNRULE_VC1_B = 1;
-    const int VCNRULE_VC2_B = 2;
-    const int VCNRULE_VC3_B = 3;
-    const int VCNRULE_VC4_B = 4;
-    const int VCNRULE_VC1_W = 11;
-    const int VCNRULE_VC2_W = 12;
-    const int VCNRULE_VC3_W = 13;
-    const int VCNRULE_VC4_W = 14;
-  }  // namespace Rules
-
-  const int DEFAULT_RULE = Rules::BASICRULE_FREESTYLE;
 
   enum MCTSsureResult : int16_t { MC_Win = 1, MC_LOSE = -1, MC_DRAW = 2, MC_UNCERTAIN = 0 };
   inline NU_Loc MakeLoc(int x, int y) { return NU_Loc(x + y * MaxBS); }

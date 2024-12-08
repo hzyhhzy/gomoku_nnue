@@ -1,9 +1,9 @@
-#include "Evaluator.h"
+#include "Board.h"
 
 #include <random>
 using namespace NNUE;
 
-Evaluator::Evaluator(std::string type, std::string filepath, const Rules& rules):moveCacheBlength(0),moveCacheWlength(0)
+Board::Board(std::string type, std::string filepath, const Rules& rules) :moveCacheBlength(0), moveCacheWlength(0)
 {
   x_size = MaxBS;
   y_size = MaxBS;
@@ -25,7 +25,7 @@ Evaluator::Evaluator(std::string type, std::string filepath, const Rules& rules)
 
 bool Evaluator::loadParam(std::string filepathB, std::string filepathW)
 {
-  bool suc= blackEvaluator->loadParam(filepathB) && whiteEvaluator->loadParam(filepathW);
+  bool suc = blackEvaluator->loadParam(filepathB) && whiteEvaluator->loadParam(filepathW);
   clear();
   return suc;
 }
@@ -187,8 +187,8 @@ void Evaluator::clearCache(Color color)
     for (int i = 0; i < moveCacheBlength; i++)
     {
       MoveCache move = moveCacheB[i];
-      if(move.isUndo)blackEvaluator->undo(move.loc);
-      else blackEvaluator->play(move.color,move.loc);
+      if (move.isUndo)blackEvaluator->undo(move.loc);
+      else blackEvaluator->play(move.color, move.loc);
     }
     moveCacheBlength = 0;
   }
@@ -197,8 +197,8 @@ void Evaluator::clearCache(Color color)
     for (int i = 0; i < moveCacheWlength; i++)
     {
       MoveCache move = moveCacheW[i];
-      if(move.isUndo)whiteEvaluator->undo(move.loc);
-      else whiteEvaluator->play(getOpp(move.color),move.loc);
+      if (move.isUndo)whiteEvaluator->undo(move.loc);
+      else whiteEvaluator->play(getOpp(move.color), move.loc);
     }
     moveCacheWlength = 0;
   }
@@ -208,7 +208,7 @@ void Evaluator::addCache(bool isUndo, Color color, NU_Loc loc)
 {
   MoveCache newcache(isUndo, color, loc);
 
-  if (moveCacheBlength == 0|| !isContraryMove(moveCacheB[moveCacheBlength-1],newcache))
+  if (moveCacheBlength == 0 || !isContraryMove(moveCacheB[moveCacheBlength - 1], newcache))
   {
     moveCacheB[moveCacheBlength] = newcache;
     moveCacheBlength++;
@@ -218,7 +218,7 @@ void Evaluator::addCache(bool isUndo, Color color, NU_Loc loc)
     moveCacheBlength--;
   }
 
-  if (moveCacheWlength == 0|| !isContraryMove(moveCacheW[moveCacheWlength-1],newcache))
+  if (moveCacheWlength == 0 || !isContraryMove(moveCacheW[moveCacheWlength - 1], newcache))
   {
     moveCacheW[moveCacheWlength] = newcache;
     moveCacheWlength++;

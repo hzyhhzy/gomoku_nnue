@@ -1,4 +1,5 @@
 #include "ExtraStates.h"
+#include "rules.h"
 using namespace NNUE;
 
 ExtraStates::ExtraStates() { 

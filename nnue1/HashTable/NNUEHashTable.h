@@ -35,6 +35,8 @@ class NNUEHashTable
 
 public:
   static Hash128 ZOBRIST_loc[4][MaxBS * MaxBS];
+  static Hash128 ZOBRIST_secondStone;
+  static Hash128 ZOBRIST_firstStoneLoc[MaxBS * MaxBS + 1];
   static Hash128 ZOBRIST_nextPlayer[3];
   static Hash128 ZOBRIST_boardH[MaxBS];
   static Hash128 ZOBRIST_boardW[MaxBS];

@@ -123,23 +123,17 @@ MCTSnode::~MCTSnode()
 
 MCTSsearch::MCTSsearch(Evaluator *e)
     :rootNode(NULL)
-    , vcfSolver {{MaxBS, MaxBS, DEFAULT_RULE, C_BLACK}, {MaxBS, MaxBS, DEFAULT_RULE, C_WHITE}}
 {
   for (int i = 0; i < MaxBS * MaxBS; i++)
     board[i] = C_EMPTY;
   posHash = Hash128(0, 0);
   evaluator = e;
-  vcfSolver[0].setBoard(board, false, true);
-  vcfSolver[1].setBoard(board, false, true);
 }
 
 float MCTSsearch::fullsearch(Color color, double factor, NU_Loc& bestmove)
 {
-  vcfSolver[0].setBoard(board, false, true);
-  vcfSolver[1].setBoard(board, false, true);
 
   //check VCF
-  VCF::SearchResult VCFresult=vcfSolver[color - 1].fullSearch(10000, 10, bestmove, false);
   if (VCFresult == VCF::SR_Win)
   {
     //直接vcf，不需要mcts
@@ -288,8 +282,6 @@ void MCTSsearch::playForSearch(Color color, NU_Loc loc)
   posHash ^= NNUEHashTable::ZOBRIST_loc[color][loc];
 
   evaluator->play(color, loc);
-  vcfSolver[0].playOutside(loc, color, 1, true);
-  vcfSolver[1].playOutside(loc, color, 1, true);
 }
 
 void MCTSsearch::undoForSearch(NU_Loc loc)
@@ -302,8 +294,6 @@ void MCTSsearch::undoForSearch(NU_Loc loc)
   posHash ^= NNUEHashTable::ZOBRIST_loc[color][loc];
 
   evaluator->undo(color, loc);
-  vcfSolver[0].undoOutside(loc, 1);
-  vcfSolver[1].undoOutside(loc, 1);
 }
 
 MCTSsearch::SearchResult MCTSsearch::search(MCTSnode* node, uint64_t remainVisits, bool isRoot)
@@ -467,7 +457,7 @@ void MCTSsearch::getGlobalFeatureInput(Color nextPlayer) {
     states.getGlobalFeatureInput_States(gfbuf, nextPlayer);
 
     for (int i = 3; i < 8; i++)gfbuf[i] = 0;
-
+    todo
 
     //disable gf
     //for (int i = 0; i < NNUEV2::globalFeatureNum; i++)gfbuf[i] = 0;
@@ -481,9 +471,5 @@ void MCTSsearch::getGlobalFeatureInput(Color nextPlayer) {
 
     Color opp = getOpp(nextPlayer);
     NU_Loc tmp;
-    VCF::SearchResult oppvcf = vcfSolver[opp - 1].fullSearch(5000, 4, tmp, false);
-    if (oppvcf == VCF::SR_Win)gfbuf[5] = 1;
-    else if (oppvcf == VCF::SR_Lose)gfbuf[6] = 1;
-    else gfbuf[7] = 1;
 
 }

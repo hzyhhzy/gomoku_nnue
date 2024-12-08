@@ -1,12 +1,11 @@
 #pragma once
 #include "NNUEglobal.h"
-#include "Eva_nnuev2.h"
 #include "rules.h"
 #include "HashTable/NNUEHashTable.h"
-class Evaluator
+class Board
 {
 public:
-  
+
   //record stats for undo
   struct UndoRecord
   {
@@ -31,7 +30,7 @@ public:
     int blackPassNum;  // pass count of black/white, used for VCT/VC2
     int whitePassNum;
 
-    UndoRecord(const Evaluator& eva);
+    UndoRecord(const Board& eva);
   };
 
 
@@ -39,11 +38,11 @@ public:
 
   int x_size;                  //Horizontal size of board
   int y_size;                  //Vertical size of board
-  
+
   Color board[MaxBS * MaxBS];
   Hash128 pos_hash;
-  Rules rule;
-  double noResultUtilityForWhite;
+  //Rules rule;
+  //double noResultUtilityForWhite;
 
   int movenum; //how many moves
   //which stage. Normally 0 = choosing piece. 1 = where to place
@@ -69,14 +68,10 @@ public:
   int blackPassNum;  // pass count of black/white, used for VCT/VC2
   int whitePassNum;
 
-  Eva_nnuev2       *blackEvaluator;
-  Eva_nnuev2       *whiteEvaluator;
-  //float gfInputBuf[NNUEV2::globalFeatureNum];
 
 
 
-  Evaluator(std::string type, std::string filepath, const Rules& rules);
-  ~Evaluator() {delete blackEvaluator; delete whiteEvaluator;}
+  Board(int x_size, int y_size);
 
   bool loadParam(std::string filepathB, std::string filepathW);
   void clear();
@@ -95,8 +90,8 @@ public:
   //square of the distance of loc and gravity center. 0 if null_loc or pass_loc (means all next moves are legal)
   double getLocationPriority(int x, int y) const;
   double getLocationPriority(NU_Loc loc) const;
-  
-  NNUE::ValueType evaluateFull(const float *gf, Color color, NNUE::PolicyType *policy)
+
+  NNUE::ValueType evaluateFull(const float* gf, Color color, NNUE::PolicyType* policy)
   {
     clearCache(color);
     if (color == C_BLACK)
@@ -104,15 +99,15 @@ public:
     else
       return whiteEvaluator->evaluateFull(gf, NULL, policy);
   }
-  void evaluatePolicy(const float *gf, Color color, NNUE::PolicyType *policy)
+  void evaluatePolicy(const float* gf, Color color, NNUE::PolicyType* policy)
   {
     clearCache(color);
     if (color == C_BLACK)
       blackEvaluator->evaluatePolicy(gf, NULL, policy);
     else
-      whiteEvaluator->evaluatePolicy(gf, NULL,policy);
+      whiteEvaluator->evaluatePolicy(gf, NULL, policy);
   }
-  NNUE::ValueType evaluateValue(const float *gf, Color color)
+  NNUE::ValueType evaluateValue(const float* gf, Color color)
   {
     clearCache(color);
     if (color == C_BLACK)
@@ -123,7 +118,7 @@ public:
 
 
 
-  
+
   //Color* board() const { return blackEvaluator->board; }
 
 private:
@@ -135,8 +130,8 @@ private:
     bool isUndo;
     Color color;
     NU_Loc loc;
-    MoveCache() :isUndo(false), color(C_EMPTY), loc(NNUE::NU_LOC_NULL){}
-    MoveCache(bool isUndo,Color color,NU_Loc loc) :isUndo(isUndo), color(color), loc(loc){}
+    MoveCache() :isUndo(false), color(C_EMPTY), loc(NNUE::NU_LOC_NULL) {}
+    MoveCache(bool isUndo, Color color, NU_Loc loc) :isUndo(isUndo), color(color), loc(loc) {}
   };
 
   MoveCache moveCacheB[MaxBS * MaxBS], moveCacheW[MaxBS * MaxBS];

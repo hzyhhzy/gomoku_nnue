@@ -1,6 +1,5 @@
 #pragma once
 #include "Evaluator.h"
-#include "VCF/VCFsolver.h"
 #include "ExtraStates.h"
 const double policyQuant = 50000;
 const double policyQuantInv = 1/policyQuant;
@@ -51,7 +50,6 @@ public:
   ExtraStates states;
 
   Evaluator *evaluator;  //在engine里析构这个evaluator，不在这里析构
-  VCFsolver vcfSolver[2];
 
 
   std::atomic_bool terminate;

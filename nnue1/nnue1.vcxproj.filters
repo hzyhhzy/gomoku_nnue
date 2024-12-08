@@ -13,12 +13,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="头文件\VCF">
-      <UniqueIdentifier>{129e874b-e305-4368-b8e5-dd1a12e258a2}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="源文件\VCF">
-      <UniqueIdentifier>{c9a7e839-02b2-40ab-b223-c968774fd989}</UniqueIdentifier>
-    </Filter>
     <Filter Include="头文件\external">
       <UniqueIdentifier>{6bf99659-dc7d-436c-9877-7400a91b61f7}</UniqueIdentifier>
     </Filter>
@@ -44,9 +38,6 @@
     </ClCompile>
     <ClCompile Include="utils.cpp">
       <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="VCF\VCFsolver.cpp">
-      <Filter>源文件\VCF</Filter>
     </ClCompile>
     <ClCompile Include="MCTSsearch.cpp">
       <Filter>源文件</Filter>
@@ -78,6 +69,12 @@
     <ClCompile Include="ExtraStates.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="rules.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Board.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Evaluator.h">
@@ -85,9 +82,6 @@
     </ClInclude>
     <ClInclude Include="TT.h">
       <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="VCF\VCFsolver.h">
-      <Filter>头文件\VCF</Filter>
     </ClInclude>
     <ClInclude Include="MCTSsearch.h">
       <Filter>头文件</Filter>
@@ -129,6 +123,12 @@
       <Filter>头文件\HashTable</Filter>
     </ClInclude>
     <ClInclude Include="NNUEglobal.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="rules.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Board.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

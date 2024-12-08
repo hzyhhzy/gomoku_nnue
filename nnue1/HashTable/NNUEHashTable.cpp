@@ -7,6 +7,8 @@ using namespace std;
 
 
 Hash128 NNUEHashTable::ZOBRIST_loc[4][MaxBS * MaxBS];
+Hash128 NNUEHashTable::ZOBRIST_secondStone;
+Hash128 NNUEHashTable::ZOBRIST_firstStoneLoc[MaxBS * MaxBS + 1];
 Hash128 NNUEHashTable::ZOBRIST_nextPlayer[3];
 Hash128 NNUEHashTable::ZOBRIST_boardH[MaxBS];
 Hash128 NNUEHashTable::ZOBRIST_boardW[MaxBS];
@@ -35,6 +37,11 @@ void NNUEHashTable::initHash(int64_t seed)
                 ZOBRIST_loc[c][loc] = Hash128(r(), r());
 
         }
+    ZOBRIST_secondStone = Hash128(r(), r());
+    for (int loc = 0; loc < MaxBS * MaxBS + 1; loc++)
+    {
+      ZOBRIST_firstStoneLoc[loc] = Hash128(r(), r());
+    }
 
     for (int i = 0; i < 3; i++)
         ZOBRIST_nextPlayer[i] = Hash128(r(), r());
