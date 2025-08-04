@@ -98,12 +98,8 @@ namespace NNUEV2 {
       float mlp_b3[ mlpChannel];
       float mlp_w4[mlpChannel][mlpChannel];
       float mlp_b4[mlpChannel];
-      float mlpfinal_w[mlpChannel][4];
-      float mlpfinal_w_for_safety[4];  // mlp_w3在read的时候一次read
-                                   // 8个，会read到后续内存mlp_w3[mix6::valueNum-1][3]+4，
-      float mlpfinal_b[4];
-      float mlpfinal_b_for_safety[4];  // mlp_b3在read的时候一次read
-                                   // 8个，会read到后续内存mlp_b3[3]+4，
+      float mlpfinal_w[mlpChannel][8]; //只有前4个有用，为了凑整mm256
+      float mlpfinal_b[8];//只有前4个有用
 
 
       // 15  mlp policy head

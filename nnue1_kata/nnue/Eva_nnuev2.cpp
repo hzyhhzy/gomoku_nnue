@@ -602,7 +602,7 @@ void Eva_nnuev2::debug_print()
 {
   using namespace std;
   NU_Loc loc = MakeLoc(0, 0);
-  PolicyType p[MaxBS * MaxBS];
+  PolicyType p[MaxBS * MaxBS + 1];
   float gf[NNUEV2::globalFeatureNum] = { 0 };
   bool illegalMap[MaxBS*MaxBS] = { false };
   auto       v = evaluateFull(gf, illegalMap, p);
@@ -986,8 +986,13 @@ bool ModelWeight::loadParamTxt(std::string filename)
     return false;
   }
   for (int j = 0; j < mlpChannel; j++)
+  {
     for (int i = 0; i < 4; i++)
       fs >> mlpfinal_w[j][i];
+    for (int i = 4; i < 8; i++) {
+      mlpfinal_w[j][i] = 0;
+    }
+  }
 
   // mlpfinal_b
   fs >> varname;
@@ -998,9 +1003,8 @@ bool ModelWeight::loadParamTxt(std::string filename)
   for (int i = 0; i < 4; i++)
     fs >> mlpfinal_b[i];
 
-  for (int i = 0; i < 4; i++) {
-    mlpfinal_w_for_safety[i] = 0;
-    mlpfinal_b_for_safety[i] = 0;
+  for (int i = 4; i < 8; i++) {
+    mlpfinal_b[i] = 0;
   }
 
   // mlp_p_w
