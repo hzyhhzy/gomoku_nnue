@@ -189,6 +189,11 @@ void NNUEBoardHistory::updateInputBuf(Color nextPlayer)
         
         if (currentBoard.numStones == 0 || currentBoard.firstLoc == Board::NULL_LOC || currentBoard.firstLoc == Board::PASS_LOC) {
             gfInputBuf[2] = 1.0f; // Everywhere is ok
+            //fill illegal map
+            for (int i = 0; i < MaxBS * MaxBS; i++)
+            {
+              illegalMapBuf[i] = true;
+            }
         }
         
         if (currentBoard.firstLoc == Board::PASS_LOC) {
@@ -354,8 +359,12 @@ void NNUEBoardHistory::addCache(bool isUndo, Color color, Loc loc)
 {
     if (loc == Board::PASS_LOC || loc == Board::NULL_LOC)
         return;
-    
-    MoveCache newcache(isUndo, color, loc);
+
+    int x = Location::getX(loc, MaxBS);
+    int y = Location::getY(loc, MaxBS);
+    Loc pos = y * MaxBS + x;
+
+    MoveCache newcache(isUndo, color, pos);
     
     if (moveCacheBlength == 0 || !isContraryMove(moveCacheB[moveCacheBlength-1], newcache)) {
         moveCacheB[moveCacheBlength] = newcache;
@@ -382,24 +391,24 @@ void NNUEBoardHistory::play(Color color, Loc loc)
     
     // Save current board state to history
     if (!historicalBoards.empty()) {
-        historicalBoards.push_back(historicalBoards.back());
+      historicalBoards.push_back(historicalBoards.back());
     }
-    
+    else
+      ASSERT_UNREACHABLE;
+
     // Add to cache for NNUE evaluator
     addCache(false, color, loc);
     
     // Make the move on the current board
     Board& currentBoard = historicalBoards.back();
-    currentBoard.playMoveAssumeLegal(loc, color);
+    //currentBoard.playMoveAssumeLegal(loc, color);
     
     // Update BoardHistory state
     BoardHistory::makeBoardMoveAssumeLegal(currentBoard, loc, color);
 }
 
-void NNUEBoardHistory::undo(Color color, Loc loc)
+void NNUEBoardHistory::undo()
 {
-    // Add undo to cache
-    addCache(true, color, loc);
     
     // Remove the last board state from history
     if (historicalBoards.size() > 1) {
@@ -408,6 +417,8 @@ void NNUEBoardHistory::undo(Color color, Loc loc)
     
     // Update BoardHistory state for undo
     if (!moveHistory.empty()) {
+        // Add undo to cache
+        addCache(true, historicalBoards.back().nextPla, moveHistory[moveHistory.size()-1].loc);
         moveHistory.pop_back();
     }
     else {
@@ -444,7 +455,7 @@ void NNUEBoardHistory::clearCache(Color color)
             if (move.isUndo)
                 whiteEvaluator.undo(move.loc);
             else
-                whiteEvaluator.play(move.color, move.loc);
+                whiteEvaluator.play(getOpp(move.color), move.loc);
         }
         moveCacheWlength = 0;
     }
@@ -465,19 +476,53 @@ bool NNUEBoardHistory::isContraryMove(MoveCache a, MoveCache b)
 
 void NNUEBoardHistory::syncNNUEWithBoard(const Board& board)
 {
-    // Clear evaluators first
-    blackEvaluator.clear();
-    whiteEvaluator.clear();
+    // Use Eva_nnuev2's syncWithBoard method
+    // blackEvaluator uses normal colors
+    blackEvaluator.syncWithBoard(board, false);
     
-    // Replay all moves on the board to sync NNUE state
-    for (int y = 0; y < board.y_size; y++) {
-        for (int x = 0; x < board.x_size; x++) {
-            Loc loc = Location::getLoc(x, y, board.x_size);
-            Color color = board.colors[loc];
-            if (color == C_BLACK || color == C_WHITE) {
-                blackEvaluator.play(color, loc);
-                whiteEvaluator.play(color, loc);
-            }
-        }
+    // whiteEvaluator uses inverted colors (all colors are reversed)
+    whiteEvaluator.syncWithBoard(board, true);
+}
+
+bool NNUEBoardHistory::checkEvaluatorBoardConsistency()
+{
+  clearCache(C_BLACK);
+  clearCache(C_WHITE);
+  const Board& currentBoard = historicalBoards.back();
+    
+  // Check blackEvaluator consistency
+  for (int y = 0; y < currentBoard.y_size; y++) {
+    for (int x = 0; x < currentBoard.x_size; x++) {
+      Loc loc = Location::getLoc(x, y, currentBoard.x_size);
+      NU_Loc nu_loc = y * MaxBS + x;
+            
+      Color historyColor = currentBoard.colors[loc];
+      if (currentBoard.stage == 1 && currentBoard.firstLoc == loc)
+      {
+        assert(historyColor == C_EMPTY);
+        historyColor = currentBoard.nextPla;
+      }
+      Color blackEvalColor = blackEvaluator.board[nu_loc];
+            
+      // For blackEvaluator, colors should match exactly
+      if (historyColor != blackEvalColor) {
+          return false;
+      }
+            
+      // For whiteEvaluator, colors should be inverted
+      Color whiteEvalColor = whiteEvaluator.board[nu_loc];
+      Color expectedWhiteColor = historyColor;
+      if (historyColor == C_BLACK) {
+          expectedWhiteColor = C_WHITE;
+      } else if (historyColor == C_WHITE) {
+          expectedWhiteColor = C_BLACK;
+      }
+            
+      if (expectedWhiteColor != whiteEvalColor) {
+          return false;
+      }
     }
+  }
+    
+  return true;
 }

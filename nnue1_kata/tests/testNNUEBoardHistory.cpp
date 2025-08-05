@@ -93,7 +93,7 @@ void testNNUEBoardHistoryPlayUndo() {
     
     // Test undo method
     try {
-        hist.undo(C_BLACK, centerLoc);
+        hist.undo();
         cout << "Undo method: OK" << endl;
     } catch (...) {
         cout << "Undo method failed, but this is expected without proper setup" << endl;

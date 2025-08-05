@@ -59,17 +59,20 @@ public:
     
     // NNUEBoard replacement methods
     void play(Color color, Loc loc);
-    void undo(Color color, Loc loc);
+    void undo();
     
 
     
     // Update input buffers for neural network evaluation
     void updateInputBuf(Color nextPlayer);
     
-    // Neural network evaluation functions
+    // Evaluation methods
     NNUE::ValueType evaluateFull(Color color, NNUE::PolicyType* policy);
     void evaluatePolicy(Color color, NNUE::PolicyType* policy);
     NNUE::ValueType evaluateValue(Color color);
+    
+    // Validation method
+    bool checkEvaluatorBoardConsistency();
     
 private:
     // Add move to cache for efficient undo

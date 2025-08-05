@@ -1,5 +1,5 @@
 #include "Eva_nnuev2.h"
-
+#include "../game/board.h"
 #include "../external/simde/simde_avx2.h"
 #include "../external/simde/simde_fma.h"
 
@@ -62,6 +62,32 @@ void ModelBuf::update(Color oldcolor, Color newcolor, NU_Loc loc, const ModelWei
 
 
 
+    }
+  }
+}
+
+void Eva_nnuev2::syncWithBoard(const Board& board, bool invertColors)
+{
+  // Clear evaluator first
+  clear();
+
+  // Replay all moves on the board to sync NNUE state
+  for (int y = 0; y < board.y_size; y++) {
+    for (int x = 0; x < board.x_size; x++) {
+      Loc loc = Location::getLoc(x, y, board.x_size);
+      Color color = board.colors[loc];
+      if (color == C_BLACK || color == C_WHITE) {
+        // Convert Loc to NU_Loc
+        NU_Loc nu_loc = y * MaxBS + x;
+
+        // Apply color inversion if needed (for whiteEvaluator)
+        Color playColor = color;
+        if (invertColors) {
+          playColor = (color == C_BLACK) ? C_WHITE : C_BLACK;
+        }
+
+        play(playColor, nu_loc);
+      }
     }
   }
 }
@@ -575,8 +601,9 @@ void Eva_nnuev2::evaluatePolicy(const float *gf, const bool* illegalMap, PolicyT
 
     auto  p = simde_mm256_extract_epi32(psum, 0) + simde_mm256_extract_epi32(psum, 4);
     policy[loc] = p * weights->scale_beforemlpInv * policyQuantFactor / 32768;
-    if (illegalMap[loc])
-      policy[loc] -= 100.0 * policyQuantFactor;
+    // this is processed by other codes
+    //if (illegalMap[loc])
+    //  policy[loc] -= 100.0 * policyQuantFactor;
   }
 
   policy[MaxBS * MaxBS] = buf.mlp_value[3] * policyQuantFactor;//pass

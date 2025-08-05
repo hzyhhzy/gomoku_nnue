@@ -22,8 +22,8 @@ namespace NNUEV2 {
     const int mlpBatch32 = mlpChannel / 8;
 
     /*
-    ¼ÆËãÁ÷³Ì£º
-    1.¸üĞÂÆåĞÎid£¬½«ÆåĞÎfeature¸üĞÂ
+    è®¡ç®—æµç¨‹ï¼š
+    1.æ›´æ–°æ£‹å½¢idï¼Œå°†æ£‹å½¢featureæ›´æ–°
 
     */
     struct ModelWeight
@@ -34,7 +34,7 @@ namespace NNUEV2 {
       int16_t mapping[shapeNum][featureNum];
       static_assert(shapeNum * featureNum * sizeof(int16_t) < 2100000000, "mapping size limit");
 
-      //illegalmapÊÇÂäµÚ¶ş¸ö×ÓÊ±ËùÓĞ²»ÄÜÂäµÄ×Ó£¨°üÀ¨ÒÑ¾­ÓĞÆå×ÓµÄÎ»ÖÃ£¬ºÍÒòÎª¡°ÓÅÏÈÖµ¡±¶ø²»ÄÜÂäµÄÎ»ÖÃ£©
+      //illegalmapæ˜¯è½ç¬¬äºŒä¸ªå­æ—¶æ‰€æœ‰ä¸èƒ½è½çš„å­ï¼ˆåŒ…æ‹¬å·²ç»æœ‰æ£‹å­çš„ä½ç½®ï¼Œå’Œå› ä¸ºâ€œä¼˜å…ˆå€¼â€è€Œä¸èƒ½è½çš„ä½ç½®ï¼‰
       //illegalBias = illegalmap * illegalVector.view(1, 2 * self.groupc, 1, 1)
       //lb1 = illegalBias[:, : self.groupc]
       //lb2 = illegalBias[:, self.groupc : ]
@@ -42,28 +42,28 @@ namespace NNUEV2 {
 
 
       // 2 
-      //  g1=mapf[:,:,:self.groupc,:,:]#µÚÒ»×éÍ¨µÀ
-      //  g2=mapf[:,:,self.groupc:,:,:]#µÚ¶ş×éÍ¨µÀ
-      //  gfvector=mlp(gf)#gf±íÊ¾¹æÔò
-      //  ÕâÀïµÄgfvectorÊÇpythonµÄ4±¶£¬ÒòÎªºóĞø4ÏßÆ½¾ù¸Ä³ÉÁË4ÏßÇóºÍ
-      float gfmlp_w[globalFeatureNum][groupSize];  // shape=(inc£¬outc)£¬ÏàÍ¬µÄinc¶ÔÓ¦È¨ÖØÏàÁÚ
+      //  g1=mapf[:,:,:self.groupc,:,:]#ç¬¬ä¸€ç»„é€šé“
+      //  g2=mapf[:,:,self.groupc:,:,:]#ç¬¬äºŒç»„é€šé“
+      //  gfvector=mlp(gf)#gfè¡¨ç¤ºè§„åˆ™
+      //  è¿™é‡Œçš„gfvectoræ˜¯pythonçš„4å€ï¼Œå› ä¸ºåç»­4çº¿å¹³å‡æ”¹æˆäº†4çº¿æ±‚å’Œ
+      float gfmlp_w[globalFeatureNum][groupSize];  // shape=(incï¼Œoutc)ï¼Œç›¸åŒçš„incå¯¹åº”æƒé‡ç›¸é‚»
       float gfmlp_b[groupSize];
 
       // 3  
       // g1sum=g1.mean(1) + rv.view(rv.shape[0],rv.shape[1],1,1) + lb1 
-      // h1 = self.g1lr(g1sum) #ËÄÏßÇóºÍÔÙ¼Ó¹æÔòÏòÁ¿ÔÙleakyrelu
+      // h1 = self.g1lr(g1sum) #å››çº¿æ±‚å’Œå†åŠ è§„åˆ™å‘é‡å†leakyrelu
       int16_t g1lr_w[ groupSize];
 
-      // 4  h1 = torch.stack(self.h1conv(h1), dim = 1) #ÑØ×ÅÒ»ÌõÏß¾í»ı
+      // 4  h1 = torch.stack(self.h1conv(h1), dim = 1) #æ²¿ç€ä¸€æ¡çº¿å·ç§¯
 
-      int16_t h1conv_w[featureHalfLen + 1][ groupSize]; //¾í»ıºËÊÇ¶Ô³ÆµÄ£¬ËùÒÔ³ı2
+      int16_t h1conv_w[featureHalfLen + 1][ groupSize]; //å·ç§¯æ ¸æ˜¯å¯¹ç§°çš„ï¼Œæ‰€ä»¥é™¤2
       int16_t h1conv_b[ groupSize];
 
       // 5  h2 = self.h1lr2(self.h1lr1(h1, dim = 2) + g2, dim = 2)
       int16_t h1lr1_w[ groupSize];
       int16_t h1lr2_w[ groupSize];
 
-      // 6  h3 = h2.mean(1) + lb2 #×îºó°ÑËÄÌõÏßÕûºÏÆğÀ´
+      // 6  h3 = h2.mean(1) + lb2 #æœ€åæŠŠå››æ¡çº¿æ•´åˆèµ·æ¥
 
       // 7  trunk = self.h3lr(h3) 
       int16_t h3lr_w[ groupSize];
@@ -77,7 +77,7 @@ namespace NNUEV2 {
       int16_t trunklr1_w[ groupSize];
 
       // 10 trunk = self.trunkconv2(trunk)
-      int16_t trunkconv2_w[3][ groupSize];//¶Ô³ÆµÄ3x3¾í»ı
+      int16_t trunkconv2_w[3][ groupSize];//å¯¹ç§°çš„3x3å·ç§¯
 
       // 11 trunk = self.trunklr2(trunk) 
       int16_t trunklr2_w[ groupSize];
@@ -90,7 +90,7 @@ namespace NNUEV2 {
       float valuelr_b[ groupSize]; 
 
       // 14  mlp
-      float mlp_w1[groupSize][mlpChannel];  // shape=(inc£¬outc)£¬ÏàÍ¬µÄinc¶ÔÓ¦È¨ÖØÏàÁÚ
+      float mlp_w1[groupSize][mlpChannel];  // shape=(incï¼Œoutc)ï¼Œç›¸åŒçš„incå¯¹åº”æƒé‡ç›¸é‚»
       float mlp_b1[ mlpChannel];
       float mlp_w2[ mlpChannel][ mlpChannel];
       float mlp_b2[ mlpChannel];
@@ -98,8 +98,8 @@ namespace NNUEV2 {
       float mlp_b3[ mlpChannel];
       float mlp_w4[mlpChannel][mlpChannel];
       float mlp_b4[mlpChannel];
-      float mlpfinal_w[mlpChannel][8]; //Ö»ÓĞÇ°4¸öÓĞÓÃ£¬ÎªÁË´ÕÕûmm256
-      float mlpfinal_b[8];//Ö»ÓĞÇ°4¸öÓĞÓÃ
+      float mlpfinal_w[mlpChannel][8]; //åªæœ‰å‰4ä¸ªæœ‰ç”¨ï¼Œä¸ºäº†å‡‘æ•´mm256
+      float mlpfinal_b[8];//åªæœ‰å‰4ä¸ªæœ‰ç”¨
 
 
       // 15  mlp policy head
@@ -128,9 +128,9 @@ namespace NNUEV2 {
     struct ModelBuf
     {
       // 1 convert board to shape
-      uint32_t shapeTable[MaxBS * MaxBS][4];  // 4¸ö·½Ïò£¬MaxBS*MaxBS¸öÎ»ÖÃ
+      uint32_t shapeTable[MaxBS * MaxBS][4];  // 4ä¸ªæ–¹å‘ï¼ŒMaxBS*MaxBSä¸ªä½ç½®
 
-      // 2  shapeµ½vector  g1ÎŞĞèÌáÈ¡£¬Ö»»º´æg2
+      // 2  shapeåˆ°vector  g1æ— éœ€æå–ï¼Œåªç¼“å­˜g2
       int16_t g2[MaxBS * MaxBS][4][groupSize];
 
       // 3  g1sum=g1.sum(1), shape=H*W*g
@@ -138,18 +138,18 @@ namespace NNUEV2 {
 
       // 4  h1=self.g1lr(g1sum), shape=HWc
       //int16_t h1[MaxBS * MaxBS][groupSize];
-      int16_t h1m[(MaxBS + 2 * featureHalfLen) * (MaxBS + 2 * featureHalfLen) * (featureHalfLen + 1) * 16];//Ö»ÊÇ¿ªÁËÒ»¿é¿Õ¼ä£¬±ÜÃâÆµ·±new/delete£¬Ã¿´ÎÓÃµÄÊ±ºòÇåÁã
+      int16_t h1m[(MaxBS + 2 * featureHalfLen) * (MaxBS + 2 * featureHalfLen) * (featureHalfLen + 1) * 16];//åªæ˜¯å¼€äº†ä¸€å—ç©ºé—´ï¼Œé¿å…é¢‘ç¹new/deleteï¼Œæ¯æ¬¡ç”¨çš„æ—¶å€™æ¸…é›¶
 
-      // ºóÃæµÄ²¿·Ö¼¸ºõÃ»·¨ÔöÁ¿¼ÆËã
+      // åé¢çš„éƒ¨åˆ†å‡ ä¹æ²¡æ³•å¢é‡è®¡ç®—
 
 
-      // valueÍ·ºÍpolicyÍ·¹²Ïítrunk£¬ËùÒÔÒ²·ÅÔÚ»º´æÀï
+      // valueå¤´å’Œpolicyå¤´å…±äº«trunkï¼Œæ‰€ä»¥ä¹Ÿæ”¾åœ¨ç¼“å­˜é‡Œ
       bool    trunkUpToDate;
       int16_t trunk[MaxBS * MaxBS][groupSize];  
 
-      // valueÍ·ºÍpolicyÍ·¹²ÏímlpµÄÇ°Èı²ã£¬ËùÒÔ°ÑµÚÈı²ãµÄÊä³öÒ²·ÅÔÚ»º´æÀï
+      // valueå¤´å’Œpolicyå¤´å…±äº«mlpçš„å‰ä¸‰å±‚ï¼Œæ‰€ä»¥æŠŠç¬¬ä¸‰å±‚çš„è¾“å‡ºä¹Ÿæ”¾åœ¨ç¼“å­˜é‡Œ
       float mlp_layer4[mlpChannel];
-      float mlp_value[8];//Ç°3¸öÒÀ´ÎÊÇÊ¤¸ººÍ£¬µÚ4¸öÊÇpassµÄpolicy£¬×îºó4¸ö½öÎª±£ÁôÄÚ´æ
+      float mlp_value[8];//å‰3ä¸ªä¾æ¬¡æ˜¯èƒœè´Ÿå’Œï¼Œç¬¬4ä¸ªæ˜¯passçš„policyï¼Œæœ€å4ä¸ªä»…ä¸ºä¿ç•™å†…å­˜
 
       void update(Color oldcolor, Color newcolor, NU_Loc loc, const ModelWeight* weights);
 
@@ -169,15 +169,17 @@ public:
   //bool loadParam(std::string filepath);
   Eva_nnuev2(const NNUEV2::ModelWeight* w);
   void clear();
-  void recalculate();  //¸ù¾İboardÍêÈ«ÖØĞÂ¼ÆËãÆåĞÎ±í
+  void recalculate();  //æ ¹æ®boardå®Œå…¨é‡æ–°è®¡ç®—æ£‹å½¢è¡¨
 
-  //¼ÆËã²ğ·ÖÎªÁ½²¿·Ö£¬µÚÒ»²¿·ÖÊÇ¿ÉÔöÁ¿¼ÆËãµÄ£¬·ÅÔÚplayº¯ÊıÀï¡£µÚ¶ş²¿·ÖÊÇ²»Ò×ÔöÁ¿¼ÆËãµÄ£¬·ÅÔÚevaluateÀï¡£
+  //è®¡ç®—æ‹†åˆ†ä¸ºä¸¤éƒ¨åˆ†ï¼Œç¬¬ä¸€éƒ¨åˆ†æ˜¯å¯å¢é‡è®¡ç®—çš„ï¼Œæ”¾åœ¨playå‡½æ•°é‡Œã€‚ç¬¬äºŒéƒ¨åˆ†æ˜¯ä¸æ˜“å¢é‡è®¡ç®—çš„ï¼Œæ”¾åœ¨evaluateé‡Œã€‚
   void      play(Color color, NU_Loc loc);
-  NNUE::ValueType evaluateFull(const float *gf, const bool* illegalMap, NNUE::PolicyType *policy);  // policyÍ¨¹ıº¯Êı²ÎÊı·µ»Ø
-  void evaluatePolicy(const float *gf, const bool* illegalMap, NNUE::PolicyType *policy);  // policyÍ¨¹ıº¯Êı²ÎÊı·µ»Ø
+  void      syncWithBoard(const Board& board, bool invertColors = false);
+
+  NNUE::ValueType evaluateFull(const float *gf, const bool* illegalMap, NNUE::PolicyType *policy);  // policyé€šè¿‡å‡½æ•°å‚æ•°è¿”å›
+  void evaluatePolicy(const float *gf, const bool* illegalMap, NNUE::PolicyType *policy);  // policyé€šè¿‡å‡½æ•°å‚æ•°è¿”å›
   NNUE::ValueType evaluateValue(const float *gf, const bool* illegalMap);                //
 
-  void undo(NU_Loc loc);  // playµÄÄæ¹ı³Ì
+  void undo(NU_Loc loc);  // playçš„é€†è¿‡ç¨‹
 
   void debug_print();
 

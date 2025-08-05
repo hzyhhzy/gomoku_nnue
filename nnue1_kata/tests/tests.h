@@ -12,6 +12,12 @@
 #include "../game/boardhistory.h"
 
 class NNEvaluator;
+namespace NNUEV2 {
+  struct ModelWeight;
+}
+
+// Function declarations for testnnue.cpp
+void testAutoPlay(const NNUEV2::ModelWeight* weights);
 
 namespace Tests {
   // testnnevalcanary.cpp
