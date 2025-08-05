@@ -65,7 +65,6 @@ add_executable(katago
   tests/testNNUEBoardHistory.cpp
   nnue/Eva_nnuev2.cpp
   nnue/NNUEglobal.cpp
-  nnue/NNUEBoard.cpp
   nnue/NNUEBoardHistory.cpp
   main.cpp
   )

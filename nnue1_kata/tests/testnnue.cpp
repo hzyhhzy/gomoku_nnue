@@ -74,6 +74,9 @@ void testAutoPlay(const ModelWeight* weights) {
   // Create board and rules
   Board board(19, 19);
   Rules rules;
+  string rootBoardSequence = "j10i9i11";
+  vector<Loc> rootBoardLocSeq = Location::parseSequenceGom(rootBoardSequence, board);
+  PlayUtils::playMoveLocSequence(board, board.nextPla, rootBoardLocSeq);
   
   // Create NNUE input parameters
   MiscNNInputParams nnInputParams;
@@ -135,7 +138,7 @@ void testAutoPlay(const ModelWeight* weights) {
     
     // Optional: print board state every 10 moves
     cout << "Board state after " << board.movenum << " moves:" << endl;
-    Board::printBoard(cout, board, Board::NULL_LOC, NULL);
+    Board::printBoard(cout, board, board.firstLoc, NULL);
     cout << endl;
 
     // Check for game end conditions

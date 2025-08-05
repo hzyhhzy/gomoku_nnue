@@ -68,8 +68,8 @@ public:
     
     // Evaluation methods
     NNUE::ValueType evaluateFull(Color color, NNUE::PolicyType* policy);
-    void evaluatePolicy(Color color, NNUE::PolicyType* policy);
-    NNUE::ValueType evaluateValue(Color color);
+    //void evaluatePolicy(Color color, NNUE::PolicyType* policy);
+    //NNUE::ValueType evaluateValue(Color color);
     
     // Validation method
     bool checkEvaluatorBoardConsistency();

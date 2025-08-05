@@ -61,6 +61,9 @@ namespace NNUE
   struct ValueType
   {
     float win, loss, draw;
+    ValueType() : win(1.0/3.0), loss(1.0 / 3.0), draw(1.0 / 3.0)
+    {
+    }
     ValueType(float win, float loss, float draw) : win(win), loss(loss), draw(draw)
     {
       self_softmax();

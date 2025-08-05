@@ -155,21 +155,28 @@ void NNUEBoardHistory::clear(const Board& board, Player pla, const Rules& rules)
 
 void NNUEBoardHistory::updateInputBuf(Color nextPlayer)
 {
+    const Board& currentBoard = historicalBoards.back();
+    Player pla = nextPlayer;
+    assert(pla == currentBoard.nextPla);
+    Player opp = getOpp(pla);
+    nnInputParams.resultsBeforeNN = GameLogic::ResultsBeforeNN();
+    nnInputParams.resultsBeforeNN.init(currentBoard, *this, nextPlayer);
+    if (nnInputParams.resultsBeforeNN.myOnlyLoc != Board::NULL_LOC && winner != C_WALL)
+    {
+      //no need to call NN
+      return;
+    }
+
+
     // Initialize input buffers
     std::fill(gfInputBuf, gfInputBuf + NNUEV2::globalFeatureNum, 0.0f);
     std::fill(illegalMapBuf, illegalMapBuf + MaxBS * MaxBS, false);
-    
+    float* gfInputBufp3 = gfInputBuf + 3;
     if (historicalBoards.empty()) {
         ASSERT_UNREACHABLE;
     }
     
-    const Board& currentBoard = historicalBoards.back();
-    Player pla = nextPlayer;
-    assert(pla==currentBoard.nextPla);
-    Player opp = getOpp(pla);
     
-    GameLogic::ResultsBeforeNN resultsBeforeNN = nnInputParams.resultsBeforeNN;
-    resultsBeforeNN.init(currentBoard, *this, nextPlayer);
 
     // Update illegal map based on current board state
     for (int i = 0; i < MaxBS * MaxBS; i++) {
@@ -180,15 +187,17 @@ void NNUEBoardHistory::updateInputBuf(Color nextPlayer)
     if (currentBoard.stage == 0) {
         // Priority value input
         if (currentBoard.numStones == 0) {
-            gfInputBuf[1] = 1.0f; // Priority value is always 0
+            gfInputBufp3[1] = 1.0f; // Priority value is always 0
+
         }
     } 
     else 
     {
-        gfInputBuf[0] = 1.0f; // Stage 1 indicator
+        gfInputBufp3[0] = 1.0f; // Stage 1 indicator
+
         
         if (currentBoard.numStones == 0 || currentBoard.firstLoc == Board::NULL_LOC || currentBoard.firstLoc == Board::PASS_LOC) {
-            gfInputBuf[2] = 1.0f; // Everywhere is ok
+            gfInputBufp3[2] = 1.0f; // Everywhere is ok
             //fill illegal map
             for (int i = 0; i < MaxBS * MaxBS; i++)
             {
@@ -197,7 +206,8 @@ void NNUEBoardHistory::updateInputBuf(Color nextPlayer)
         }
         
         if (currentBoard.firstLoc == Board::PASS_LOC) {
-            gfInputBuf[3] = 1.0f; // First move was pass
+            gfInputBufp3[3] = 1.0f; // First move was pass
+
             //fill illegal map
             for(int i = 0; i < MaxBS * MaxBS; i++)
             {
@@ -238,11 +248,11 @@ void NNUEBoardHistory::updateInputBuf(Color nextPlayer)
       ASSERT_UNREACHABLE;
     
     if(true) {
-        if(resultsBeforeNN.myOnlyLoc == Board::PASS_LOC)
-          gfInputBuf[38] = 1.0;
+        if(nnInputParams.resultsBeforeNN.myOnlyLoc == Board::PASS_LOC)
+          gfInputBufp3[38] = 1.0;
 
-        if(resultsBeforeNN.winner == nextPlayer)
-          gfInputBuf[11] = 1.0;  // can win by five/lifeFour/vcf
+        if(nnInputParams.resultsBeforeNN.winner == nextPlayer)
+          gfInputBufp3[11] = 1.0;  // can win by five/lifeFour/vcf
 
     }
     // Pass number features
@@ -257,25 +267,26 @@ void NNUEBoardHistory::updateInputBuf(Color nextPlayer)
     if (!rules.firstPassWin && rules.VCNRule == Rules::VCNRULE_NOVC) {
         // Note: noResultUtilityForWhite would need to be passed as parameter
         // For now using 0.0f as placeholder
-        gfInputBuf[12] = nextPlayer == P_BLACK ? -nnInputParams.noResultUtilityForWhite : nnInputParams.noResultUtilityForWhite;
-        gfInputBuf[13] = myPassNum > 0 ? 1.0f : 0.0f;
-        gfInputBuf[14] = oppPassNum > 0 ? 1.0f : 0.0f;
+        gfInputBufp3[12] = nextPlayer == P_BLACK ? -nnInputParams.noResultUtilityForWhite : nnInputParams.noResultUtilityForWhite;
+        gfInputBufp3[13] = myPassNum > 0 ? 1.0f : 0.0f;
+        gfInputBufp3[14] = oppPassNum > 0 ? 1.0f : 0.0f;
     } else {
-        gfInputBuf[12] = 0.0f;
-        gfInputBuf[13] = 0.0f;
-        gfInputBuf[14] = 0.0f;
+        gfInputBufp3[12] = 0.0f;
+        gfInputBufp3[13] = 0.0f;
+        gfInputBufp3[14] = 0.0f;
+
     }
 
      if(nnInputParams.playoutDoublingAdvantage != 0) {
-        gfInputBuf[15] = 1.0;
-        gfInputBuf[16] = (float)(0.5 * nnInputParams.playoutDoublingAdvantage);
+        gfInputBufp3[15] = 1.0;
+        gfInputBufp3[16] = (float)(0.5 * nnInputParams.playoutDoublingAdvantage);
     }
     
     // First pass win features (indices 17-19)
     if (rules.firstPassWin) {
-        gfInputBuf[17] = 1.0f;
-        gfInputBuf[18] = myPassNum > 0 ? 1.0f : 0.0f;
-        gfInputBuf[19] = oppPassNum > 0 ? 1.0f : 0.0f;
+        gfInputBufp3[17] = 1.0f;
+        gfInputBufp3[18] = myPassNum > 0 ? 1.0f : 0.0f;
+        gfInputBufp3[19] = oppPassNum > 0 ? 1.0f : 0.0f;
     }
     
     // VCN rule features (indices 20-29)
@@ -287,28 +298,29 @@ void NNUEBoardHistory::updateInputBuf(Color nextPlayer)
             realVClevel = 5; // vc6 is the same as vc5
         if (realVClevel >= 1 && realVClevel <= 5) {
             if (VCside == nextPlayer)
-                gfInputBuf[19 + realVClevel] = 1.0f;
+                gfInputBufp3[19 + realVClevel] = 1.0f;
             else if (VCside == opp)
-                gfInputBuf[24 + realVClevel] = 1.0f;
+                gfInputBufp3[24 + realVClevel] = 1.0f;
         }
     }
     
     // Max moves features (indices 30-37)
     if (rules.maxMoves != 0) {
-        gfInputBuf[30] = 1.0f;
+        gfInputBufp3[30] = 1.0f;
+
         double boardArea = currentBoard.x_size * currentBoard.y_size;
         double movenum = currentBoard.movenum;
         int maxmovesInt = currentBoard.calculateRealMaxmove(rules.maxMoves);
         double maxmoves = maxmovesInt;
-        gfInputBuf[31] = static_cast<float>(maxmoves / boardArea);
-        gfInputBuf[32] = static_cast<float>(movenum / boardArea);
-        gfInputBuf[33] = static_cast<float>(exp(-(maxmoves - movenum) / 70.0));
-        gfInputBuf[34] = static_cast<float>(exp(-(maxmoves - movenum) / 20.0));
-        gfInputBuf[35] = static_cast<float>(exp(-(maxmoves - movenum) / 7.0));
-        gfInputBuf[36] = static_cast<float>(exp(-(maxmoves - movenum) / 2.0));
+        gfInputBufp3[31] = static_cast<float>(maxmoves / boardArea);
+        gfInputBufp3[32] = static_cast<float>(movenum / boardArea);
+        gfInputBufp3[33] = static_cast<float>(exp(-(maxmoves - movenum) / 70.0));
+        gfInputBufp3[34] = static_cast<float>(exp(-(maxmoves - movenum) / 20.0));
+        gfInputBufp3[35] = static_cast<float>(exp(-(maxmoves - movenum) / 7.0));
+        gfInputBufp3[36] = static_cast<float>(exp(-(maxmoves - movenum) / 2.0));
         int remainFullMoves = maxmoves - movenum + currentBoard.stage;
         remainFullMoves /= 2;
-        gfInputBuf[37] = static_cast<float>(2 * (remainFullMoves % 2) - 1); // final move is pla or opp
+        gfInputBufp3[37] = static_cast<float>(2 * (remainFullMoves % 2) - 1); // final move is pla or opp
     }
     
     // Win by pass feature (index 38)
@@ -320,40 +332,84 @@ void NNUEBoardHistory::updateInputBuf(Color nextPlayer)
     float boardHs = static_cast<float>(currentBoard.y_size); // board height
     float boardWs = static_cast<float>(currentBoard.x_size);  // board width
     
-    gfInputBuf[39] = boardArea / 225.0f - 1.0f;  // boardArea/225-1
-    gfInputBuf[40] = sqrt(boardArea / 225.0f) - 1.0f;  // sqrt(boardArea/225)-1
-    gfInputBuf[41] = (boardHs - boardWs) * (boardHs - boardWs) / boardArea;  // (boardHs-boardWs)^2/boardArea
+    gfInputBuf[0] = boardArea / 225.0f - 1.0f;  // boardArea/225-1
+    gfInputBuf[1] = sqrt(boardArea / 225.0f) - 1.0f;  // sqrt(boardArea/225)-1
+    gfInputBuf[2] = (boardHs - boardWs) * (boardHs - boardWs) / boardArea;  // (boardHs-boardWs)^2/boardArea
 }
 
 NNUE::ValueType NNUEBoardHistory::evaluateFull(Color color, NNUE::PolicyType* policy)
 {
-    updateInputBuf(color);
+  updateInputBuf(color);
+  if (nnInputParams.resultsBeforeNN.myOnlyLoc != Board::NULL_LOC && nnInputParams.resultsBeforeNN.winner != C_WALL)
+  {
+    //no need to call NN
+    // Set all policies to MIN_POLICY
+    for (int i = 0; i < MaxBS * MaxBS + 1; i++) {
+      policy[i] = MIN_POLICY;
+    }
+    
+    // Set myOnlyLoc policy to MYFOUR_POLICY
+    Loc myOnlyLoc = nnInputParams.resultsBeforeNN.myOnlyLoc;
+    if (myOnlyLoc == Board::PASS_LOC) {
+      policy[MaxBS * MaxBS] = MYFOUR_POLICY;
+    } else {
+      int x = Location::getX(myOnlyLoc, MaxBS);
+      int y = Location::getY(myOnlyLoc, MaxBS);
+      int nu_loc = y * MaxBS + x;
+      policy[nu_loc] = MYFOUR_POLICY;
+    }
+    
+    // Return a default value (can be adjusted based on requirements)
+    NNUE::ValueType result;
+    if(nnInputParams.resultsBeforeNN.winner==color)
+    {
+        result.win = 1.0f;
+        result.loss = 0.0f;
+        result.draw = 0.0f;
+    }
+    else if(nnInputParams.resultsBeforeNN.winner==getOpp(color))
+    {
+        result.win = 0.0f;
+        result.loss = 1.0f;
+        result.draw = 0.0f;
+    }
+    else if(nnInputParams.resultsBeforeNN.winner==C_EMPTY)
+    {
+        result.win = 0.0f;
+        result.loss = 0.0f;
+        result.draw = 1.0f;
+    }
+    return result;
+  }
+  else
+  {
     clearCache(color);
     if (color == C_BLACK)
-        return blackEvaluator.evaluateFull(gfInputBuf, illegalMapBuf, policy);
+      return blackEvaluator.evaluateFull(gfInputBuf, illegalMapBuf, policy);
     else
-        return whiteEvaluator.evaluateFull(gfInputBuf, illegalMapBuf, policy);
+      return whiteEvaluator.evaluateFull(gfInputBuf, illegalMapBuf, policy);
+  }
 }
 
-void NNUEBoardHistory::evaluatePolicy(Color color, NNUE::PolicyType* policy)
-{
-    updateInputBuf(color);
-    clearCache(color);
-    if (color == C_BLACK)
-        blackEvaluator.evaluatePolicy(gfInputBuf, illegalMapBuf, policy);
-    else
-        whiteEvaluator.evaluatePolicy(gfInputBuf, illegalMapBuf, policy);
-}
+//void NNUEBoardHistory::evaluatePolicy(Color color, NNUE::PolicyType* policy)
+//{
+//    updateInputBuf(color);
+//    clearCache(color);
+//    if (color == C_BLACK)
+//        blackEvaluator.evaluatePolicy(gfInputBuf, illegalMapBuf, policy);
+//    else
+//        whiteEvaluator.evaluatePolicy(gfInputBuf, illegalMapBuf, policy);
+//}
 
-NNUE::ValueType NNUEBoardHistory::evaluateValue(Color color)
-{
-    updateInputBuf(color);
-    clearCache(color);
-    if (color == C_BLACK)
-        return blackEvaluator.evaluateValue(gfInputBuf, illegalMapBuf);
-    else
-        return whiteEvaluator.evaluateValue(gfInputBuf, illegalMapBuf);
-}
+//NNUE::ValueType NNUEBoardHistory::evaluateValue(Color color)
+//{
+//    updateInputBuf(color);
+//    clearCache(color);
+//    if (color == C_BLACK)
+//        return blackEvaluator.evaluateValue(gfInputBuf, illegalMapBuf);
+//    else
+//        return whiteEvaluator.evaluateValue(gfInputBuf, illegalMapBuf);
+//}
 
 void NNUEBoardHistory::addCache(bool isUndo, Color color, Loc loc)
 {
