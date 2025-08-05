@@ -62,9 +62,11 @@ add_executable(katago
   game/graphhash.cpp  
   tests/testcommon.cpp
   tests/testnnue.cpp
+  tests/testNNUEBoardHistory.cpp
   nnue/Eva_nnuev2.cpp
   nnue/NNUEglobal.cpp
   nnue/NNUEBoard.cpp
+  nnue/NNUEBoardHistory.cpp
   main.cpp
   )
 
