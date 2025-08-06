@@ -494,6 +494,11 @@ void NNUEBoardHistory::undo()
     isResignation = false;
 }
 
+const Board& NNUEBoardHistory::getBoard() const
+{
+    return historicalBoards.back();
+}
+
 void NNUEBoardHistory::clearCache(Color color)
 {
     if (color == C_BLACK) {

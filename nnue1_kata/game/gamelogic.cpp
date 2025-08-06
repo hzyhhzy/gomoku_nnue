@@ -12,7 +12,9 @@
 #include <cassert>
 #include <cstring>
 #include <iostream>
+#include <set>
 #include <vector>
+
 
 using namespace std;
 
@@ -281,7 +283,7 @@ Color GameLogic::checkWinnerAfterPlayed(
         {
           return C_EMPTY;
         } 
-        else  // �Է���pass
+        else  // �Է���pass
         {
           return opp;
         }
@@ -291,11 +293,11 @@ Color GameLogic::checkWinnerAfterPlayed(
       Color VCside = hist.rules.vcSide();
       int VClevel = hist.rules.vcLevel();
 
-      if(VCside == pla)  // VCN����������pass
+      if(VCside == pla)  // VCN����������pass
       {
         return opp;
       } 
-      else  // pass�����㹻����ʤ
+      else  // pass�����㹻����ʤ
       {
         if(myPassNum >= 7 - VClevel) {
           return pla;
@@ -306,11 +308,11 @@ Color GameLogic::checkWinnerAfterPlayed(
 
 
 
-  // maxmoves�ж�
+  // maxmoves�ж�
   if(hist.rules.maxMoves != 0 && board.movenum >= hist.rules.maxMoves) {
     if(hist.rules.VCNRule == Rules::VCNRULE_NOVC) {
       return C_EMPTY;
-    } else  // �����н�������
+    } else  // �����н�������
     {
       static_assert(Rules::VCNRULE_VC1_W == Rules::VCNRULE_VC1_B + 10, "Ensure VCNRule%10==N, VCNRule/10+1==color");
       Color VCside = hist.rules.vcSide();
@@ -401,4 +403,191 @@ void GameLogic::ResultsBeforeNN::init(const Board& board, const BoardHistory& hi
 
 
   return;
+}
+
+int GameLogic::checkTwoFourThreats(const Board& board, Player pla) {
+  Player opp = getOpp(pla);
+  vector<vector<Loc>> emptyPositionsInTuples; // 记录有4~5个pla棋子且没opp棋子的六元组的空位
+  
+  // 记录所有六元组的状态
+  bool hasPlaWin = false;     // 是否有全pla的六元组
+  
+  auto checkTuple = [&](Loc loc0, int16_t adj) -> void {
+     int plaCount = 0;
+     int oppCount = 0;
+     
+     for (int i = 0; i < 6; i++) {
+       Loc loc = loc0 + i * adj;
+       if (!board.isOnBoard(loc))
+         ASSERT_UNREACHABLE;//越界判定应在此函数外
+         return; // 无效六元组，跳过
+       
+       Color c = board.colors[loc];
+       if (c == pla) {
+         plaCount++;
+       } else if (c == opp) {
+         oppCount++;
+       }
+     }
+     
+     // 记录各种状态
+     if (plaCount == 6) {
+       hasPlaWin = true;
+     }
+     
+     // 记录有4~5个pla棋子且没opp棋子的六元组的空位
+     if (plaCount >= 4 && plaCount <= 5 && oppCount == 0) {
+       vector<Loc> emptyLocs;
+       for (int i = 0; i < 6; i++) {
+         Loc loc = loc0 + i * adj;
+         Color c = board.colors[loc];
+         if (c == C_EMPTY) {
+           emptyLocs.push_back(loc);
+         }
+       }
+       emptyPositionsInTuples.push_back(emptyLocs);
+     }
+   };
+  
+  // 遍历所有方向的六元组
+  // +x direction (横向)
+  for (int y = 0; y < board.y_size; y++) {
+    for (int x = 0; x < board.x_size - 5; x++) {
+      Loc loc0 = Location::getLoc(x, y, board.x_size);
+      checkTuple(loc0, 1);
+    }
+  }
+  
+  // +y direction (竖向)
+  for (int y = 0; y < board.y_size - 5; y++) {
+    for (int x = 0; x < board.x_size; x++) {
+      Loc loc0 = Location::getLoc(x, y, board.x_size);
+      checkTuple(loc0, board.x_size + 1);
+    }
+  }
+  
+  // +x+y direction (正斜向)
+  for (int y = 0; y < board.y_size - 5; y++) {
+    for (int x = 0; x < board.x_size - 5; x++) {
+      Loc loc0 = Location::getLoc(x, y, board.x_size);
+      checkTuple(loc0, board.x_size + 1 + 1);
+    }
+  }
+  
+  // -x+y direction (反斜向)
+  for (int y = 0; y < board.y_size - 5; y++) {
+    for (int x = 5; x < board.x_size; x++) {
+      Loc loc0 = Location::getLoc(x, y, board.x_size);
+      checkTuple(loc0, board.x_size + 1 - 1);
+    }
+  }
+  
+  // 按优先级返回结果
+  if (hasPlaWin) {
+    return 4; // 全是pla的棋子
+  }
+  
+  // 如果没有威胁六元组，返回0
+  if (emptyPositionsInTuples.empty()) {
+    return 0;
+  }
+  
+  // 检查是否可以用1个或2个棋子堵住所有威胁
+  // 找到所有空位并去重
+  set<Loc> uniqueEmptyPositions;
+  for (const auto& emptyLocs : emptyPositionsInTuples) {
+    for (Loc loc : emptyLocs) {
+      uniqueEmptyPositions.insert(loc);
+    }
+  }
+  vector<Loc> allEmptyPositions(uniqueEmptyPositions.begin(), uniqueEmptyPositions.end());
+  
+  // 检查是否有一个位置能堵住所有六元组
+  for (Loc candidateLoc : allEmptyPositions) {
+    bool canBlockAll = true;
+    for (const auto& emptyLocs : emptyPositionsInTuples) {
+      bool foundInThisTuple = false;
+      for (Loc loc : emptyLocs) {
+        if (loc == candidateLoc) {
+          foundInThisTuple = true;
+          break;
+        }
+      }
+      if (!foundInThisTuple) {
+        canBlockAll = false;
+        break;
+      }
+    }
+    if (canBlockAll) {
+      return 1; // 一个棋子可以堵住所有
+    }
+  }
+  
+  // 检查是否用2个棋子可以堵住所有六元组
+  for (size_t i = 0; i < allEmptyPositions.size(); i++) {
+    for (size_t j = i + 1; j < allEmptyPositions.size(); j++) {
+      Loc loc1 = allEmptyPositions[i];
+      Loc loc2 = allEmptyPositions[j];
+      
+      bool canBlockAll = true;
+      for (const auto& emptyLocs : emptyPositionsInTuples) {
+        bool foundInThisTuple = false;
+        for (Loc loc : emptyLocs) {
+          if (loc == loc1 || loc == loc2) {
+            foundInThisTuple = true;
+            break;
+          }
+        }
+        if (!foundInThisTuple) {
+          canBlockAll = false;
+          break;
+        }
+      }
+      if (canBlockAll) {
+        return 2; // 两个棋子可以堵住所有
+      }
+    }
+  }
+  
+  return 3; // 两个棋子堵不住
+}
+
+int GameLogic::checkMaxConnectLen(const Board& board, Player pla) {
+  int maxLen = 0;
+  
+  auto checkDirection = [&](Loc startLoc, int16_t adj) -> int {
+    int len = 0;
+    Loc loc = startLoc;
+    while (board.isOnBoard(loc) && board.colors[loc] == pla) {
+      len++;
+      loc += adj;
+    }
+    return len;
+  };
+  
+  // 检查所有位置的四个方向
+  for (int y = 0; y < board.y_size; y++) {
+    for (int x = 0; x < board.x_size; x++) {
+      Loc loc = Location::getLoc(x, y, board.x_size);
+      if (board.colors[loc] == pla) {
+        // 横向 (+x direction)
+        int len = checkDirection(loc, 1);
+        maxLen = max(maxLen, len);
+        
+        // 竖向 (+y direction)
+        len = checkDirection(loc, board.x_size + 1);
+        maxLen = max(maxLen, len);
+        
+        // 正斜向 (+x+y direction)
+        len = checkDirection(loc, board.x_size + 1 + 1);
+        maxLen = max(maxLen, len);
+        
+        // 反斜向 (-x+y direction)
+        len = checkDirection(loc, board.x_size + 1 - 1);
+        maxLen = max(maxLen, len);
+      }
+    }
+  }
+  
+  return maxLen;
 }

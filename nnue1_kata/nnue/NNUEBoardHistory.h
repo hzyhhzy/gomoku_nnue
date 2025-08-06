@@ -61,6 +61,9 @@ public:
     void play(Color color, Loc loc);
     void undo();
     
+    // Get current board state
+    const Board& getBoard() const;
+    
 
     
     // Update input buffers for neural network evaluation

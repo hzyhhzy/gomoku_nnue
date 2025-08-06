@@ -38,6 +38,12 @@ namespace GameLogic {
     ResultsBeforeNN();
     void init(const Board& board, const BoardHistory& hist, Color nextPlayer);
   };
+
+  //Check if player has two four-in-a-row threats
+  int checkTwoFourThreats(const Board& board, Player pla);
+  
+  //Check maximum consecutive length for a player
+  int checkMaxConnectLen(const Board& board, Player pla);
 }
 
 
