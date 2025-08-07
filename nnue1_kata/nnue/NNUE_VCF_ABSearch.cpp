@@ -76,7 +76,7 @@ double VCF_ABSearch::alphaBeta(
       
       // Check if this move should be excluded
       double policyCost = -policy;
-      if (policyCost > depth && policy < maxPolicy) {
+      if (policyCost > depth && policy < maxPolicy - 0.01) {
         // Excluded moves are assumed to have value -1.5
         double childValue = -1.5;
         if (childValue > bestValue) {
@@ -173,6 +173,8 @@ int VCF_ABSearch::checkGameState() {
       return 0; // Continue
     }
     if (twoFourThreats == 2 || twoFourThreats == 3) {
+      //Board::printBoard(cout, board, board.firstLoc, NULL);
+      //cout.flush();
       return 1; // Attacker wins
     }
     if (twoFourThreats == 0) {
@@ -217,7 +219,8 @@ vector<pair<Loc, double>> VCF_ABSearch::getLegalMovesWithPolicy() {
       if (board.isLegal(loc, board.nextPla) && (board.stage==0 || (board.getLocationPriority(loc) + Board::PRIOR_EPS >= board.firstLocPriority)))
       {
         validLocs.push_back(loc);
-        maxPolicy = max(maxPolicy, (double)policy[loc]);
+        int nu_loc = x + y * MaxBS;
+        maxPolicy = max(maxPolicy, (double)policy[nu_loc]);
       }
     }
   }
@@ -229,12 +232,14 @@ vector<pair<Loc, double>> VCF_ABSearch::getLegalMovesWithPolicy() {
   double ptemp=1.0;
   double sumExp = 0.0;
   for (Loc loc : validLocs) {
-    sumExp += exp(ptemp * (policy[loc] - maxPolicy));
+    int nu_loc = Location::getX(loc, board.x_size) + Location::getY(loc, board.x_size) * MaxBS;
+    sumExp += exp(ptemp * (policy[nu_loc] - maxPolicy) / NNUE::policyQuantFactor);
   }
   double logSumExp = log(sumExp) / ptemp;
   // Collect legal moves and calculate log_softmax
   for (Loc loc : validLocs) {
-    double logSoftmax = (policy[loc] - maxPolicy) - logSumExp;
+    int nu_loc = Location::getX(loc, board.x_size) + Location::getY(loc, board.x_size) * MaxBS;
+    double logSoftmax = (policy[nu_loc] - maxPolicy) / NNUE::policyQuantFactor - logSumExp;
     moves.push_back(make_pair(loc, logSoftmax));
   }
   

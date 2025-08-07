@@ -437,6 +437,7 @@ void NNUEBoardHistory::addCache(bool isUndo, Color color, Loc loc)
         // Cancel out the previous move
         moveCacheWlength--;
     }
+
 }
 
 // NNUEBoard replacement methods
@@ -461,6 +462,8 @@ void NNUEBoardHistory::play(Color color, Loc loc)
     
     // Update BoardHistory state
     BoardHistory::makeBoardMoveAssumeLegal(currentBoard, loc, color);
+
+    //assert(checkEvaluatorBoardConsistency());
 }
 
 void NNUEBoardHistory::undo()
@@ -470,12 +473,16 @@ void NNUEBoardHistory::undo()
     if (historicalBoards.size() > 1) {
         historicalBoards.pop_back();
     }
-    
+    else {
+      ASSERT_UNREACHABLE;
+    }
+
     // Update BoardHistory state for undo
     if (!moveHistory.empty()) {
         // Add undo to cache
         addCache(true, historicalBoards.back().nextPla, moveHistory[moveHistory.size()-1].loc);
         moveHistory.pop_back();
+        //assert(checkEvaluatorBoardConsistency());
     }
     else {
       ASSERT_UNREACHABLE;
@@ -527,11 +534,15 @@ bool NNUEBoardHistory::isContraryMove(MoveCache a, MoveCache b)
     if (a.isUndo == b.isUndo)
         return false;
     else {
-        if (a.loc != b.loc)
-            std::cout << "NNUEBoardHistory::isContraryMove strange bugs";
-        if (a.color != b.color)
-            std::cout << "NNUEBoardHistory::isContraryMove strange bugs";
-        return true;
+      if (a.loc != b.loc)
+      {
+        if (b.isUndo)
+          std::cout << "NNUEBoardHistory::isContraryMove strange bugs";
+        return false;
+      }
+      if (a.color != b.color)
+          std::cout << "NNUEBoardHistory::isContraryMove strange bugs";
+      return true;
     }
 }
 

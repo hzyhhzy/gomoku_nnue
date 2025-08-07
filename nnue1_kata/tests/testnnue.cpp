@@ -5,15 +5,21 @@
 
 #include "../nnue/Eva_nnuev2.h"
 #include "../nnue/NNUEBoardHistory.h"
+#include "../nnue/NNUE_VCF_ABSearch.h"
 #include "../game/gamelogic.h"
 #include "../neuralnet/nninputs.h"
 //------------------------
 #include "../core/using.h"
 //------------------------
+#include <chrono>
 
 using namespace std;
 using namespace NNUE;
 using namespace NNUEV2;
+
+// Function declarations
+void testAutoPlay(const ModelWeight* weights);
+void testABSearch(const ModelWeight* weights);
 
 int MainCmds::testnnue() {
   Board::initHash();
@@ -58,10 +64,13 @@ int MainCmds::testnnue() {
   string rootBoardSequence = "j10i8l10";
   vector<Loc> rootBoardLocSeq = Location::parseSequenceGom(rootBoardSequence, board);
   PlayUtils::playMoveLocSequence(board, board.nextPla, rootBoardLocSeq);
-  eva->debug_print();
+  //eva->debug_print();
   
   // Test auto-play function
-  testAutoPlay(nnueWeight);
+  //testAutoPlay(nnueWeight);
+  
+  // Test AB search with specific initial position
+  testABSearch(nnueWeight);
   
   delete nnueWeight;
   return 0;
@@ -150,4 +159,68 @@ void testAutoPlay(const ModelWeight* weights) {
     }
   }
   
+}
+
+// Test function: AB search with specific initial position
+void testABSearch(const ModelWeight* weights) {
+  cout << "Starting AB search test with specific initial position..." << endl;
+  
+  // Create board and rules
+  Board board(19, 19);
+  Rules rules;
+  
+  // Set up the specific initial position
+  string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9i14g12h13j9l13j7h15h16h12h17f12i16f13j16m12j17g9n13g14g8e11k18f8f7h9h8f10f9f11f5i8h6h7k8";
+  vector<Loc> initialLocSeq = Location::parseSequenceGom(initialSequence, board);
+  PlayUtils::playMoveLocSequence(board, board.nextPla, initialLocSeq);
+  
+  // Create NNUE input parameters
+  MiscNNInputParams nnInputParams;
+  
+  // Create NNUEBoardHistory
+  NNUEBoardHistory nnueHistory(weights, nnInputParams);
+  nnueHistory.clear(board, board.nextPla, rules);
+ // Board::printBoard(cout, board, Board::NULL_LOC, NULL);
+ // int p = GameLogic::checkTwoFourThreats(board, C_BLACK);
+  
+  cout << "Initial board position:" << endl;
+  Board::printBoard(cout, board, board.firstLoc, NULL);
+  cout << endl;
+  
+  cout << "Move history: " << initialSequence << endl;
+  cout << "Total moves: " << board.movenum << endl;
+  cout << "Next player: " << (board.nextPla == C_BLACK ? "Black" : "White") << endl;
+  cout << endl;
+  
+  // Create AB search instance
+  NNUE::VCF_ABSearch abSearch(&nnueHistory, board.nextPla);
+  
+  // Test different search depths
+  vector<double> testDepths = {0,1,3,5,7,10,12,14,16};
+  
+  for (double depth : testDepths) {
+    cout << "Testing AB search with depth " << depth << "..." << endl;
+    
+    auto startTime = chrono::high_resolution_clock::now();
+    double result = abSearch.search(depth);
+    auto endTime = chrono::high_resolution_clock::now();
+    
+    auto duration = chrono::duration_cast<chrono::milliseconds>(endTime - startTime);
+    
+    cout << "Search depth: " << depth << endl;
+    cout << "Search result: " << result << endl;
+    cout << "Search time: " << duration.count() << " ms" << endl;
+    
+    // Interpret the result
+    if (result > 1.0) {
+      cout << "Result interpretation: Attacking player has a winning strategy" << endl;
+    } else if (result < -1.0) {
+      cout << "Result interpretation: Defending player can defend successfully" << endl;
+    } else {
+      cout << "Result interpretation: Uncertain outcome (value: " << result << ")" << endl;
+    }
+    cout << "----------------------------------------" << endl;
+  }
+  
+  cout << "AB search test completed." << endl;
 }

@@ -419,10 +419,14 @@ int GameLogic::checkTwoFourThreats(const Board& board, Player pla) {
      for (int i = 0; i < 6; i++) {
        Loc loc = loc0 + i * adj;
        if (!board.isOnBoard(loc))
+       {
          ASSERT_UNREACHABLE;//越界判定应在此函数外
          return; // 无效六元组，跳过
+       }
        
        Color c = board.colors[loc];
+       if (board.stage == 1 && loc == board.firstLoc)
+         c = board.nextPla;
        if (c == pla) {
          plaCount++;
        } else if (c == opp) {
@@ -553,13 +557,23 @@ int GameLogic::checkTwoFourThreats(const Board& board, Player pla) {
 }
 
 int GameLogic::checkMaxConnectLen(const Board& board, Player pla) {
+  if (board.stage != 0)
+    ASSERT_UNREACHABLE;
   int maxLen = 0;
   
   auto checkDirection = [&](Loc startLoc, int16_t adj) -> int {
     int len = 0;
     Loc loc = startLoc;
-    while (board.isOnBoard(loc) && board.colors[loc] == pla) {
-      len++;
+    for (int i = 0; i < 6; i++)
+    {
+      if (!board.isOnBoard(loc))
+        return 0;
+      if (board.colors[loc] == getOpp(pla))
+        return 0;
+      if (board.colors[loc] == pla)
+      {
+        len++;
+      }
       loc += adj;
     }
     return len;

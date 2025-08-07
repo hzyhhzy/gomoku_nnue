@@ -537,6 +537,7 @@ void Eva_nnuev2::recalculate()
 void Eva_nnuev2::play(Color color, NU_Loc loc)
 {
   if (loc < 0 || loc >= MaxBS * MaxBS)return;
+  assert(board[loc] == C_EMPTY);
   board[loc] = color;
   buf.update(C_EMPTY, color, loc, weights);
 }
@@ -621,6 +622,7 @@ ValueType Eva_nnuev2::evaluateValue(const float *gf, const bool* illegalMap)
 void Eva_nnuev2::undo(NU_Loc loc)
 {
   if (loc < 0 || loc >= MaxBS * MaxBS)return;
+  assert(board[loc] != C_EMPTY);
   buf.update(board[loc], C_EMPTY, loc, weights);
   board[loc] = C_EMPTY;
 }
