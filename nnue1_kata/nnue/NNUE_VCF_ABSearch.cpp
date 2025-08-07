@@ -65,7 +65,7 @@ double VCF_ABSearch::alphaBeta(
     
     // Attacker moves, need to filter move selection
     // Find the move with maximum policy
-    double maxPolicy = 0.0;
+    double maxPolicy = -1e100;
     for (const auto& move : moves) {
       maxPolicy = max(maxPolicy, move.second);
     }
@@ -76,6 +76,7 @@ double VCF_ABSearch::alphaBeta(
       
       // Check if this move should be excluded
       double policyCost = -policy;
+      //if (policy == maxPolicy)policyCost = 0;
       if (policyCost > depth && policy < maxPolicy - 0.01) {
         // Excluded moves are assumed to have value -1.5
         double childValue = -1.5;
@@ -150,7 +151,10 @@ int VCF_ABSearch::checkGameState() {
     // Attacker just finished placing two pieces
     int twoFourThreats = GameLogic::checkTwoFourThreats(board, attackPlayer);
     int oppMaxLen = GameLogic::checkMaxConnectLen(board, defendPlayer);
-    
+
+    //Board::printBoard(cout, board, board.firstLoc, NULL);
+    //cout.flush();
+
     if (twoFourThreats == 4) {
       return 1; // Attacker wins
     }
@@ -267,11 +271,15 @@ double VCF_ABSearch::evaluateLeaf() {
   // Use NNUE evaluation (neural network returns values in [-1, 1] interval)
   boardHistory->updateInputBuf(boardHistory->getBoard().nextPla);
   NNUE::ValueType value = boardHistory->evaluateFull(boardHistory->getBoard().nextPla, nullptr);
+
+  //Board::printBoard(cout, boardHistory->getBoard(), boardHistory->getBoard().firstLoc, NULL);
+  //cout.flush();
   
+   
   // Convert to attacker's perspective win rate
   if (boardHistory->getBoard().nextPla == attackPlayer) {
     return value.win-value.loss-value.draw;
   } else {
-    return value.loss+ value.draw -value.win;
+    return value.loss- value.draw -value.win;
   }
 }

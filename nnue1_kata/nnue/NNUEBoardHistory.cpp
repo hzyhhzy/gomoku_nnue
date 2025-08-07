@@ -340,23 +340,27 @@ void NNUEBoardHistory::updateInputBuf(Color nextPlayer)
 NNUE::ValueType NNUEBoardHistory::evaluateFull(Color color, NNUE::PolicyType* policy)
 {
   updateInputBuf(color);
+  bool noPolicy = policy == nullptr;
   if (nnInputParams.resultsBeforeNN.myOnlyLoc != Board::NULL_LOC && nnInputParams.resultsBeforeNN.winner != C_WALL)
   {
     //no need to call NN
     // Set all policies to MIN_POLICY
-    for (int i = 0; i < MaxBS * MaxBS + 1; i++) {
-      policy[i] = MIN_POLICY;
-    }
+    if (!noPolicy)
+    {
+      for (int i = 0; i < MaxBS * MaxBS + 1; i++) {
+        policy[i] = MIN_POLICY;
+      }
     
-    // Set myOnlyLoc policy to MYFOUR_POLICY
-    Loc myOnlyLoc = nnInputParams.resultsBeforeNN.myOnlyLoc;
-    if (myOnlyLoc == Board::PASS_LOC) {
-      policy[MaxBS * MaxBS] = MYFOUR_POLICY;
-    } else {
-      int x = Location::getX(myOnlyLoc, MaxBS);
-      int y = Location::getY(myOnlyLoc, MaxBS);
-      int nu_loc = y * MaxBS + x;
-      policy[nu_loc] = MYFOUR_POLICY;
+      // Set myOnlyLoc policy to MYFOUR_POLICY
+      Loc myOnlyLoc = nnInputParams.resultsBeforeNN.myOnlyLoc;
+      if (myOnlyLoc == Board::PASS_LOC) {
+        policy[MaxBS * MaxBS] = MYFOUR_POLICY;
+      } else {
+        int x = Location::getX(myOnlyLoc, MaxBS);
+        int y = Location::getY(myOnlyLoc, MaxBS);
+        int nu_loc = y * MaxBS + x;
+        policy[nu_loc] = MYFOUR_POLICY;
+      }
     }
     
     // Return a default value (can be adjusted based on requirements)
@@ -384,10 +388,20 @@ NNUE::ValueType NNUEBoardHistory::evaluateFull(Color color, NNUE::PolicyType* po
   else
   {
     clearCache(color);
-    if (color == C_BLACK)
-      return blackEvaluator.evaluateFull(gfInputBuf, illegalMapBuf, policy);
+    if (noPolicy)
+    {
+      if (color == C_BLACK)
+        return blackEvaluator.evaluateValue(gfInputBuf, illegalMapBuf);
+      else
+        return whiteEvaluator.evaluateValue(gfInputBuf, illegalMapBuf);
+    }
     else
-      return whiteEvaluator.evaluateFull(gfInputBuf, illegalMapBuf, policy);
+    {
+      if (color == C_BLACK)
+        return blackEvaluator.evaluateFull(gfInputBuf, illegalMapBuf, policy);
+      else
+        return whiteEvaluator.evaluateFull(gfInputBuf, illegalMapBuf, policy);
+    }
   }
 }
 
