@@ -9,23 +9,130 @@
 using namespace std;
 using namespace NNUE;
 
+ABSearch_CacheTable::Entry::Entry()
+  :hash(0,0),value(0),depth(-1000),bestloc0(Board::NULL_LOC),bestLoc1(Board::NULL_LOC)
+{
+}
+ABSearch_CacheTable::Entry::~Entry()
+{
+}
+
+ABSearch_CacheTable::ABSearch_CacheTable(int sizePowerOfTwo, int mutexPoolSizePowerOfTwo) {
+  if (sizePowerOfTwo < 0 || sizePowerOfTwo > 63)
+    throw StringError("ABSearch_CacheTable: Invalid sizePowerOfTwo: " + Global::intToString(sizePowerOfTwo));
+  if (mutexPoolSizePowerOfTwo < 0 || mutexPoolSizePowerOfTwo > 31)
+    throw StringError("ABSearch_CacheTable: Invalid mutexPoolSizePowerOfTwo: " + Global::intToString(mutexPoolSizePowerOfTwo));
+#if defined(SIMULATE_TRUE_HASH_COLLISIONS)
+  sizePowerOfTwo = sizePowerOfTwo > 12 ? 12 : sizePowerOfTwo;
+#endif
+  if (mutexPoolSizePowerOfTwo > sizePowerOfTwo)
+    mutexPoolSizePowerOfTwo = sizePowerOfTwo;
+
+  tableSize = ((uint64_t)1) << sizePowerOfTwo;
+  tableMask = tableSize - 1;
+  entries = new Entry[tableSize];
+  uint32_t mutexPoolSize = ((uint32_t)1) << mutexPoolSizePowerOfTwo;
+  mutexPoolMask = mutexPoolSize - 1;
+  mutexPool = new MutexPool(mutexPoolSize);
+}
+ABSearch_CacheTable::~ABSearch_CacheTable() {
+  delete[] entries;
+  delete mutexPool;
+}
+bool ABSearch_CacheTable::get(Hash128 nnHash, Entry& ret) {
+  //Free ret BEFORE locking, to avoid any expensive operations while locked.
+  ret = Entry();
+
+  uint64_t idx = nnHash.hash0 & tableMask;
+  uint32_t mutexIdx = (uint32_t)idx & mutexPoolMask;
+  Entry& entry = entries[idx];
+  std::mutex& mutex = mutexPool->getMutex(mutexIdx);
+
+  std::lock_guard<std::mutex> lock(mutex);
+  bool found = false;
+#if defined(SIMULATE_TRUE_HASH_COLLISIONS)
+  if (entry.hash.hash0 ^ nnHash.hash0) & 0xFFF) == 0) {
+    ret = entry;
+    found = true;
+  }
+#else
+  if (entry.hash == nnHash) {
+    ret = entry;
+    found = true;
+  }
+#endif
+  return found;
+}
+
+void ABSearch_CacheTable::set(const Entry& ent) {
+  //Immediately copy p right now, before locking, to avoid any expensive operations while locked.
+
+  uint64_t idx = ent.hash.hash0 & tableMask;
+  uint32_t mutexIdx = (uint32_t)idx & mutexPoolMask;
+  Entry& entry = entries[idx];
+  std::mutex& mutex = mutexPool->getMutex(mutexIdx);
+
+  {
+    std::lock_guard<std::mutex> lock(mutex);
+    //Perform a swap, to avoid any expensive free under the mutex.
+    entry = ent;
+  }
+
+  //No longer locked, allow buf to fall out of scope now, will free whatever used to be present in the table.
+}
+
+void ABSearch_CacheTable::clear() {
+  for (size_t idx = 0; idx < tableSize; idx++) {
+    Entry& entry = entries[idx];
+    uint32_t mutexIdx = (uint32_t)idx & mutexPoolMask;
+    std::mutex& mutex = mutexPool->getMutex(mutexIdx);
+    {
+      std::lock_guard<std::mutex> lock(mutex);
+      entry = Entry();
+    }
+  }
+}
+
 // VCF_ABSearch class implementation
-VCF_ABSearch::VCF_ABSearch(NNUEBoardHistory* hist, Player pla) 
-  : boardHistory(hist), attackPlayer(pla), defendPlayer(getOpp(pla)) {
+VCF_ABSearch::VCF_ABSearch(NNUEBoardHistory* hist, ABSearch_CacheTable* cache, Player pla) 
+  : boardHistory(hist), attackPlayer(pla), defendPlayer(getOpp(pla)), nodeCount(0), nnevalCount(0), cacheTable(cache) {
   // Check initial state
   assert(boardHistory->getBoard().stage == 0);
   assert(boardHistory->getBoard().nextPla == attackPlayer);
 }
 
+VCF_ABSearch::~VCF_ABSearch() {
+  // Cache table is managed externally, don't delete it here
+}
+
 double VCF_ABSearch::search(double maxDepth) {
   remainingDepth = maxDepth;
-  return alphaBeta(-std::numeric_limits<double>::infinity(), 
+  nodeCount = 0;
+  nnevalCount = 0;
+  return alphaBeta(-1.2, 
                    std::numeric_limits<double>::infinity(), 
                    maxDepth);
 }
 
 double VCF_ABSearch::alphaBeta(
     double alpha, double beta, double depth) {
+
+  nodeCount++;
+  
+  // Check cache first
+  const Board& board = boardHistory->getBoard();
+  ABSearch_CacheTable::Entry cacheEntry;
+  Loc cachedBestMove = Board::NULL_LOC;
+  if (cacheTable && cacheTable->get(board.pos_hash, cacheEntry)) {
+    // Get cached best move based on current player
+    cachedBestMove = cacheEntry.bestloc0; // Attacker's best move
+    
+    // If cached depth is sufficient (difference < 0.5), use cached result
+    if (cacheEntry.depth >= depth-0.01 && (cacheEntry.value>1.1|| cacheEntry.value < -1.1)) {
+      //cout << cacheEntry.value << endl;
+      return cacheEntry.value;
+    }
+  }
   
   // Directly determine search direction based on current player (attacker's perspective)
   
@@ -33,6 +140,7 @@ double VCF_ABSearch::alphaBeta(
   Color maybeWinner=C_WALL;
   int gameEndMovenum=0;
   std::vector<Loc> allLegalLocs = GameLogic::getAllVCFAttackOrDefenseLocs(boardHistory->getBoard(), attackPlayer, maybeWinner, gameEndMovenum);
+
 
   //int gameState = checkGameState();
   //cout << gameState;
@@ -42,41 +150,108 @@ double VCF_ABSearch::alphaBeta(
       // Attacker wins: board.x_size*board.y_size+100-board.numStones (ensure > 1)
       double winValue = boardHistory->getBoard().x_size * boardHistory->getBoard().y_size + 100 - gameEndMovenum;
 
+      // Store result in cache
+      if (cacheTable) {
+        ABSearch_CacheTable::Entry newEntry;
+        newEntry.hash = board.pos_hash;
+        newEntry.value = winValue;
+        newEntry.depth = depth;
+        newEntry.bestloc0 = Board::NULL_LOC;
+        newEntry.bestLoc1 = Board::NULL_LOC;
+        cacheTable->set(newEntry);
+      }
+      
       return winValue;
     } else { // Defender wins
       // Defender wins: -2.0
+      
+      // Store result in cache
+      if (cacheTable) {
+        ABSearch_CacheTable::Entry newEntry;
+        newEntry.hash = board.pos_hash;
+        newEntry.value = -2.0;
+        newEntry.depth = depth;
+        newEntry.bestloc0 = Board::NULL_LOC;
+        newEntry.bestLoc1 = Board::NULL_LOC;
+        cacheTable->set(newEntry);
+      }
+      
       return -2.0;
     }
   }
   
   // Check if reached leaf node (when defender moves with depth<0 and no clear winner)
   if (depth < 0 && boardHistory->getBoard().nextPla == defendPlayer) {
-    return evaluateLeafAssumeNotEnd();
+    double leafValue = evaluateLeafAssumeNotEnd();
+    
+    // Store result in cache
+    if (cacheTable) {
+      ABSearch_CacheTable::Entry newEntry;
+      newEntry.hash = board.pos_hash;
+      newEntry.value = leafValue;
+      newEntry.depth = depth;
+      newEntry.bestloc0 = Board::NULL_LOC;
+      newEntry.bestLoc1 = Board::NULL_LOC;
+      cacheTable->set(newEntry);
+    }
+    
+    return leafValue;
   }
   
   // Get legal moves
   vector<pair<Loc, double>> moves = getLegalMovesWithPolicy(allLegalLocs, true);
-
   if (moves.empty()) {
+    double emptyValue;
     if(boardHistory->getBoard().numStones == boardHistory->getBoard().x_size * boardHistory->getBoard().y_size)
-      return -2.0; // Draw,failed to attack
+      emptyValue = -2.0; // Draw,failed to attack
     else
     // play a corner move which cause the second move can only be pass
       if(boardHistory->getBoard().nextPla == attackPlayer)
-        return -10000; 
+        emptyValue = -10000; 
       else
-        return 10000;
+        emptyValue = 10000;
+    
+    // Store result in cache
+    if (cacheTable) {
+      ABSearch_CacheTable::Entry newEntry;
+      newEntry.hash = board.pos_hash;
+      newEntry.value = emptyValue;
+      newEntry.depth = depth;
+      newEntry.bestloc0 = Board::NULL_LOC;
+      newEntry.bestLoc1 = Board::NULL_LOC;
+      cacheTable->set(newEntry);
+    }
+    
+    return emptyValue;
+  }
+  
+  // Find the move with maximum policy
+  double maxPolicy = -1e100;
+  for (const auto& move : moves) {
+    maxPolicy = max(maxPolicy, move.second);
+  }
+  
+  // Reorder moves to prioritize cached best move
+  if (cachedBestMove != Board::NULL_LOC) {
+    // Find and modify cached move policy to max+0.01, then sort
+    for (auto& move : moves) {
+      if (move.first == cachedBestMove) {
+        move.second = maxPolicy + 0.01; // Set to max policy + 0.01 for priority
+        if(move.second>0)move.second=0;
+        maxPolicy = move.second;
+        break;
+      }
+    }
+    // Sort moves by policy descending (cached move will be first)
+    sort(moves.begin(), moves.end(), [](const pair<Loc, double>& a, const pair<Loc, double>& b) {
+      return a.second > b.second;
+    });
   }
   
   if (boardHistory->getBoard().nextPla == attackPlayer) { // Attacker maximizes
     double bestValue = -std::numeric_limits<double>::infinity();
+    Loc bestMove = Board::NULL_LOC;
     
-    // Attacker moves, need to filter move selection
-    // Find the move with maximum policy
-    double maxPolicy = -1e100;
-    for (const auto& move : moves) {
-      maxPolicy = max(maxPolicy, move.second);
-    }
     int t = 0;
     for (const auto& move : moves) {
       Loc loc = move.first;
@@ -90,6 +265,7 @@ double VCF_ABSearch::alphaBeta(
         double childValue = -1.5;
         if (childValue > bestValue) {
           bestValue = childValue;
+          bestMove = loc;
         }
         continue;
       }
@@ -108,12 +284,13 @@ double VCF_ABSearch::alphaBeta(
       
       if (childValue > bestValue) {
         bestValue = childValue;
+        bestMove = loc;
       }
       
       // Attacker returns immediately once a winning move is found (value > 1)
-      if (bestValue > 1.0) {
-        return bestValue;
-      }
+      //if (bestValue > 1.0) {
+      //  return bestValue;
+      //}
       
       alpha = max(alpha, bestValue);
       if (beta <= alpha) {
@@ -121,9 +298,23 @@ double VCF_ABSearch::alphaBeta(
       }
     }
     //cout << depth << " " << t << endl;
+    
+    // Store result in cache
+    if (cacheTable) {
+      ABSearch_CacheTable::Entry newEntry;
+      newEntry.hash = board.pos_hash;
+      newEntry.value = bestValue;
+      newEntry.depth = depth;
+      newEntry.bestloc0 = bestMove; // Store best move for attacker
+      newEntry.bestLoc1 = Board::NULL_LOC;
+      cacheTable->set(newEntry);
+    }
+    
      return bestValue;
   } else { // Defender minimizes
     double bestValue = std::numeric_limits<double>::infinity();
+    Loc bestMove = Board::NULL_LOC;
+    
     for (const auto& move : moves) {
       Loc loc = move.first;
       double policy = move.second;
@@ -142,6 +333,7 @@ double VCF_ABSearch::alphaBeta(
       
       if (childValue < bestValue) {
         bestValue = childValue;
+        bestMove = loc;
       }
       
       beta = min(beta, bestValue);
@@ -149,6 +341,18 @@ double VCF_ABSearch::alphaBeta(
         break; // Alpha pruning
       }
     }
+    
+    // Store result in cache
+    if (cacheTable) {
+      ABSearch_CacheTable::Entry newEntry;
+      newEntry.hash = board.pos_hash;
+      newEntry.value = bestValue;
+      newEntry.depth = depth;
+      newEntry.bestloc0 = bestMove;
+      newEntry.bestLoc1 = Board::NULL_LOC;
+      cacheTable->set(newEntry);
+    }
+    
     return bestValue;
   }
 }
@@ -223,6 +427,7 @@ vector<pair<Loc, double>> VCF_ABSearch::getLegalMovesWithPolicy(const std::vecto
   // Get policy
   NNUE::PolicyType policy[MaxBS * MaxBS + 1];
   boardHistory->evaluateFull(board.nextPla, policy);
+  nnevalCount++;
   
   // Collect all legal positions with their policy values
   vector<pair<Loc, double>> locPolicyPairs;
@@ -320,6 +525,7 @@ double VCF_ABSearch::evaluateLeafAssumeNotEnd() {
   // Use NNUE evaluation (neural network returns values in [-1, 1] interval)
   boardHistory->updateInputBuf(boardHistory->getBoard().nextPla);
   NNUE::ValueType value = boardHistory->evaluateFull(boardHistory->getBoard().nextPla, nullptr);
+  nnevalCount++;
 
   //Board::printBoard(cout, boardHistory->getBoard(), boardHistory->getBoard().firstLoc, NULL);
   //cout.flush();
