@@ -445,7 +445,7 @@ int GameLogic::checkTwoFourThreats(const Board& board, Player pla) {
        for (int i = 0; i < 6; i++) {
          Loc loc = loc0 + i * adj;
          Color c = board.colors[loc];
-         if (c == C_EMPTY) {
+         if (c == C_EMPTY && board.firstLoc != loc) {
            emptyLocs.push_back(loc);
          }
        }
@@ -604,4 +604,391 @@ int GameLogic::checkMaxConnectLen(const Board& board, Player pla) {
   }
   
   return maxLen;
+}
+
+vector<Loc> GameLogic::getAllVCFAttackOrDefenseLocs(const Board& board, Player attackPla, Color& winner, int& gameEndMovenum) {
+  winner = C_WALL;
+  gameEndMovenum = 0;
+  Player defendPla = getOpp(attackPla);
+  vector<Loc> locs;
+  
+  if (board.nextPla == attackPla) {
+    // 进攻方逻辑
+    int maybeLegalMap[Board::MAX_ARR_SIZE] = {0};
+    int maxAttackCount = 0;
+    int maxDefendCount = 0;
+    int fourCount = 0;
+
+
+    
+    auto checkTuple = [&](Loc loc0, int16_t adj) -> void {
+      int attackCount = 0;
+      int defendCount = 0;
+      
+      for (int i = 0; i < 6; i++) {
+        Loc loc = loc0 + i * adj;
+        if (!board.isOnBoard(loc)) {
+          ASSERT_UNREACHABLE;
+          return; // 无效六元组，跳过
+        }
+        
+        Color c = board.colors[loc];
+        if (board.stage == 1 && loc == board.firstLoc)
+          c = board.nextPla;
+        if (c == attackPla) {
+          attackCount++;
+        } else if (c == defendPla) {
+          defendCount++;
+        }
+      }
+      
+      // 更新最大计数
+      if (defendCount == 6) {
+        maxDefendCount = max(maxDefendCount, defendCount);
+      }
+      
+      if (board.stage == 0) {
+        if (attackCount >= 4 && attackCount <= 6 && defendCount == 0) {
+          maxAttackCount = max(maxAttackCount, attackCount);
+        }
+        // 记录可能的合法位置 (2~3个进攻方棋子且无防守方棋子)
+        if (attackCount >= 2 && attackCount <= 3 && defendCount == 0) {
+          for (int i = 0; i < 6; i++) {
+            Loc loc = loc0 + i * adj;
+            if (board.colors[loc] == C_EMPTY) {
+              maybeLegalMap[loc] += 1;
+            }
+          }
+        }
+      } else { // stage == 1
+        if (attackCount >= 5 && attackCount <= 6 && defendCount == 0) {
+          maxAttackCount = max(maxAttackCount, attackCount);
+        }
+        if(attackCount == 4 && defendCount == 0) {
+          fourCount++;
+        }
+        // 记录可能的合法位置 (3~4个进攻方棋子且无防守方棋子)
+        if (attackCount >= 3 && attackCount <= 4 && defendCount == 0) {
+          for (int i = 0; i < 6; i++) {
+            Loc loc = loc0 + i * adj;
+            if (board.colors[loc] == C_EMPTY && board.firstLoc != loc) {
+              maybeLegalMap[loc] += 1;
+            }
+          }
+        }
+      }
+    };
+    
+    // 遍历所有方向的六元组
+    // +x direction (横向)
+    for (int y = 0; y < board.y_size; y++) {
+      for (int x = 0; x < board.x_size - 5; x++) {
+        Loc loc0 = Location::getLoc(x, y, board.x_size);
+        checkTuple(loc0, 1);
+      }
+    }
+    
+    // +y direction (竖向)
+    for (int y = 0; y < board.y_size - 5; y++) {
+      for (int x = 0; x < board.x_size; x++) {
+        Loc loc0 = Location::getLoc(x, y, board.x_size);
+        checkTuple(loc0, board.x_size + 1);
+      }
+    }
+    
+    // +x+y direction (正斜向)
+    for (int y = 0; y < board.y_size - 5; y++) {
+      for (int x = 0; x < board.x_size - 5; x++) {
+        Loc loc0 = Location::getLoc(x, y, board.x_size);
+        checkTuple(loc0, board.x_size + 1 + 1);
+      }
+    }
+    
+    // -x+y direction (反斜向)
+    for (int y = 0; y < board.y_size - 5; y++) {
+      for (int x = 5; x < board.x_size; x++) {
+        Loc loc0 = Location::getLoc(x, y, board.x_size);
+        checkTuple(loc0, board.x_size + 1 - 1);
+      }
+    }
+    
+    // 检查胜负情况
+    if (maxDefendCount == 6) {
+      winner = defendPla;
+      gameEndMovenum = board.movenum;
+      return locs;
+    }
+    
+    if (board.stage == 0) {
+      if (maxAttackCount >= 4) {
+        winner = attackPla;
+        gameEndMovenum = board.movenum + 6 - maxAttackCount;
+        return locs;
+      }
+    } else { // stage == 1
+      if (maxAttackCount >= 5) {
+        winner = attackPla;
+        gameEndMovenum = board.movenum + 6 - maxAttackCount;
+        return locs;
+      }
+    }
+
+    int maybeLegalThreshold = 1;
+    if(board.stage == 1 && fourCount == 0) {
+      maybeLegalThreshold = 2;//must create two fours at once
+    }
+
+
+    
+    // 收集可能的合法位置
+    for (int y = 0; y < board.y_size; y++) {
+      for (int x = 0; x < board.x_size; x++) {
+        Loc loc = Location::getLoc(x, y, board.x_size);
+        if (maybeLegalMap[loc] >= maybeLegalThreshold) {
+          if (board.stage == 0 || (board.getLocationPriority(loc) + Board::PRIOR_EPS >= board.firstLocPriority)) {
+            locs.push_back(loc);
+          }
+        }
+      }
+    }
+    
+    // 如果没有可行位置，防守方获胜
+    if (locs.empty()) {
+      winner = defendPla;
+      gameEndMovenum = board.movenum;
+    }
+    
+  } else {
+    // 防守方逻辑
+    vector<vector<Loc>> emptyPositionsInTuples; // 记录有4~5个attackPla棋子且没defendPla棋子的六元组的空位
+    int maxDefendCount = 0;
+    int maxAttackCount = 0;
+    
+    auto checkTuple = [&](Loc loc0, int16_t adj) -> void {
+      int attackCount = 0;
+      int defendCount = 0;
+      
+      for (int i = 0; i < 6; i++) {
+        Loc loc = loc0 + i * adj;
+        if (!board.isOnBoard(loc)) {
+          ASSERT_UNREACHABLE;
+          return; // 无效六元组，跳过
+        }
+        
+        Color c = board.colors[loc];
+        if (board.stage == 1 && loc == board.firstLoc)
+          c = board.nextPla;
+        if (c == attackPla) {
+          attackCount++;
+        } else if (c == defendPla) {
+          defendCount++;
+        }
+      }
+      
+      if (board.stage == 0) {
+        // 更新最大计数
+        if (attackCount == 6) {
+          maxAttackCount = max(maxAttackCount, attackCount);
+        }
+        
+        // 更新防守方最大计数
+        if (defendCount >= 4 && defendCount <= 6 && attackCount == 0) {
+          maxDefendCount = max(maxDefendCount, defendCount);
+        }
+        
+        // 记录有4~5个attackPla棋子且没defendPla棋子的六元组的空位
+        if (attackCount >= 4 && attackCount <= 5 && defendCount == 0) {
+          vector<Loc> emptyLocs;
+          for (int i = 0; i < 6; i++) {
+            Loc loc = loc0 + i * adj;
+            if (board.colors[loc] == C_EMPTY) {
+              emptyLocs.push_back(loc);
+            }
+          }
+          emptyPositionsInTuples.push_back(emptyLocs);
+        }
+      } else { // stage == 1
+        // 更新最大计数
+        if (attackCount == 6) {
+          maxAttackCount = max(maxAttackCount, attackCount);
+        }
+        
+        // 更新防守方最大计数
+        if (defendCount >= 5 && defendCount <= 6 && attackCount == 0) {
+          maxDefendCount = max(maxDefendCount, defendCount);
+        }
+        
+        // 记录有4~5个attackPla棋子且没defendPla棋子的六元组的空位
+        if (attackCount >= 4 && attackCount <= 5 && defendCount == 0) {
+          vector<Loc> emptyLocs;
+          for (int i = 0; i < 6; i++) {
+            Loc loc = loc0 + i * adj;
+            if (board.colors[loc] == C_EMPTY && board.firstLoc != loc) {
+              emptyLocs.push_back(loc);
+            }
+          }
+          emptyPositionsInTuples.push_back(emptyLocs);
+        }
+      }
+    };
+    
+    // 遍历所有方向的六元组
+    // +x direction (横向)
+    for (int y = 0; y < board.y_size; y++) {
+      for (int x = 0; x < board.x_size - 5; x++) {
+        Loc loc0 = Location::getLoc(x, y, board.x_size);
+        checkTuple(loc0, 1);
+      }
+    }
+    
+    // +y direction (竖向)
+    for (int y = 0; y < board.y_size - 5; y++) {
+      for (int x = 0; x < board.x_size; x++) {
+        Loc loc0 = Location::getLoc(x, y, board.x_size);
+        checkTuple(loc0, board.x_size + 1);
+      }
+    }
+    
+    // +x+y direction (正斜向)
+    for (int y = 0; y < board.y_size - 5; y++) {
+      for (int x = 0; x < board.x_size - 5; x++) {
+        Loc loc0 = Location::getLoc(x, y, board.x_size);
+        checkTuple(loc0, board.x_size + 1 + 1);
+      }
+    }
+    
+    // -x+y direction (反斜向)
+    for (int y = 0; y < board.y_size - 5; y++) {
+      for (int x = 5; x < board.x_size; x++) {
+        Loc loc0 = Location::getLoc(x, y, board.x_size);
+        checkTuple(loc0, board.x_size + 1 - 1);
+      }
+    }
+    
+    // 检查胜负情况
+    if (board.stage == 0) {
+      if (maxAttackCount == 6) {
+        winner = attackPla;
+        gameEndMovenum = board.movenum;
+        return locs;
+      }
+      if (maxDefendCount >= 4) {
+        winner = defendPla;
+        gameEndMovenum = board.movenum + 6 - maxDefendCount;
+        return locs;
+      }
+    } else { // stage == 1
+      if (maxAttackCount == 6) {
+        assert(false); // stage==1时不应该有6个进攻方棋子
+      }
+      if (maxDefendCount >= 5) {
+        winner = defendPla;
+        gameEndMovenum = board.movenum + 6 - maxDefendCount;
+        return locs;
+      }
+    }
+    
+    // 如果没有威胁六元组，返回空
+    if (emptyPositionsInTuples.empty()) {
+      winner = defendPla;
+      gameEndMovenum = board.movenum;
+
+      return locs;
+    }
+
+    if (emptyPositionsInTuples.size() == 1 && board.stage == 0) {
+      winner = defendPla;
+      gameEndMovenum = board.movenum + 1;
+
+      return locs;
+    }
+    
+    // 计算能堵住所有四的位置
+    set<Loc> uniqueEmptyPositions;
+    for (const auto& emptyLocs : emptyPositionsInTuples) {
+      for (Loc loc : emptyLocs) {
+        uniqueEmptyPositions.insert(loc);
+      }
+    }
+    vector<Loc> allEmptyPositions(uniqueEmptyPositions.begin(), uniqueEmptyPositions.end());
+    
+    if (board.stage == 0) {
+      // 检查是否用2个棋子可以堵住所有六元组
+      for (size_t i = 0; i < allEmptyPositions.size(); i++) {
+        Loc loc1 = allEmptyPositions[i];
+        bool canBlock = false;
+        for (size_t j = 0; j < allEmptyPositions.size(); j++) {
+          Loc loc2 = allEmptyPositions[j];
+          if (loc2 == loc1)
+            continue;
+          
+          // 检查第二步是否满足优先级要求
+          if (!(board.getLocationPriority(loc2) + Board::PRIOR_EPS >= board.getLocationPriority(loc1))) {
+            continue;
+          }
+          
+          bool canBlockAll = true;
+          for (const auto& emptyLocs : emptyPositionsInTuples) {
+            bool foundInThisTuple = false;
+            for (Loc loc : emptyLocs) {
+              if (loc == loc1 || loc == loc2) {
+                foundInThisTuple = true;
+                break;
+              }
+            }
+            if (!foundInThisTuple) {
+              canBlockAll = false;
+              break;
+            }
+          }
+          if (canBlockAll) {
+            canBlock = true;
+            break;
+          }
+        }
+        if (canBlock) {
+          locs.push_back(loc1);
+        }
+      }
+      
+      // 如果没有找到能两步堵住的位置，进攻方获胜
+      if (locs.empty()) {
+        winner = attackPla;
+        gameEndMovenum = board.movenum + 4;
+      }
+    } else { // stage == 1
+      // 检查是否有一个位置能堵住所有六元组且满足优先级要求
+      for (Loc candidateLoc : allEmptyPositions) {
+        if (!(board.getLocationPriority(candidateLoc) + Board::PRIOR_EPS >= board.firstLocPriority)) {
+          continue;
+        }
+        
+        bool canBlockAll = true;
+        for (const auto& emptyLocs : emptyPositionsInTuples) {
+          bool foundInThisTuple = false;
+          for (Loc loc : emptyLocs) {
+            if (loc == candidateLoc) {
+              foundInThisTuple = true;
+              break;
+            }
+          }
+          if (!foundInThisTuple) {
+            canBlockAll = false;
+            break;
+          }
+        }
+        if (canBlockAll) {
+          locs.push_back(candidateLoc);
+        }
+      }
+      
+      // 如果没有找到能一步堵住的位置，进攻方获胜
+      if (locs.empty()) {
+        winner = attackPla;
+        gameEndMovenum = board.movenum + 3;
+      }
+    }
+  }
+  
+  return locs;
 }

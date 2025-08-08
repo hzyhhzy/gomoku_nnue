@@ -44,6 +44,12 @@ namespace GameLogic {
   
   //Check maximum consecutive length for a player
   int checkMaxConnectLen(const Board& board, Player pla);
+  
+  //Get all possible VCF attack or defense locations
+  //if board.nextPla==attackPla, return all attack locations
+  //else return all defense locations
+  
+  std::vector<Loc> getAllVCFAttackOrDefenseLocs(const Board& board, Player attackPla, Color& winner, int& gameEndMovenum);
 }
 
 

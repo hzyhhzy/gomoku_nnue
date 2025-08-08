@@ -31,10 +31,10 @@ private:
   int checkGameState();
   
   // Get legal moves and sort by policy
-  std::vector<std::pair<Loc, double>> getLegalMovesWithPolicy();
+  std::vector<std::pair<Loc, double>> getLegalMovesWithPolicy(const std::vector<Loc>& legalLocs, bool hasLegalLocs);
   
   // Calculate leaf node evaluation
-  double evaluateLeaf();
+  double evaluateLeafAssumeNotEnd();
 };
 
 } // namespace NNUE

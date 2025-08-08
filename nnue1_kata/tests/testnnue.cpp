@@ -172,7 +172,8 @@ void testABSearch(const ModelWeight* weights) {
   //rules.VCNRule = Rules::VCNRULE_VC4_B;
   
   // Set up the specific initial position
-  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9i14g12h13j9l13j7h15h16h12h17f12i16f13j16m12j17g9n13g14g8e11k18f8f7h9h8f10f9f11f5i8h6h7k8";
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9i14g12h13j9l13j7h15h16h12h17f12i16f13j16m12j17g9n13g14g8e11k18f8f7h9h8f10f9f11f5i8h6h7k8";//can vcf
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9i14g12h13j9l13j7h15h16h12h17f12i16f13j16m12j17g9n13g14g8e11k18f8f7h9h8f10f9f11f5i8h6h7g7";//cannot vcf
   string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9i14g12h13j9l13j7h15h16h12h17f12i16f13j16m12j17g9n13g14g8e11k18f8f7h9h8f10f9f11f5i8h6g7i6k8l7m8m6o13o15n14n15m14n12l12m11n10o11m9d11m10c11l11l10l9n8m13o12m7p10n9o9l6k5m5j4g16f16g15e16";
   vector<Loc> initialLocSeq = Location::parseSequenceGom(initialSequence, board);
   PlayUtils::playMoveLocSequence(board, board.nextPla, initialLocSeq);
@@ -199,7 +200,7 @@ void testABSearch(const ModelWeight* weights) {
   NNUE::VCF_ABSearch abSearch(&nnueHistory, board.nextPla);
   
   // Test different search depths
-  vector<double> testDepths = {0,1,3,5,7,9,11,13,15,17,20};
+  vector<double> testDepths = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21 };
   
   for (double depth : testDepths) {
     cout << "Testing AB search with depth " << depth << "..." << endl;
