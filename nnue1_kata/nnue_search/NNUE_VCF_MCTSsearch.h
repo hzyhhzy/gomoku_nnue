@@ -21,7 +21,7 @@ public:
     Color maybeWinner;           // Result from getAllVCFAttackOrDefenseLocs
     int gameEndMovenum;          // Game end move number from VCF
     NNUE::ValueType nnueValue;   // NNUE evaluation result
-    std::vector<std::pair<Loc, double>> legalMovesWithPolicy; // Legal moves with policy
+    std::vector<std::pair<Loc, float>> legalMovesWithPolicy; // Legal moves with policy
     Loc bestMove;                // Best move for this position
     Entry();
     ~Entry();
@@ -135,7 +135,7 @@ public:
     
     SearchResult search(MCTSnode* node, uint64_t remainVisits, bool isRoot);
     int selectChildIDToSearch(MCTSnode* node);
-    std::vector<std::pair<Loc, double>> getLegalMovesAndVCFResultWithPolicy(Color color, Color& maybeWinner, int& gameEndMovenum);
+    std::vector<std::pair<Loc, float>> getLegalMovesAndVCFResultWithPolicy(Color color, Color& maybeWinner, int& gameEndMovenum);
     NNUE::ValueType evaluatePosition(Color color);
     std::pair<Color, int64_t> checkWinnerDetermined(const MCTSnode* node) const;
 };

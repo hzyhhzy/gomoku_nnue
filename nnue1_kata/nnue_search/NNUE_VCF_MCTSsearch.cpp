@@ -148,7 +148,7 @@ MCTSnode::MCTSnode(MCTSsearch* search, Color nextColor, double policyTemp) : nex
     // Get legal moves with policy from cache or calculate
     Color maybeWinner = C_WALL;
     int gameEndMovenum = 0;
-    std::vector<std::pair<Loc, double>> moves = search->getLegalMovesAndVCFResultWithPolicy(nextColor, maybeWinner, gameEndMovenum);
+    std::vector<std::pair<Loc, float>> moves = search->getLegalMovesAndVCFResultWithPolicy(nextColor, maybeWinner, gameEndMovenum);
 
     if (MCTSsearch::IMMEDIATE_WIN_SEARCH_LAYERS >= 2 && maybeWinner == C_WALL && board.nextPla == search->attackPlayer && board.stage == 0)//check one move win from stage 0
     {
@@ -454,13 +454,13 @@ int MCTSsearch::selectChildIDToSearch(MCTSnode* node) {
     if (node->nextColor != attackPlayer)
       parentValue = -parentValue;
     
-    double totalChildPolicy = 0;
+    float totalChildPolicy = 0;
     for (int i = 0; i < childrennum; i++) {
         const MCTSnode* child = node->children[i].ptr;
         double visit = child->visits;
         // Both child and parent nodes are from attacker's perspective, use directly
         double value = child->WRtotal / visit;
-        double policy = double(node->children[i].policy) * policyQuantInv;
+        float policy = float(node->children[i].policy) * policyQuantInv;
         totalChildPolicy += policy;
         
         // Prioritize determined winning moves
@@ -492,7 +492,7 @@ int MCTSsearch::selectChildIDToSearch(MCTSnode* node) {
     // Check new child
     if (childrennum < node->legalChildrennum) {
         double value = parentValue - sqrt(totalChildPolicy) * params.fpuReduction;
-        double policy = double(node->children[childrennum].policy) * policyQuantInv;
+        float policy = float(node->children[childrennum].policy) * policyQuantInv;
         double visit = 0;
         double selectionValue = MCTSselectionValue(puctFactor, value, visit, policy);
         if (selectionValue > bestSelectionValue) bestChildID = childrennum;
@@ -501,7 +501,7 @@ int MCTSsearch::selectChildIDToSearch(MCTSnode* node) {
     return bestChildID;
 }
 
-std::vector<std::pair<Loc, double>> MCTSsearch::getLegalMovesAndVCFResultWithPolicy(Color color, Color& maybeWinner, int& gameEndMovenum) {
+std::vector<std::pair<Loc, float>> MCTSsearch::getLegalMovesAndVCFResultWithPolicy(Color color, Color& maybeWinner, int& gameEndMovenum) {
     const Board& board = boardHistory->getBoard();
     Hash128 posHash = board.pos_hash;
     
@@ -520,7 +520,7 @@ std::vector<std::pair<Loc, double>> MCTSsearch::getLegalMovesAndVCFResultWithPol
     if (legalLocs.empty())
       assert(maybeWinner != C_WALL);
     
-    std::vector<std::pair<Loc, double>> moves;
+    std::vector<std::pair<Loc, float>> moves;
     
     if (maybeWinner != C_WALL || legalLocs.empty()) {
         // Game is determined or no legal moves
@@ -546,7 +546,7 @@ std::vector<std::pair<Loc, double>> MCTSsearch::getLegalMovesAndVCFResultWithPol
     for (const Loc& loc : legalLocs) {
         if (board.isLegal(loc, color)) {
             int nu_loc = Location::getX(loc, board.x_size) + Location::getY(loc, board.x_size) * MaxBS;
-            moves.push_back(std::make_pair(loc, (double)policy[nu_loc]));
+            moves.push_back(std::make_pair(loc, (float)policy[nu_loc]));
         }
     }
     
@@ -554,6 +554,26 @@ std::vector<std::pair<Loc, double>> MCTSsearch::getLegalMovesAndVCFResultWithPol
     std::sort(moves.begin(), moves.end(), [](const auto& a, const auto& b) {
         return a.second > b.second;
     });
+    
+    assert(moves.size()>0);
+    // Find max policy for numerical stability
+    float maxPolicy = moves[0].second; // Already sorted, so first is max
+    
+    // Calculate exp(policy - maxPolicy) for each move
+    float factor = 1.0f / (params.policyTemp * policyQuantFactor);
+    float sumExp = 0.0f;
+    for (auto& move : moves) {
+      float p = std::exp(factor * (move.second - maxPolicy));
+      sumExp += p;
+    }
+    
+    float factor2 = 1.0f / sumExp;
+    // Normalize to get softmax probabilities
+    for (auto& move : moves) {
+        move.second = factor2 * std::exp(factor * (move.second - maxPolicy));
+        if (move.second < 0.001f)move.second = 0.001f;//avoid too little policy
+    }
+    
     
     // Cache the result
     if (cacheTable != nullptr) {

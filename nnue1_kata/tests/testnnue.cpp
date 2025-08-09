@@ -283,7 +283,7 @@ void testMCTSSearch(const ModelWeight* weights) {
   //NNUE_VCF_MCTSsearch::MCTSsearch mcts(nullptr, &nnueHistory, board.nextPla);
   
   // Set MCTS parameters
-  mcts.params.puct = 1.0;
+  mcts.params.puct = 0.7;
   mcts.params.expandFactor = 0.2;
   mcts.params.policyTemp = 1.0;
   
