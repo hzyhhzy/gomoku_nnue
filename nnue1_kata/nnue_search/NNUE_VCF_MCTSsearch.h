@@ -107,6 +107,7 @@ public:
         double puctBase = 10;
         double fpuReduction = 0.1;
         double policyTemp = 1.1;
+        double localPolicyBonusStage1 = 0.0;
     } params;
     
     MCTSsearch(MCTS_CacheTable* cacheTable, NNUEBoardHistory* hist, Player attackPla);

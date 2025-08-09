@@ -286,6 +286,7 @@ void testMCTSSearch(const ModelWeight* weights) {
   mcts.params.puct = 0.7;
   mcts.params.expandFactor = 0.2;
   mcts.params.policyTemp = 1.0;
+  mcts.params.localPolicyBonusStage1 = 0.0;
   
   // Test different search factors (visits = factor * 1000)
   vector<int64_t> testFactors = {1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768,65536,131072,262144,524288,1048576,2000000,4000000 ,8000000,16000000 ,32000000 ,64000000 };

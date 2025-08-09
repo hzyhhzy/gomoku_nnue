@@ -550,6 +550,21 @@ std::vector<std::pair<Loc, float>> MCTSsearch::getLegalMovesAndVCFResultWithPoli
         }
     }
     
+    // Apply local policy bonus for stage 1 if conditions are met
+    if (color == attackPlayer && board.stage == 1 && params.localPolicyBonusStage1 != 0.0f && board.isOnBoard(board.firstLoc)) {
+        // Check if current player is the attacking player (first player to move)
+        
+        for (size_t i = 0; i < moves.size(); i++) {
+            Loc move = moves[i].first;
+            if (board.isOnBoard(move)) {
+                int d2 = Location::euclideanDistanceSquared(move, board.firstLoc, board.x_size);
+                float bonus = policyQuantFactor * params.localPolicyBonusStage1 * (-log(d2+36.0));
+                moves[i].second += bonus;
+            }
+        }
+        
+    }
+    
     // Sort by policy (highest first)
     std::sort(moves.begin(), moves.end(), [](const auto& a, const auto& b) {
         return a.second > b.second;
@@ -727,5 +742,6 @@ void MCTSsearch::loadParamFile(std::string filename) {
         else if (key == "puctBase") params.puctBase = std::stod(value);
         else if (key == "fpuReduction") params.fpuReduction = std::stod(value);
         else if (key == "policyTemp") params.policyTemp = std::stod(value);
+        else if (key == "localPolicyBonusStage1") params.localPolicyBonusStage1 = std::stod(value);
     }
 }
