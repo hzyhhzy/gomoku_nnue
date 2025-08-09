@@ -254,7 +254,7 @@ void testMCTSSearch(const ModelWeight* weights) {
   //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9i14g12h13j9l13j7h15h16h12h17f12i16f13j16m12j17g9n13g14g8e11k18f8f7h9h8f10f9f11f5i8h6h7k8";//can vcf
   //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15i14h12i15g15j15f16j16k17g13l18l14i17m13h18j17l17h17m17";//2 moves win
   //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9i14g12h13j9l13j7h15h16h12h17f12i16f13j16m12j17g9n13g14g8e11k18f8f7h9h8f10f9f11f5i8h6h7k8g7i5e9j4";
-  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15i14h12";
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15k12";
   //string initialSequence = "j10i11h10j9k7g9g11m6m5k8l6m4a1m8l8";//white has a four
   vector<Loc> initialLocSeq = Location::parseSequenceGom(initialSequence, board);
   PlayUtils::playMoveLocSequence(board, board.nextPla, initialLocSeq);
@@ -283,19 +283,19 @@ void testMCTSSearch(const ModelWeight* weights) {
   //NNUE_VCF_MCTSsearch::MCTSsearch mcts(nullptr, &nnueHistory, board.nextPla);
   
   // Set MCTS parameters
-  mcts.params.puct = 0.5;
+  mcts.params.puct = 1.0;
   mcts.params.expandFactor = 0.2;
-  mcts.params.policyTemp = 1.1;
+  mcts.params.policyTemp = 1.0;
   
   // Test different search factors (visits = factor * 1000)
   vector<int64_t> testFactors = {1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768,65536,131072,262144,524288,1048576,2000000,4000000 ,8000000,16000000 ,32000000 ,64000000 };
 
 
-  
+
+  auto startTime = chrono::high_resolution_clock::now();
   for (double factor : testFactors) {
     cout << "Testing MCTS search with factor " << factor << " (" << (int)(factor) << " visits)..." << endl;
     
-    auto startTime = chrono::high_resolution_clock::now();
     Loc bestMove;
     double result = mcts.fullsearch(board.nextPla, factor, bestMove);
     auto endTime = chrono::high_resolution_clock::now();
@@ -321,6 +321,9 @@ void testMCTSSearch(const ModelWeight* weights) {
     if (mcts.rootNode && mcts.rootNode->isWinDetermined) {
       cout << "Result interpretation: " << (mcts.rootNode->winner == board.nextPla ? "Win" : "Loss")
            << " determined in " << abs(mcts.rootNode->stepsToWin) << " steps" << endl;
+      cout << "Win/Loss determined, stopping further searches." << endl;
+      cout << "----------------------------------------" << endl;
+      break; // 检测到必胜/必败时直接退出循环
     } else {
       cout << "Result interpretation: Uncertain outcome (value: " << result << ")" << endl;
     }

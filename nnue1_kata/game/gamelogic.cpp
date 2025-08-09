@@ -993,3 +993,82 @@ vector<Loc> GameLogic::getAllVCFAttackOrDefenseLocs(const Board& board, Player a
     assert(gameEndMovenum >= board.movenum);
   return locs;
 }
+
+Loc GameLogic::findImmediateWinInVCFAttack(const Board& board, Player attackPla) {
+  // 只对stage==1且nextPla==attackPla的情况进行搜索
+  if (board.stage != 1 || board.nextPla != attackPla) {
+    ASSERT_UNREACHABLE;
+  }
+  
+  Color winner = C_WALL;
+  int gameEndMovenum = 0;
+  
+  // 获取所有VCF攻击位置
+  vector<Loc> attackLocs = getAllVCFAttackOrDefenseLocs(board, attackPla, winner, gameEndMovenum);
+  
+  // 如果已经有确定的胜负结果，直接返回
+  if (winner != C_WALL) {
+
+    if(winner==attackPla)
+      ASSERT_UNREACHABLE;
+    else
+      return Board::NULL_LOC;
+  }
+  
+  // 对每个攻击位置进行一层搜索
+  for (Loc attackLoc : attackLocs) {
+    // 创建临时棋盘进行试探
+    Board tempBoard = board;
+    tempBoard.playMoveAssumeLegal(attackLoc, attackPla);
+    
+    // 检查走完这步后的局面
+    Color tempWinner;
+    int tempGameEndMovenum;
+    vector<Loc> defenseLocs = getAllVCFAttackOrDefenseLocs(tempBoard, attackPla, tempWinner, tempGameEndMovenum);
+    
+    // 如果攻击方直接获胜，返回这个位置
+    if (tempWinner == attackPla) {
+      assert(tempGameEndMovenum == board.movenum + 5);
+      return attackLoc;
+    }
+  }
+  
+  // 没有找到立即获胜的位置
+  return Board::NULL_LOC;
+}
+
+Loc GameLogic::findImmediateWinInVCFAttackLayer2(const Board& board, Player attackPla) {
+  // 只对stage==0且nextPla==attackPla的情况进行搜索
+  if (board.stage != 0 || board.nextPla != attackPla) {
+    ASSERT_UNREACHABLE;
+  }
+
+  Color winner = C_WALL;
+  int gameEndMovenum = 0;
+
+  // 获取所有VCF攻击位置
+  vector<Loc> attackLocs = getAllVCFAttackOrDefenseLocs(board, attackPla, winner, gameEndMovenum);
+
+  // 如果已经有确定的胜负结果，直接返回
+  if (winner != C_WALL) {
+    ASSERT_UNREACHABLE;
+  }
+
+  // 对每个攻击位置进行一层搜索
+  for (Loc attackLoc : attackLocs) {
+    // 创建临时棋盘进行试探
+    Board tempBoard = board;
+    tempBoard.playMoveAssumeLegal(attackLoc, attackPla);
+
+    // 检查走完这步后的局面
+    Loc winLoc = GameLogic::findImmediateWinInVCFAttack(tempBoard, attackPla);
+
+    // 如果攻击方直接获胜，返回这个位置
+    if (winLoc != Board::NULL_LOC) {
+      return attackLoc;
+    }
+  }
+
+  // 没有找到立即获胜的位置
+  return Board::NULL_LOC;
+}

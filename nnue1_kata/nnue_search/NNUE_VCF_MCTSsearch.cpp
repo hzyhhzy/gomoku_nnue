@@ -143,16 +143,33 @@ MCTSnode::MCTSnode(MCTSsearch* search, Color nextColor, double policyTemp) : nex
     children = nullptr;
     visits = 1;
     
-
-    // Check if this position's outcome is already determined
-    //if (search->checkWinLossDetermined(this)) {
-    //    return;
-    //}
+    const Board& board = search->boardHistory->getBoard();
     
     // Get legal moves with policy from cache or calculate
     Color maybeWinner = C_WALL;
     int gameEndMovenum = 0;
     std::vector<std::pair<Loc, double>> moves = search->getLegalMovesAndVCFResultWithPolicy(nextColor, maybeWinner, gameEndMovenum);
+
+    if (MCTSsearch::IMMEDIATE_WIN_SEARCH_LAYERS >= 2 && maybeWinner == C_WALL && board.nextPla == search->attackPlayer && board.stage == 0)//check one move win from stage 0
+    {
+      Loc winloc = GameLogic::findImmediateWinInVCFAttackLayer2(board, search->attackPlayer);
+      if (winloc != Board::NULL_LOC)
+      {
+        maybeWinner = search->attackPlayer;
+        gameEndMovenum = board.movenum + 6;
+      }
+    }
+
+    if (MCTSsearch::IMMEDIATE_WIN_SEARCH_LAYERS >= 1 && maybeWinner == C_WALL && board.nextPla == search->attackPlayer && board.stage == 1)//check one move win from stage 1
+    {
+      Loc winloc = GameLogic::findImmediateWinInVCFAttack(board, search->attackPlayer);
+      if (winloc != Board::NULL_LOC)
+      {
+        maybeWinner = search->attackPlayer;
+        gameEndMovenum = board.movenum + 5;
+      }
+    }
+
 
     if (search->boardHistory->rules.maxMoves > 0)
     {
@@ -172,8 +189,8 @@ MCTSnode::MCTSnode(MCTSsearch* search, Color nextColor, double policyTemp) : nex
         bool isAttacker = search->attackPlayer == nextColor;
         int stage = search->boardHistory->getBoard().stage;
         int earliestWinUntilNow =
-          (isAttacker && stage == 0) ? 6 : //attacker has no four now
-          (isAttacker && stage == 1) ? 5 :
+          (isAttacker && stage == 0) ? (MCTSsearch::IMMEDIATE_WIN_SEARCH_LAYERS >= 2 ? 10 : 6) : //attacker has no four now
+          (isAttacker && stage == 1) ? (MCTSsearch::IMMEDIATE_WIN_SEARCH_LAYERS >= 1 ? 9 : 5) :
           (!isAttacker && stage == 0) ? 8 : //the defender can block all fours this turn
           7;
 
@@ -237,10 +254,10 @@ MCTSsearch::~MCTSsearch() {
 
 float MCTSsearch::fullsearch(Color color, int64_t maxVisits, Loc& bestmove) {
     terminate.store(false, std::memory_order_relaxed);
-    
-    if (rootNode != nullptr) delete rootNode;
-    rootNode = new MCTSnode(this, color, params.policyTemp);
-    
+
+    if (rootNode == nullptr) 
+      rootNode = new MCTSnode(this, color, params.policyTemp);
+
     // If root is already determined, return immediately
     if (rootNode->isWinDetermined) {
         bestmove = Board::NULL_LOC;
@@ -293,7 +310,8 @@ void MCTSsearch::clearBoard() {
 }
 
 MCTSsearch::SearchResult MCTSsearch::search(MCTSnode* node, uint64_t remainVisits, bool isRoot) {
-    if (remainVisits == 0) remainVisits = UINT64_MAX;
+  if (remainVisits == 0)
+    ASSERT_UNREACHABLE;
     
     if (!isRoot) remainVisits = std::min(remainVisits, uint64_t(params.expandFactor * double(node->visits)) + 1);
     
@@ -345,21 +363,34 @@ MCTSsearch::SearchResult MCTSsearch::search(MCTSnode* node, uint64_t remainVisit
         
         // Check if this node's outcome is now determined
         if (!node->isWinDetermined) {
-            checkWinLossDetermined(node);
+          auto res = checkWinnerDetermined(node);
+          if (res.first != C_WALL)
+          {
+            node->isWinDetermined = true;
+            node->winner = res.first;
+            node->stepsToWin = res.second;
+            node->visits += remainVisits;
+            SR.newVisits += remainVisits;
+            remainVisits = 0;
+            double oldWRtotal = node->WRtotal;
+            node->WRtotal = sureResultWR(node->winner, attackPlayer, node->stepsToWin) * node->visits;
+            SR.WRchange += (node->WRtotal - oldWRtotal);
+            break;
+          }
         }
     }
     
     return SR;
 }
 
-bool MCTSsearch::checkWinLossDetermined(MCTSnode* node) {
-    if (node->isWinDetermined) return true;
+std::pair<Color, int64_t> MCTSsearch::checkWinnerDetermined(const MCTSnode* node) const {
+    if (node->isWinDetermined) return std::make_pair(C_WALL, 0);
     
     // Check if all children have determined outcomes
     if (node->childrennum == 0) 
     {
         assert(node->visits == 1);
-        return false;
+        return std::make_pair(C_WALL, 0);
     }
     
     int bestResult = -2;//-2:lose, 1:win, -1:draw, 0:undetermined
@@ -373,7 +404,7 @@ bool MCTSsearch::checkWinLossDetermined(MCTSnode* node) {
     
     for (int i = 0; i < node->childrennum; i++) {
         int result = -2;
-        MCTSnode* child = node->children[i].ptr;
+        const MCTSnode* child = node->children[i].ptr;
         if (child == nullptr || !child->isWinDetermined) {
             result = 0;
         }
@@ -402,14 +433,12 @@ bool MCTSsearch::checkWinLossDetermined(MCTSnode* node) {
     }
     
     if (bestResult != 0) {
-        node->isWinDetermined = true;
-        node->winner = bestResult==1 ? node->nextColor : bestResult==-2 ? getOpp(node->nextColor) : C_EMPTY;
-        node->stepsToWin = bestResult==1 ? shortestStepsToWin : bestResult==-2 ? -longestStepsToLoss : 0;
-        
-        node->WRtotal = sureResultWR(node->winner, attackPlayer, node->stepsToWin) * node->visits;
+        Color winner = bestResult==1 ? node->nextColor : bestResult==-2 ? getOpp(node->nextColor) : C_EMPTY;
+        int stepsToWin = bestResult==1 ? shortestStepsToWin : bestResult==-2 ? -longestStepsToLoss : 0;
+        return std::make_pair(winner, stepsToWin);
     }
     
-    return node->isWinDetermined;
+    return std::make_pair(C_WALL, 0);
 }
 
 int MCTSsearch::selectChildIDToSearch(MCTSnode* node) {

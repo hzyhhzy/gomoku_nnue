@@ -84,6 +84,9 @@ struct MCTSnode {
 
 class MCTSsearch {
 public:
+
+  static const int IMMEDIATE_WIN_SEARCH_LAYERS = 0;//0(disable) or 1(search 1 layer) or 2(search 2 layers). 2 is too slow, 0 or 1 seems to be the best
+
     MCTS_CacheTable* cacheTable;
     
     
@@ -99,7 +102,7 @@ public:
     
     struct Param {
         double expandFactor = 0.2;
-        double puct = 2;
+        double puct = 2.0;
         double puctPow = 0.75;
         double puctBase = 10;
         double fpuReduction = 0.1;
@@ -134,7 +137,7 @@ public:
     int selectChildIDToSearch(MCTSnode* node);
     std::vector<std::pair<Loc, double>> getLegalMovesAndVCFResultWithPolicy(Color color, Color& maybeWinner, int& gameEndMovenum);
     NNUE::ValueType evaluatePosition(Color color);
-    bool checkWinLossDetermined(MCTSnode* node);
+    std::pair<Color, int64_t> checkWinnerDetermined(const MCTSnode* node) const;
 };
 
 } // namespace NNUE_VCF_MCTSsearch
