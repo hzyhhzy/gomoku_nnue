@@ -79,7 +79,6 @@ struct MCTSnode {
     int stepsToWin;              // Steps to win/loss (positive for win, negative for loss)
     
     MCTSnode(MCTSsearch* search, Color nextColor, double policyTemp);
-    MCTSnode(Color winner, int stepsToWin, Color nextColor);
     ~MCTSnode();
 };
 
@@ -125,11 +124,6 @@ public:
     void loadParamFile(std::string filename);
     
 
-
-
-    Loc locbuf[MaxBS * MaxBS];
-    NNUE::PolicyType pbuf1[MaxBS * MaxBS], pbuf2[MaxBS * MaxBS];
-    float pbuf3[MaxBS * MaxBS];
     
     struct SearchResult {
         uint64_t newVisits;
@@ -138,7 +132,7 @@ public:
     
     SearchResult search(MCTSnode* node, uint64_t remainVisits, bool isRoot);
     int selectChildIDToSearch(MCTSnode* node);
-    std::vector<std::pair<Loc, double>> getLegalMovesWithPolicy(Color color);
+    std::vector<std::pair<Loc, double>> getLegalMovesAndVCFResultWithPolicy(Color color, Color& maybeWinner, int& gameEndMovenum);
     NNUE::ValueType evaluatePosition(Color color);
     bool checkWinLossDetermined(MCTSnode* node);
 };

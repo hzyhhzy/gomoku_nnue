@@ -305,7 +305,7 @@ void NNUEBoardHistory::updateInputBuf(Color nextPlayer)
     }
     
     // Max moves features (indices 30-37)
-    if (rules.maxMoves != 0) {
+    if (rules.maxMoves != 0 && rules.VCNRule==Rules::VCNRULE_NOVC) {
         gfInputBufp3[30] = 1.0f;
 
         double boardArea = currentBoard.x_size * currentBoard.y_size;

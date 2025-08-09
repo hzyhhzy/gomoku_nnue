@@ -989,6 +989,7 @@ vector<Loc> GameLogic::getAllVCFAttackOrDefenseLocs(const Board& board, Player a
       }
     }
   }
-  
+  if (winner != C_WALL)
+    assert(gameEndMovenum >= board.movenum);
   return locs;
 }

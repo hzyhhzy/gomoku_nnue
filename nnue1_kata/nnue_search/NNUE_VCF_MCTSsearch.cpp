@@ -143,21 +143,64 @@ MCTSnode::MCTSnode(MCTSsearch* search, Color nextColor, double policyTemp) : nex
     children = nullptr;
     visits = 1;
     
+
     // Check if this position's outcome is already determined
-    if (search->checkWinLossDetermined(this)) {
-        return;
-    }
+    //if (search->checkWinLossDetermined(this)) {
+    //    return;
+    //}
     
     // Get legal moves with policy from cache or calculate
-    std::vector<std::pair<Loc, double>> moves = search->getLegalMovesWithPolicy(nextColor);
-    
-    if (moves.empty()) {
-        isWinDetermined = true;
-        winner = getOpp(nextColor); // No legal moves = opponent wins
-        stepsToWin = -1;
-        WRtotal = sureResultWR(winner, search->attackPlayer, stepsToWin);
-        return;
+    Color maybeWinner = C_WALL;
+    int gameEndMovenum = 0;
+    std::vector<std::pair<Loc, double>> moves = search->getLegalMovesAndVCFResultWithPolicy(nextColor, maybeWinner, gameEndMovenum);
+
+    if (search->boardHistory->rules.maxMoves > 0)
+    {
+      //Can attack player win in rules.maxMoves?
+      bool attackerCannotWin = false;
+      int mm = search->boardHistory->rules.maxMoves;
+
+      if (maybeWinner != C_WALL)
+      {
+        if (maybeWinner != search->attackPlayer)
+          attackerCannotWin = true;
+        else if (gameEndMovenum > mm)
+          attackerCannotWin = true;
+      }
+      else
+      {
+        bool isAttacker = search->attackPlayer == nextColor;
+        int stage = search->boardHistory->getBoard().stage;
+        int earliestWinUntilNow =
+          (isAttacker && stage == 0) ? 6 : //attacker has no four now
+          (isAttacker && stage == 1) ? 5 :
+          (!isAttacker && stage == 0) ? 8 : //the defender can block all fours this turn
+          7;
+
+        if (search->boardHistory->getBoard().movenum + earliestWinUntilNow > mm)
+          attackerCannotWin = true;
+      }
+
+      if (attackerCannotWin)
+      {
+        maybeWinner = getOpp(search->attackPlayer);
+        gameEndMovenum = search->boardHistory->rules.maxMoves;
+      }
+
     }
+
+
+    if(maybeWinner!=C_WALL)
+    {
+      isWinDetermined = true;
+      stepsToWin = gameEndMovenum;
+      assert(stepsToWin > 0);
+      winner = maybeWinner;
+      WRtotal = sureResultWR(winner, search->attackPlayer, stepsToWin);
+      return;
+    }
+    
+    assert(!moves.empty());
     
     // Get NNUE evaluation and convert to attacker perspective
     NNUE::ValueType value = search->evaluatePosition(nextColor);
@@ -171,17 +214,6 @@ MCTSnode::MCTSnode(MCTSsearch* search, Color nextColor, double policyTemp) : nex
         children[i].policy = uint16_t(moves[i].second * policyQuant) + 1;
         children[i].ptr = nullptr;
     }
-}
-
-MCTSnode::MCTSnode(Color winner, int stepsToWin, Color nextColor) 
-    : nextColor(nextColor), isWinDetermined(true), winner(winner), stepsToWin(stepsToWin) {
-    visits = 1;
-    // Note: We need attackPlayer to calculate WRtotal, but it's not available in constructor
-    // This will be set properly when the node is created with the search context
-    WRtotal = (winner != C_WALL) ? ((winner == C_BLACK) ? 1.0 : -1.0) : 0.0;
-    childrennum = 0;
-    legalChildrennum = 0;
-    children = nullptr;
 }
 
 MCTSnode::~MCTSnode() {
@@ -290,21 +322,8 @@ MCTSsearch::SearchResult MCTSsearch::search(MCTSnode* node, uint64_t remainVisit
             // Make move and check if outcome is determined
             boardHistory->play(color, nextChildLoc);
             
-            // Check VCF result first
-            Color maybeWinner = C_WALL;
-            int gameEndMovenum = 0;
-            std::vector<Loc> vcfLocs = GameLogic::getAllVCFAttackOrDefenseLocs(
-                boardHistory->getBoard(), attackPlayer, maybeWinner, gameEndMovenum);
+            node->children[nextChildID].ptr = new MCTSnode(this, boardHistory->getBoard().nextPla, params.policyTemp);
             
-            if (maybeWinner != C_WALL) {
-                // Game outcome determined
-                int stepsToEnd = gameEndMovenum - boardHistory->getBoard().movenum;
-                node->children[nextChildID].ptr = new MCTSnode(maybeWinner, stepsToEnd, boardHistory->getBoard().nextPla);
-                
-            } else {
-                // Continue normal MCTS
-                node->children[nextChildID].ptr = new MCTSnode(this, boardHistory->getBoard().nextPla, params.policyTemp);
-            }
             
             boardHistory->undo();
             
@@ -453,7 +472,7 @@ int MCTSsearch::selectChildIDToSearch(MCTSnode* node) {
     return bestChildID;
 }
 
-std::vector<std::pair<Loc, double>> MCTSsearch::getLegalMovesWithPolicy(Color color) {
+std::vector<std::pair<Loc, double>> MCTSsearch::getLegalMovesAndVCFResultWithPolicy(Color color, Color& maybeWinner, int& gameEndMovenum) {
     const Board& board = boardHistory->getBoard();
     Hash128 posHash = board.pos_hash;
     
@@ -468,23 +487,26 @@ std::vector<std::pair<Loc, double>> MCTSsearch::getLegalMovesWithPolicy(Color co
     }
     
     // Calculate legal moves with policy
-    Color maybeWinner = C_WALL;
-    int gameEndMovenum = 0;
     std::vector<Loc> legalLocs = GameLogic::getAllVCFAttackOrDefenseLocs(board, attackPlayer, maybeWinner, gameEndMovenum);
+    if (legalLocs.empty())
+      assert(maybeWinner != C_WALL);
     
     std::vector<std::pair<Loc, double>> moves;
     
     if (maybeWinner != C_WALL || legalLocs.empty()) {
         // Game is determined or no legal moves
+      if (false) //fast results without NN, no need to save
+      {
         if (cacheTable != nullptr) {
-            MCTS_CacheTable::Entry entry;
-            entry.hash = posHash;
-            entry.maybeWinner = maybeWinner;
-            entry.gameEndMovenum = gameEndMovenum;
-            entry.legalMovesWithPolicy = moves;
-            cacheTable->set(entry);
+          MCTS_CacheTable::Entry entry;
+          entry.hash = posHash;
+          entry.maybeWinner = maybeWinner;
+          entry.gameEndMovenum = gameEndMovenum;
+          entry.legalMovesWithPolicy = moves;
+          cacheTable->set(entry);
         }
-        return moves;
+      }
+      return moves;
     }
     
     // Get policy from NNUE
