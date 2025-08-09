@@ -24,22 +24,22 @@
 ## 文件结构
 
 ```
-mcts_new/
-├── MCTSsearch_new.h      # 头文件定义
-├── MCTSsearch_new.cpp    # 主要实现
+mcts/
+├── MCTSsearch.h      # 头文件定义
+├── MCTSsearch.cpp    # 主要实现
 ├── Makefile              # 编译配置
 └── README.md             # 说明文档
 ```
 
 ## 核心类和结构
 
-### MCTSnode_new
-```cpp
-struct MCTSnode_new {
+### MCTSnode
+
+struct MCTSnode {
     // 原有MCTS数据
     int16_t childrennum;
     int16_t legalChildrennum;
-    MCTSchild_new* children;  // 动态分配，根据实际合法走法数量
+    MCTSchild* children;  // 动态分配，根据实际合法走法数量
     uint64_t visits;
     NNUE::ValueSum WRtotal;
     Color nextColor;
@@ -73,9 +73,9 @@ public:
 };
 ```
 
-### MCTSsearch_new
-```cpp
-class MCTSsearch_new {
+### MCTSsearch
+
+class MCTSsearch {
 public:
     static MCTS_CacheTable* cacheTable;  // 全局缓存表
     
@@ -84,7 +84,7 @@ public:
     static void clearCache();
     static void destroyCache();
     
-    MCTSnode_new* rootNode;
+    MCTSnode* rootNode;
     NNUEBoardHistory* boardHistory;
     Player attackPlayer;  // VCF搜索的攻击方
     
@@ -95,9 +95,9 @@ public:
     
 private:
     // 核心算法
-    SearchResult search(MCTSnode_new* node, uint64_t remainVisits, bool isRoot);
-    bool checkWinLossDetermined(MCTSnode_new* node);
-    int selectChildIDToSearch(MCTSnode_new* node);
+    SearchResult search(MCTSnode* node, uint64_t remainVisits, bool isRoot);
+bool checkWinLossDetermined(MCTSnode* node);
+int selectChildIDToSearch(MCTSnode* node);
 };
 ```
 
@@ -110,7 +110,7 @@ NNUEBoardHistory* boardHistory = new NNUEBoardHistory(weights, nnInputParams);
 boardHistory->clear(board, C_BLACK, rules);
 
 // 创建新MCTS
-MCTSsearch_new mcts(boardHistory, C_BLACK);  // C_BLACK为攻击方
+MCTSsearch mcts(boardHistory, C_BLACK);  // C_BLACK为攻击方
 
 // 设置参数
 mcts.params.puct = 2.0;
@@ -140,14 +140,14 @@ struct Param {
 
 ### 编译库
 ```bash
-cd mcts_new
+cd mcts
 make
 ```
 
 ### 编译并运行测试
 ```bash
 make test
-./test_mcts_new
+./test_mcts
 ```
 
 ### 清理
@@ -186,7 +186,7 @@ make clean
 
 ## 与旧版本对比
 
-| 特性 | mcts_old | mcts_new |
+| 特性 | mcts_old | mcts |
 |------|----------|----------|
 | 必胜必败判断 | ✗ | ✓ |
 | VCF缓存 | ✗ | ✓ |

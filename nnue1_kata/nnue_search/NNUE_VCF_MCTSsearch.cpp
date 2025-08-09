@@ -134,8 +134,8 @@ void MCTS_CacheTable::clear() {
   }
 }
 
-// MCTSnode_new implementation
-MCTSnode_new::MCTSnode_new(MCTSsearch_new* search, Color nextColor, double policyTemp) : nextColor(nextColor) {
+// MCTSnode implementation
+MCTSnode::MCTSnode(MCTSsearch* search, Color nextColor, double policyTemp) : nextColor(nextColor) {
     isWinDetermined = false;
     winner = C_WALL;
     stepsToWin = 0;
@@ -165,7 +165,7 @@ MCTSnode_new::MCTSnode_new(MCTSsearch_new* search, Color nextColor, double polic
     
     // Set up children - dynamically allocate based on actual number of legal moves
     legalChildrennum = (int)moves.size();
-    children = new MCTSchild_new[legalChildrennum];
+    children = new MCTSchild[legalChildrennum];
     for (int i = 0; i < legalChildrennum; i++) {
         children[i].loc = moves[i].first;
         children[i].policy = uint16_t(moves[i].second * policyQuant) + 1;
@@ -173,7 +173,7 @@ MCTSnode_new::MCTSnode_new(MCTSsearch_new* search, Color nextColor, double polic
     }
 }
 
-MCTSnode_new::MCTSnode_new(Color winner, int stepsToWin, Color nextColor) 
+MCTSnode::MCTSnode(Color winner, int stepsToWin, Color nextColor) 
     : nextColor(nextColor), isWinDetermined(true), winner(winner), stepsToWin(stepsToWin) {
     visits = 1;
     // Note: We need attackPlayer to calculate WRtotal, but it's not available in constructor
@@ -184,7 +184,7 @@ MCTSnode_new::MCTSnode_new(Color winner, int stepsToWin, Color nextColor)
     children = nullptr;
 }
 
-MCTSnode_new::~MCTSnode_new() {
+MCTSnode::~MCTSnode() {
     if (children != nullptr) {
         for (int i = 0; i < childrennum; i++) {
             if (children[i].ptr != nullptr) delete children[i].ptr;
@@ -193,21 +193,21 @@ MCTSnode_new::~MCTSnode_new() {
     }
 }
 
-// MCTSsearch_new implementation
-MCTSsearch_new::MCTSsearch_new(MCTS_CacheTable* cacheTable, NNUEBoardHistory* hist, Player attackPla)
+// MCTSsearch implementation
+MCTSsearch::MCTSsearch(MCTS_CacheTable* cacheTable, NNUEBoardHistory* hist, Player attackPla)
     : rootNode(nullptr), boardHistory(hist), attackPlayer(attackPla), cacheTable(cacheTable) {
     terminate.store(false, std::memory_order_relaxed);
 }
 
-MCTSsearch_new::~MCTSsearch_new() {
+MCTSsearch::~MCTSsearch() {
     if (rootNode != nullptr) delete rootNode;
 }
 
-float MCTSsearch_new::fullsearch(Color color, int64_t maxVisits, Loc& bestmove) {
+float MCTSsearch::fullsearch(Color color, int64_t maxVisits, Loc& bestmove) {
     terminate.store(false, std::memory_order_relaxed);
     
     if (rootNode != nullptr) delete rootNode;
-    rootNode = new MCTSnode_new(this, color, params.policyTemp);
+    rootNode = new MCTSnode(this, color, params.policyTemp);
     
     // If root is already determined, return immediately
     if (rootNode->isWinDetermined) {
@@ -225,12 +225,12 @@ float MCTSsearch_new::fullsearch(Color color, int64_t maxVisits, Loc& bestmove) 
     return getRootValue();
 }
 
-void MCTSsearch_new::play(Color color, Loc loc) {
+void MCTSsearch::play(Color color, Loc loc) {
     boardHistory->play(color, loc);
     
     // Try to reuse subtree
     if (rootNode != nullptr) {
-        MCTSnode_new* newRoot = nullptr;
+        MCTSnode* newRoot = nullptr;
         for (int i = 0; i < rootNode->childrennum; i++) {
             if (rootNode->children[i].loc == loc && rootNode->children[i].ptr != nullptr) {
                 newRoot = rootNode->children[i].ptr;
@@ -243,7 +243,7 @@ void MCTSsearch_new::play(Color color, Loc loc) {
     }
 }
 
-void MCTSsearch_new::undo() {
+void MCTSsearch::undo() {
     boardHistory->undo();
     // Clear root node as it's no longer valid
     if (rootNode != nullptr) {
@@ -252,7 +252,7 @@ void MCTSsearch_new::undo() {
     }
 }
 
-void MCTSsearch_new::clearBoard() {
+void MCTSsearch::clearBoard() {
     boardHistory->clear(boardHistory->getBoard(), boardHistory->getBoard().nextPla, boardHistory->rules);
     if (rootNode != nullptr) {
         delete rootNode;
@@ -260,7 +260,7 @@ void MCTSsearch_new::clearBoard() {
     }
 }
 
-MCTSsearch_new::SearchResult MCTSsearch_new::search(MCTSnode_new* node, uint64_t remainVisits, bool isRoot) {
+MCTSsearch::SearchResult MCTSsearch::search(MCTSnode* node, uint64_t remainVisits, bool isRoot) {
     if (remainVisits == 0) remainVisits = UINT64_MAX;
     
     if (!isRoot) remainVisits = std::min(remainVisits, uint64_t(params.expandFactor * double(node->visits)) + 1);
@@ -299,11 +299,11 @@ MCTSsearch_new::SearchResult MCTSsearch_new::search(MCTSnode_new* node, uint64_t
             if (maybeWinner != C_WALL) {
                 // Game outcome determined
                 int stepsToEnd = gameEndMovenum - boardHistory->getBoard().movenum;
-                node->children[nextChildID].ptr = new MCTSnode_new(maybeWinner, stepsToEnd, boardHistory->getBoard().nextPla);
+                node->children[nextChildID].ptr = new MCTSnode(maybeWinner, stepsToEnd, boardHistory->getBoard().nextPla);
                 
             } else {
                 // Continue normal MCTS
-                node->children[nextChildID].ptr = new MCTSnode_new(this, boardHistory->getBoard().nextPla, params.policyTemp);
+                node->children[nextChildID].ptr = new MCTSnode(this, boardHistory->getBoard().nextPla, params.policyTemp);
             }
             
             boardHistory->undo();
@@ -333,7 +333,7 @@ MCTSsearch_new::SearchResult MCTSsearch_new::search(MCTSnode_new* node, uint64_t
     return SR;
 }
 
-bool MCTSsearch_new::checkWinLossDetermined(MCTSnode_new* node) {
+bool MCTSsearch::checkWinLossDetermined(MCTSnode* node) {
     if (node->isWinDetermined) return true;
     
     // Check if all children have determined outcomes
@@ -354,7 +354,7 @@ bool MCTSsearch_new::checkWinLossDetermined(MCTSnode_new* node) {
     
     for (int i = 0; i < node->childrennum; i++) {
         int result = -2;
-        MCTSnode_new* child = node->children[i].ptr;
+        MCTSnode* child = node->children[i].ptr;
         if (child == nullptr || !child->isWinDetermined) {
             result = 0;
         }
@@ -393,7 +393,7 @@ bool MCTSsearch_new::checkWinLossDetermined(MCTSnode_new* node) {
     return node->isWinDetermined;
 }
 
-int MCTSsearch_new::selectChildIDToSearch(MCTSnode_new* node) {
+int MCTSsearch::selectChildIDToSearch(MCTSnode* node) {
     int childrennum = node->childrennum;
     if (childrennum == 0) return 0;
     
@@ -408,7 +408,7 @@ int MCTSsearch_new::selectChildIDToSearch(MCTSnode_new* node) {
     
     double totalChildPolicy = 0;
     for (int i = 0; i < childrennum; i++) {
-        const MCTSnode_new* child = node->children[i].ptr;
+        const MCTSnode* child = node->children[i].ptr;
         double visit = child->visits;
         // Both child and parent nodes are from attacker's perspective, use directly
         double value = child->WRtotal / visit;
@@ -453,7 +453,7 @@ int MCTSsearch_new::selectChildIDToSearch(MCTSnode_new* node) {
     return bestChildID;
 }
 
-std::vector<std::pair<Loc, double>> MCTSsearch_new::getLegalMovesWithPolicy(Color color) {
+std::vector<std::pair<Loc, double>> MCTSsearch::getLegalMovesWithPolicy(Color color) {
     const Board& board = boardHistory->getBoard();
     Hash128 posHash = board.pos_hash;
     
@@ -517,7 +517,7 @@ std::vector<std::pair<Loc, double>> MCTSsearch_new::getLegalMovesWithPolicy(Colo
     return moves;
 }
 
-NNUE::ValueType MCTSsearch_new::evaluatePosition(Color color) {
+NNUE::ValueType MCTSsearch::evaluatePosition(Color color) {
     const Board& board = boardHistory->getBoard();
     Hash128 posHash = board.pos_hash;
     
@@ -542,7 +542,7 @@ NNUE::ValueType MCTSsearch_new::evaluatePosition(Color color) {
     return value;
 }
 
-Loc MCTSsearch_new::bestRootMove() const {
+Loc MCTSsearch::bestRootMove() const {
     if (rootNode == nullptr || rootNode->childrennum == 0) return Board::NULL_LOC;
     
     int bestChildID = -1;
@@ -565,7 +565,7 @@ Loc MCTSsearch_new::bestRootMove() const {
     return bestChildID >= 0 ? rootNode->children[bestChildID].loc : Board::NULL_LOC;
 }
 
-float MCTSsearch_new::getRootValue() const {
+float MCTSsearch::getRootValue() const {
     if (rootNode == nullptr) return 0.0f;
     if (rootNode->visits == 0) return 0.0f;
     
@@ -576,15 +576,15 @@ float MCTSsearch_new::getRootValue() const {
     return float(rootNode->WRtotal / rootNode->visits);
 }
 
-int64_t MCTSsearch_new::getRootVisit() const {
+int64_t MCTSsearch::getRootVisit() const {
     return rootNode ? rootNode->visits : 0;
 }
 
-std::vector<std::pair<Loc, uint64_t>> MCTSsearch_new::getPV() const {
+std::vector<std::pair<Loc, uint64_t>> MCTSsearch::getPV() const {
     std::vector<std::pair<Loc, uint64_t>> pv;
     if (rootNode == nullptr) return pv;
     
-    MCTSnode_new* currentNode = rootNode;
+    MCTSnode* currentNode = rootNode;
     
     // Follow the path of best children until we reach a leaf
     while (currentNode != nullptr && currentNode->childrennum > 0) {
@@ -595,7 +595,7 @@ std::vector<std::pair<Loc, uint64_t>> MCTSsearch_new::getPV() const {
         
         // First pass: look for winning children for current player
         for (int i = 0; i < currentNode->childrennum; i++) {
-            MCTSnode_new* child = currentNode->children[i].ptr;
+            MCTSnode* child = currentNode->children[i].ptr;
             if (child != nullptr && child->isWinDetermined && 
                 child->winner == currentNode->nextColor ) {
                 assert(child->stepsToWin>0);
@@ -612,7 +612,7 @@ std::vector<std::pair<Loc, uint64_t>> MCTSsearch_new::getPV() const {
         // If no winning child found, select the most visited child
         if (!hasWinningChild) {
             for (int i = 0; i < currentNode->childrennum; i++) {
-                MCTSnode_new* child = currentNode->children[i].ptr;
+                MCTSnode* child = currentNode->children[i].ptr;
                 if (child != nullptr && child->visits > maxVisits) {
                     maxVisits = child->visits;
                     bestChildIndex = i;
@@ -622,7 +622,7 @@ std::vector<std::pair<Loc, uint64_t>> MCTSsearch_new::getPV() const {
         
         // If we found a best child, add its move and visit count to PV and continue
         if (bestChildIndex >= 0) {
-            MCTSnode_new* bestChild = currentNode->children[bestChildIndex].ptr;
+            MCTSnode* bestChild = currentNode->children[bestChildIndex].ptr;
             pv.push_back(std::make_pair(currentNode->children[bestChildIndex].loc, bestChild->visits));
             currentNode = bestChild;
         } else {
@@ -633,7 +633,7 @@ std::vector<std::pair<Loc, uint64_t>> MCTSsearch_new::getPV() const {
     return pv;
 }
 
-void MCTSsearch_new::loadParamFile(std::string filename) {
+void MCTSsearch::loadParamFile(std::string filename) {
     std::ifstream file(filename);
     if (!file.is_open()) {
         std::cerr << "Cannot open param file: " << filename << std::endl;

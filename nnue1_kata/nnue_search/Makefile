@@ -5,13 +5,13 @@ CXXFLAGS = -std=c++17 -O3 -Wall -Wextra -I.. -I../nnue -I../game -I../external
 LDFLAGS = -pthread
 
 # Source files
-SRCS = MCTSsearch_new.cpp
+SRCS = MCTSsearch.cpp
 OBJS = $(SRCS:.cpp=.o)
-TARGET = libmcts_new.a
+TARGET = libmcts.a
 
 # Test files
-TEST_SRCS = ../tests/test_mcts_new.cpp
-TEST_TARGET = test_mcts_new
+TEST_SRCS = ../tests/test_mcts.cpp
+TEST_TARGET = test_mcts
 
 # Dependencies
 NNUE_DIR = ../nnue

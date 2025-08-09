@@ -11,8 +11,8 @@ namespace NNUE_VCF_MCTSsearch {
 const double policyQuant = 50000;
 const double policyQuantInv = 1/policyQuant;
 
-struct MCTSnode_new;
-class MCTSsearch_new;
+struct MCTSnode;
+class MCTSsearch;
 
 class MCTS_CacheTable {
 public:
@@ -57,38 +57,38 @@ public:
 
 
 
-struct MCTSchild_new {
-    MCTSnode_new* ptr;
+struct MCTSchild {
+    MCTSnode* ptr;
     Loc loc;
     uint16_t policy; // Original policy multiplied by policyQuant
 };
 
-struct MCTSnode_new {
-    // Original MCTS node data
+struct MCTSnode {
+    // Node structure
     int16_t childrennum;
     int16_t legalChildrennum;
-    MCTSchild_new* children;
+    MCTSchild* children;
     
     uint64_t visits;
     double WRtotal;  // Attacker win rate minus loss rate and draw rate
     Color nextColor;
     
-    // New fields for win/loss determination
+    // Win/loss determination
     bool isWinDetermined;        // Whether this node's outcome is determined
     Color winner;                // Winner color (C_WALL if undetermined)
     int stepsToWin;              // Steps to win/loss (positive for win, negative for loss)
     
-    MCTSnode_new(MCTSsearch_new* search, Color nextColor, double policyTemp);
-    MCTSnode_new(Color winner, int stepsToWin, Color nextColor);
-    ~MCTSnode_new();
+    MCTSnode(MCTSsearch* search, Color nextColor, double policyTemp);
+    MCTSnode(Color winner, int stepsToWin, Color nextColor);
+    ~MCTSnode();
 };
 
-class MCTSsearch_new {
+class MCTSsearch {
 public:
     MCTS_CacheTable* cacheTable;
     
     
-    MCTSnode_new* rootNode;
+    MCTSnode* rootNode;
     NNUEBoardHistory* boardHistory;
     Player attackPlayer;  // For VCF search
     
@@ -107,8 +107,8 @@ public:
         double policyTemp = 1.1;
     } params;
     
-    MCTSsearch_new(MCTS_CacheTable* cacheTable, NNUEBoardHistory* hist, Player attackPla);
-    ~MCTSsearch_new();
+    MCTSsearch(MCTS_CacheTable* cacheTable, NNUEBoardHistory* hist, Player attackPla);
+    ~MCTSsearch();
     
     float fullsearch(Color color, int64_t  maxVisits, Loc& bestmove);
     void play(Color color, Loc loc);
@@ -136,11 +136,11 @@ public:
         double WRchange;  // Value change from attacker's perspective
     };
     
-    SearchResult search(MCTSnode_new* node, uint64_t remainVisits, bool isRoot);
-    int selectChildIDToSearch(MCTSnode_new* node);
+    SearchResult search(MCTSnode* node, uint64_t remainVisits, bool isRoot);
+    int selectChildIDToSearch(MCTSnode* node);
     std::vector<std::pair<Loc, double>> getLegalMovesWithPolicy(Color color);
     NNUE::ValueType evaluatePosition(Color color);
-    bool checkWinLossDetermined(MCTSnode_new* node);
+    bool checkWinLossDetermined(MCTSnode* node);
 };
 
 } // namespace NNUE_VCF_MCTSsearch
