@@ -1,0 +1,660 @@
+#include "NNUE_VCF_MCTSsearch.h"
+#include <algorithm>
+#include <numeric>
+#include <cmath>
+#include <fstream>
+#include <iostream>
+#include <climits>
+
+using namespace NNUE_VCF_MCTSsearch;
+using namespace NNUE;
+
+
+
+// Helper functions
+// Return attacker's perspective value: win rate minus loss rate and draw rate
+inline double sureResultWR(Color winner, Player attackPlayer, int stepsToWin) {
+    if (winner == attackPlayer) {
+        return 1.0;  // Attacker wins
+    } else if (winner != C_WALL) {
+        return -1.0; // Attacker loses
+    } else {
+        return 0.0;  // Undetermined
+    }
+}
+
+// Convert NNUE's ValueType to attacker's perspective double value
+inline double valueTypeToAttackerPerspective(const NNUE::ValueType& value, Player attackPlayer, Color currentPlayer) {
+  assert(value.win + value.loss + value.draw < 1.01 && value.win + value.loss + value.draw >0.99);
+    
+    
+  // If current player is not the attacker, need to negate
+  if (currentPlayer == attackPlayer) {
+    return value.win - value.loss - value.draw;
+  }
+  else
+  {
+    return value.loss - value.win - value.draw;
+  }
+}
+
+inline double MCTSpuctFactor(double totalVisit, double puct, double puctPow, double puctBase) {
+    return puct * pow((totalVisit + puctBase) / puctBase, puctPow);
+}
+
+inline double MCTSselectionValue(double puctFactor, double value, double childVisit, double childPolicy) {
+    return value + puctFactor * childPolicy / (childVisit + 1);
+}
+
+// MCTS_CacheTable implementation
+MCTS_CacheTable::Entry::Entry()
+  :hash(0,0), maybeWinner(C_WALL), gameEndMovenum(0), nnueValue(0,0,0), bestMove(Board::NULL_LOC)
+{
+}
+
+MCTS_CacheTable::Entry::~Entry()
+{
+}
+
+MCTS_CacheTable::MCTS_CacheTable(int sizePowerOfTwo, int mutexPoolSizePowerOfTwo) {
+  if (sizePowerOfTwo < 0 || sizePowerOfTwo > 63)
+    throw StringError("MCTS_CacheTable: Invalid sizePowerOfTwo: " + Global::intToString(sizePowerOfTwo));
+  if (mutexPoolSizePowerOfTwo < 0 || mutexPoolSizePowerOfTwo > 31)
+    throw StringError("MCTS_CacheTable: Invalid mutexPoolSizePowerOfTwo: " + Global::intToString(mutexPoolSizePowerOfTwo));
+#if defined(SIMULATE_TRUE_HASH_COLLISIONS)
+  sizePowerOfTwo = sizePowerOfTwo > 12 ? 12 : sizePowerOfTwo;
+#endif
+  if (mutexPoolSizePowerOfTwo > sizePowerOfTwo)
+    mutexPoolSizePowerOfTwo = sizePowerOfTwo;
+
+  tableSize = ((uint64_t)1) << sizePowerOfTwo;
+  tableMask = tableSize - 1;
+  entries = new Entry[tableSize];
+  uint32_t mutexPoolSize = ((uint32_t)1) << mutexPoolSizePowerOfTwo;
+  mutexPoolMask = mutexPoolSize - 1;
+  mutexPool = new MutexPool(mutexPoolSize);
+}
+
+MCTS_CacheTable::~MCTS_CacheTable() {
+  delete[] entries;
+  delete mutexPool;
+}
+
+bool MCTS_CacheTable::get(Hash128 nnHash, Entry& ret) {
+  //Free ret BEFORE locking, to avoid any expensive operations while locked.
+  ret = Entry();
+
+  uint64_t idx = nnHash.hash0 & tableMask;
+  uint32_t mutexIdx = (uint32_t)idx & mutexPoolMask;
+  Entry& entry = entries[idx];
+  std::mutex& mutex = mutexPool->getMutex(mutexIdx);
+
+  std::lock_guard<std::mutex> lock(mutex);
+  bool found = false;
+#if defined(SIMULATE_TRUE_HASH_COLLISIONS)
+  if ((entry.hash.hash0 ^ nnHash.hash0) & 0xFFF) == 0) {
+    ret = entry;
+    found = true;
+  }
+#else
+  if (entry.hash == nnHash) {
+    ret = entry;
+    found = true;
+  }
+#endif
+  return found;
+}
+
+void MCTS_CacheTable::set(const Entry& ent) {
+  //Immediately copy ent right now, before locking, to avoid any expensive operations while locked.
+
+  uint64_t idx = ent.hash.hash0 & tableMask;
+  uint32_t mutexIdx = (uint32_t)idx & mutexPoolMask;
+  Entry& entry = entries[idx];
+  std::mutex& mutex = mutexPool->getMutex(mutexIdx);
+
+  {
+    std::lock_guard<std::mutex> lock(mutex);
+    //Perform a swap, to avoid any expensive free under the mutex.
+    entry = ent;
+  }
+
+  //No longer locked, allow ent to fall out of scope now, will free whatever used to be present in the table.
+}
+
+void MCTS_CacheTable::clear() {
+  for (size_t idx = 0; idx < tableSize; idx++) {
+    Entry& entry = entries[idx];
+    uint32_t mutexIdx = (uint32_t)idx & mutexPoolMask;
+    std::mutex& mutex = mutexPool->getMutex(mutexIdx);
+    {
+      std::lock_guard<std::mutex> lock(mutex);
+      entry = Entry();
+    }
+  }
+}
+
+// MCTSnode_new implementation
+MCTSnode_new::MCTSnode_new(MCTSsearch_new* search, Color nextColor, double policyTemp) : nextColor(nextColor) {
+    isWinDetermined = false;
+    winner = C_WALL;
+    stepsToWin = 0;
+    childrennum = 0;
+    children = nullptr;
+    visits = 1;
+    
+    // Check if this position's outcome is already determined
+    if (search->checkWinLossDetermined(this)) {
+        return;
+    }
+    
+    // Get legal moves with policy from cache or calculate
+    std::vector<std::pair<Loc, double>> moves = search->getLegalMovesWithPolicy(nextColor);
+    
+    if (moves.empty()) {
+        isWinDetermined = true;
+        winner = getOpp(nextColor); // No legal moves = opponent wins
+        stepsToWin = -1;
+        WRtotal = sureResultWR(winner, search->attackPlayer, stepsToWin);
+        return;
+    }
+    
+    // Get NNUE evaluation and convert to attacker perspective
+    NNUE::ValueType value = search->evaluatePosition(nextColor);
+    WRtotal = valueTypeToAttackerPerspective(value, search->attackPlayer, nextColor);
+    
+    // Set up children - dynamically allocate based on actual number of legal moves
+    legalChildrennum = (int)moves.size();
+    children = new MCTSchild_new[legalChildrennum];
+    for (int i = 0; i < legalChildrennum; i++) {
+        children[i].loc = moves[i].first;
+        children[i].policy = uint16_t(moves[i].second * policyQuant) + 1;
+        children[i].ptr = nullptr;
+    }
+}
+
+MCTSnode_new::MCTSnode_new(Color winner, int stepsToWin, Color nextColor) 
+    : nextColor(nextColor), isWinDetermined(true), winner(winner), stepsToWin(stepsToWin) {
+    visits = 1;
+    // Note: We need attackPlayer to calculate WRtotal, but it's not available in constructor
+    // This will be set properly when the node is created with the search context
+    WRtotal = (winner != C_WALL) ? ((winner == C_BLACK) ? 1.0 : -1.0) : 0.0;
+    childrennum = 0;
+    legalChildrennum = 0;
+    children = nullptr;
+}
+
+MCTSnode_new::~MCTSnode_new() {
+    if (children != nullptr) {
+        for (int i = 0; i < childrennum; i++) {
+            if (children[i].ptr != nullptr) delete children[i].ptr;
+        }
+        delete[] children;
+    }
+}
+
+// MCTSsearch_new implementation
+MCTSsearch_new::MCTSsearch_new(MCTS_CacheTable* cacheTable, NNUEBoardHistory* hist, Player attackPla)
+    : rootNode(nullptr), boardHistory(hist), attackPlayer(attackPla), cacheTable(cacheTable) {
+    terminate.store(false, std::memory_order_relaxed);
+}
+
+MCTSsearch_new::~MCTSsearch_new() {
+    if (rootNode != nullptr) delete rootNode;
+}
+
+float MCTSsearch_new::fullsearch(Color color, int64_t maxVisits, Loc& bestmove) {
+    terminate.store(false, std::memory_order_relaxed);
+    
+    if (rootNode != nullptr) delete rootNode;
+    rootNode = new MCTSnode_new(this, color, params.policyTemp);
+    
+    // If root is already determined, return immediately
+    if (rootNode->isWinDetermined) {
+        bestmove = Board::NULL_LOC;
+        return (rootNode->winner == attackPlayer) ? 1.0f : -1.0f;
+    }
+
+    if (option.maxNodes > 0) {
+        maxVisits = std::min(maxVisits, option.maxNodes);
+    }
+    
+    search(rootNode, maxVisits, true);
+    
+    bestmove = bestRootMove();
+    return getRootValue();
+}
+
+void MCTSsearch_new::play(Color color, Loc loc) {
+    boardHistory->play(color, loc);
+    
+    // Try to reuse subtree
+    if (rootNode != nullptr) {
+        MCTSnode_new* newRoot = nullptr;
+        for (int i = 0; i < rootNode->childrennum; i++) {
+            if (rootNode->children[i].loc == loc && rootNode->children[i].ptr != nullptr) {
+                newRoot = rootNode->children[i].ptr;
+                rootNode->children[i].ptr = nullptr; // Prevent deletion
+                break;
+            }
+        }
+        delete rootNode;
+        rootNode = newRoot;
+    }
+}
+
+void MCTSsearch_new::undo() {
+    boardHistory->undo();
+    // Clear root node as it's no longer valid
+    if (rootNode != nullptr) {
+        delete rootNode;
+        rootNode = nullptr;
+    }
+}
+
+void MCTSsearch_new::clearBoard() {
+    boardHistory->clear(boardHistory->getBoard(), boardHistory->getBoard().nextPla, boardHistory->rules);
+    if (rootNode != nullptr) {
+        delete rootNode;
+        rootNode = nullptr;
+    }
+}
+
+MCTSsearch_new::SearchResult MCTSsearch_new::search(MCTSnode_new* node, uint64_t remainVisits, bool isRoot) {
+    if (remainVisits == 0) remainVisits = UINT64_MAX;
+    
+    if (!isRoot) remainVisits = std::min(remainVisits, uint64_t(params.expandFactor * double(node->visits)) + 1);
+    
+    SearchResult SR = {0, 0.0};
+    
+    // If outcome is determined, just update visits
+    if (node->isWinDetermined) {
+        node->visits += remainVisits;
+        SR.newVisits = remainVisits;
+        SR.WRchange = sureResultWR(node->winner, attackPlayer, node->stepsToWin) * remainVisits;
+        node->WRtotal += SR.WRchange;
+        return SR;
+    }
+    
+    Color color = node->nextColor;
+    Color opp = getOpp(color);
+    
+    while (remainVisits > 0 && !terminate.load(std::memory_order_relaxed)) {
+        int nextChildID = selectChildIDToSearch(node);
+        Loc nextChildLoc = node->children[nextChildID].loc;
+        SearchResult childSR;
+        
+        if (nextChildID >= node->childrennum) { // New child
+            node->childrennum++;
+            
+            // Make move and check if outcome is determined
+            boardHistory->play(color, nextChildLoc);
+            
+            // Check VCF result first
+            Color maybeWinner = C_WALL;
+            int gameEndMovenum = 0;
+            std::vector<Loc> vcfLocs = GameLogic::getAllVCFAttackOrDefenseLocs(
+                boardHistory->getBoard(), attackPlayer, maybeWinner, gameEndMovenum);
+            
+            if (maybeWinner != C_WALL) {
+                // Game outcome determined
+                int stepsToEnd = gameEndMovenum - boardHistory->getBoard().movenum;
+                node->children[nextChildID].ptr = new MCTSnode_new(maybeWinner, stepsToEnd, boardHistory->getBoard().nextPla);
+                
+            } else {
+                // Continue normal MCTS
+                node->children[nextChildID].ptr = new MCTSnode_new(this, boardHistory->getBoard().nextPla, params.policyTemp);
+            }
+            
+            boardHistory->undo();
+            
+            childSR.newVisits = 1;
+            childSR.WRchange = node->children[nextChildID].ptr->WRtotal;
+        } else {
+            // Existing child
+            boardHistory->play(color, nextChildLoc);
+            childSR = search(node->children[nextChildID].ptr, remainVisits, false);
+            boardHistory->undo();
+        }
+        
+        // Update stats - both child and parent nodes are from attacker's perspective, directly accumulate
+        remainVisits -= childSR.newVisits;
+        node->visits += childSR.newVisits;
+        node->WRtotal += childSR.WRchange;  // Direct accumulation, both from attacker's perspective
+        SR.newVisits += childSR.newVisits;
+        SR.WRchange += childSR.WRchange;    // Direct accumulation, both from attacker's perspective
+        
+        // Check if this node's outcome is now determined
+        if (!node->isWinDetermined) {
+            checkWinLossDetermined(node);
+        }
+    }
+    
+    return SR;
+}
+
+bool MCTSsearch_new::checkWinLossDetermined(MCTSnode_new* node) {
+    if (node->isWinDetermined) return true;
+    
+    // Check if all children have determined outcomes
+    if (node->childrennum == 0) 
+    {
+        assert(node->visits == 1);
+        return false;
+    }
+    
+    int bestResult = -2;//-2:lose, 1:win, -1:draw, 0:undetermined
+    if(node->childrennum < node->legalChildrennum)//Not all children have been expanded
+    {
+        bestResult = 0;
+    }
+    int shortestStepsToWin = INT_MAX;
+    int longestStepsToLoss = INT_MIN;
+    Loc bestLoc = Board::NULL_LOC;
+    
+    for (int i = 0; i < node->childrennum; i++) {
+        int result = -2;
+        MCTSnode_new* child = node->children[i].ptr;
+        if (child == nullptr || !child->isWinDetermined) {
+            result = 0;
+        }
+        else if (child->winner == node->nextColor) {
+            result = 1;
+        }
+        else if (child->winner == getOpp(node->nextColor)) {
+            result = -2;
+        }
+        else if (child->winner == C_EMPTY) {
+            result = -1;
+        }
+        else assert(false);
+
+        if (result == -2) {
+            longestStepsToLoss = std::max(longestStepsToLoss, child->stepsToWin);
+        }
+        else if (result == 1) {
+            shortestStepsToWin = std::min(shortestStepsToWin, child->stepsToWin);
+        }
+        
+        if (result > bestResult) {
+            bestResult = result;
+            bestLoc = node->children[i].loc;
+        }
+    }
+    
+    if (bestResult != 0) {
+        node->isWinDetermined = true;
+        node->winner = bestResult==1 ? node->nextColor : bestResult==-2 ? getOpp(node->nextColor) : C_EMPTY;
+        node->stepsToWin = bestResult==1 ? shortestStepsToWin : bestResult==-2 ? -longestStepsToLoss : 0;
+        
+        node->WRtotal = sureResultWR(node->winner, attackPlayer, node->stepsToWin) * node->visits;
+    }
+    
+    return node->isWinDetermined;
+}
+
+int MCTSsearch_new::selectChildIDToSearch(MCTSnode_new* node) {
+    int childrennum = node->childrennum;
+    if (childrennum == 0) return 0;
+    
+    double bestSelectionValue = -1e20;
+    int bestChildID = -1;
+    
+    double totalVisit = node->visits;
+    double puctFactor = MCTSpuctFactor(totalVisit, params.puct, params.puctPow, params.puctBase);
+    double parentValue = node->WRtotal / node->visits;  // Parent node's attacker perspective value
+    if (node->nextColor != attackPlayer)
+      parentValue = -parentValue;
+    
+    double totalChildPolicy = 0;
+    for (int i = 0; i < childrennum; i++) {
+        const MCTSnode_new* child = node->children[i].ptr;
+        double visit = child->visits;
+        // Both child and parent nodes are from attacker's perspective, use directly
+        double value = child->WRtotal / visit;
+        double policy = double(node->children[i].policy) * policyQuantInv;
+        totalChildPolicy += policy;
+        
+        // Prioritize determined winning moves
+        if (child->isWinDetermined) {
+            if (child->winner == attackPlayer) {
+                value = 1.0; // Attacker wins
+            } else if (child->winner != C_WALL) {
+                value = -1.0; // Attacker loses
+            }
+        }
+        if (node->nextColor != attackPlayer)
+          value = -value;
+        double selectionValue = MCTSselectionValue(puctFactor, value, visit, policy);
+        if (child->isWinDetermined) {
+          if (child->winner == node->nextColor) {
+            selectionValue += 10000;
+            //assert(false);
+          }
+          else {
+            selectionValue -= 10000;
+          }
+        }
+        if (selectionValue > bestSelectionValue) {
+            bestSelectionValue = selectionValue;
+            bestChildID = i;
+        }
+    }
+    
+    // Check new child
+    if (childrennum < node->legalChildrennum) {
+        double value = parentValue - sqrt(totalChildPolicy) * params.fpuReduction;
+        double policy = double(node->children[childrennum].policy) * policyQuantInv;
+        double visit = 0;
+        double selectionValue = MCTSselectionValue(puctFactor, value, visit, policy);
+        if (selectionValue > bestSelectionValue) bestChildID = childrennum;
+    }
+    
+    return bestChildID;
+}
+
+std::vector<std::pair<Loc, double>> MCTSsearch_new::getLegalMovesWithPolicy(Color color) {
+    const Board& board = boardHistory->getBoard();
+    Hash128 posHash = board.pos_hash;
+    
+    // Try to get from cache first
+    if (cacheTable != nullptr) {
+        MCTS_CacheTable::Entry entry;
+        if (cacheTable->get(posHash, entry)) {
+            if (!entry.legalMovesWithPolicy.empty()) {
+                return entry.legalMovesWithPolicy;
+            }
+        }
+    }
+    
+    // Calculate legal moves with policy
+    Color maybeWinner = C_WALL;
+    int gameEndMovenum = 0;
+    std::vector<Loc> legalLocs = GameLogic::getAllVCFAttackOrDefenseLocs(board, attackPlayer, maybeWinner, gameEndMovenum);
+    
+    std::vector<std::pair<Loc, double>> moves;
+    
+    if (maybeWinner != C_WALL || legalLocs.empty()) {
+        // Game is determined or no legal moves
+        if (cacheTable != nullptr) {
+            MCTS_CacheTable::Entry entry;
+            entry.hash = posHash;
+            entry.maybeWinner = maybeWinner;
+            entry.gameEndMovenum = gameEndMovenum;
+            entry.legalMovesWithPolicy = moves;
+            cacheTable->set(entry);
+        }
+        return moves;
+    }
+    
+    // Get policy from NNUE
+    NNUE::PolicyType policy[MaxBS * MaxBS + 1];
+    NNUE::ValueType value = boardHistory->evaluateFull(color, policy);
+    
+    // Collect moves with policy values
+    for (const Loc& loc : legalLocs) {
+        if (board.isLegal(loc, color)) {
+            int nu_loc = Location::getX(loc, board.x_size) + Location::getY(loc, board.x_size) * MaxBS;
+            moves.push_back(std::make_pair(loc, (double)policy[nu_loc]));
+        }
+    }
+    
+    // Sort by policy (highest first)
+    std::sort(moves.begin(), moves.end(), [](const auto& a, const auto& b) {
+        return a.second > b.second;
+    });
+    
+    // Cache the result
+    if (cacheTable != nullptr) {
+        MCTS_CacheTable::Entry entry;
+        entry.hash = posHash;
+        entry.maybeWinner = maybeWinner;
+        entry.gameEndMovenum = gameEndMovenum;
+        entry.nnueValue = value;
+        entry.legalMovesWithPolicy = moves;
+        cacheTable->set(entry);
+    }
+    return moves;
+}
+
+NNUE::ValueType MCTSsearch_new::evaluatePosition(Color color) {
+    const Board& board = boardHistory->getBoard();
+    Hash128 posHash = board.pos_hash;
+    
+    // Try to get from cache first
+    if (cacheTable != nullptr) {
+        MCTS_CacheTable::Entry entry;
+        if (cacheTable->get(posHash, entry)) {
+            return entry.nnueValue;
+        }
+    }
+    
+    // Calculate NNUE evaluation
+    NNUE::ValueType value = boardHistory->evaluateFull(color, nullptr);
+    
+    // Cache the result
+    if (cacheTable != nullptr) {
+        MCTS_CacheTable::Entry entry;
+        entry.hash = posHash;
+        entry.nnueValue = value;
+        cacheTable->set(entry);
+    }
+    return value;
+}
+
+Loc MCTSsearch_new::bestRootMove() const {
+    if (rootNode == nullptr || rootNode->childrennum == 0) return Board::NULL_LOC;
+    
+    int bestChildID = -1;
+    uint64_t bestVisits = 0;
+    
+    for (int i = 0; i < rootNode->childrennum; i++) {
+        if (rootNode->children[i].ptr != nullptr) {
+            uint64_t visits = rootNode->children[i].ptr->visits;
+            // Prioritize determined winning moves
+            if (rootNode->children[i].ptr->isWinDetermined && rootNode->children[i].ptr->winner == attackPlayer) {
+                return rootNode->children[i].loc;
+            }
+            if (visits > bestVisits) {
+                bestVisits = visits;
+                bestChildID = i;
+            }
+        }
+    }
+    
+    return bestChildID >= 0 ? rootNode->children[bestChildID].loc : Board::NULL_LOC;
+}
+
+float MCTSsearch_new::getRootValue() const {
+    if (rootNode == nullptr) return 0.0f;
+    if (rootNode->visits == 0) return 0.0f;
+    
+    if (rootNode->isWinDetermined) {
+        return (rootNode->winner == attackPlayer) ? 1.0f : -1.0f;
+    }
+    
+    return float(rootNode->WRtotal / rootNode->visits);
+}
+
+int64_t MCTSsearch_new::getRootVisit() const {
+    return rootNode ? rootNode->visits : 0;
+}
+
+std::vector<std::pair<Loc, uint64_t>> MCTSsearch_new::getPV() const {
+    std::vector<std::pair<Loc, uint64_t>> pv;
+    if (rootNode == nullptr) return pv;
+    
+    MCTSnode_new* currentNode = rootNode;
+    
+    // Follow the path of best children until we reach a leaf
+    while (currentNode != nullptr && currentNode->childrennum > 0) {
+        int bestChildIndex = -1;
+        uint64_t maxVisits = 0;
+        int shortestWinSteps = INT_MAX;
+        bool hasWinningChild = false;
+        
+        // First pass: look for winning children for current player
+        for (int i = 0; i < currentNode->childrennum; i++) {
+            MCTSnode_new* child = currentNode->children[i].ptr;
+            if (child != nullptr && child->isWinDetermined && 
+                child->winner == currentNode->nextColor ) {
+                assert(child->stepsToWin>0);
+                // This is a winning move for current player
+                if (!hasWinningChild || child->stepsToWin < shortestWinSteps) {
+                    hasWinningChild = true;
+                    shortestWinSteps = child->stepsToWin;
+                    bestChildIndex = i;
+                    maxVisits = child->visits;
+                }
+            }
+        }
+        
+        // If no winning child found, select the most visited child
+        if (!hasWinningChild) {
+            for (int i = 0; i < currentNode->childrennum; i++) {
+                MCTSnode_new* child = currentNode->children[i].ptr;
+                if (child != nullptr && child->visits > maxVisits) {
+                    maxVisits = child->visits;
+                    bestChildIndex = i;
+                }
+            }
+        }
+        
+        // If we found a best child, add its move and visit count to PV and continue
+        if (bestChildIndex >= 0) {
+            MCTSnode_new* bestChild = currentNode->children[bestChildIndex].ptr;
+            pv.push_back(std::make_pair(currentNode->children[bestChildIndex].loc, bestChild->visits));
+            currentNode = bestChild;
+        } else {
+            break;
+        }
+    }
+    
+    return pv;
+}
+
+void MCTSsearch_new::loadParamFile(std::string filename) {
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "Cannot open param file: " << filename << std::endl;
+        return;
+    }
+    
+    std::string line;
+    while (std::getline(file, line)) {
+        if (line.empty() || line[0] == '#') continue;
+        
+        size_t pos = line.find('=');
+        if (pos == std::string::npos) continue;
+        
+        std::string key = line.substr(0, pos);
+        std::string value = line.substr(pos + 1);
+        
+        if (key == "expandFactor") params.expandFactor = std::stod(value);
+        else if (key == "puct") params.puct = std::stod(value);
+        else if (key == "puctPow") params.puctPow = std::stod(value);
+        else if (key == "puctBase") params.puctBase = std::stod(value);
+        else if (key == "fpuReduction") params.fpuReduction = std::stod(value);
+        else if (key == "policyTemp") params.policyTemp = std::stod(value);
+    }
+}

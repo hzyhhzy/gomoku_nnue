@@ -6,6 +6,7 @@
 #include "../nnue/Eva_nnuev2.h"
 #include "../nnue/NNUEBoardHistory.h"
 #include "../nnue/NNUE_VCF_ABSearch.h"
+#include "../nnue_search/NNUE_VCF_MCTSsearch.h"
 #include "../game/gamelogic.h"
 #include "../neuralnet/nninputs.h"
 //------------------------
@@ -20,6 +21,7 @@ using namespace NNUEV2;
 // Function declarations
 void testAutoPlay(const ModelWeight* weights);
 void testABSearch(const ModelWeight* weights);
+void testMCTSSearch(const ModelWeight* weights);
 
 int MainCmds::testnnue() {
   Board::initHash();
@@ -70,7 +72,10 @@ int MainCmds::testnnue() {
   //testAutoPlay(nnueWeight);
   
   // Test AB search with specific initial position
-  testABSearch(nnueWeight);
+  //testABSearch(nnueWeight);
+  
+  // Test MCTS search with same initial position
+  testMCTSSearch(nnueWeight);
   
   delete nnueWeight;
   return 0;
@@ -232,4 +237,93 @@ void testABSearch(const ModelWeight* weights) {
   }
   
   cout << "AB search test completed." << endl;
+}
+
+void testMCTSSearch(const ModelWeight* weights) {
+  cout << "Starting MCTS search test with specific initial position..." << endl;
+  
+  // Create board and rules
+  Board board(19, 19);
+  Rules rules;
+  rules.VCNRule = Rules::VCNRULE_VC4_B;
+  rules.maxMoves = 109;
+  
+  // Set up the same initial position as AB search test
+  string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9i14g12h13j9l13j7h15h16h12h17f12i16f13j16m12j17g9n13g14g8e11k18f8f7h9h8f10f9f11f5i8h6g7i6k8l7m8m6o13o15n14n15m14n12l12m11n10o11m9d11m10c11l11l10l9n8m13o12m7p10n9o9l6k5m5j4";
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9i14g12h13j9l13j7h15h16h12h17f12i16f13j16m12j17g9n13g14g8e11k18f8f7h9h8f10f9f11f5i8h6h7g7";//cannot vcf
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9i14g12h13j9l13j7h15h16h12h17f12i16f13j16m12j17g9n13g14g8e11k18f8f7h9h8f10f9f11f5i8h6h7k8";//can vcf
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15i14h12i15g15j15f16j16k17g13l18l14i17m13h18j17l17h17m17";//2 moves win
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9i14g12h13j9l13j7h15h16h12h17f12i16f13j16m12j17g9n13g14g8e11k18f8f7h9h8f10f9f11f5i8h6h7k8g7i5e9j4";
+  vector<Loc> initialLocSeq = Location::parseSequenceGom(initialSequence, board);
+  PlayUtils::playMoveLocSequence(board, board.nextPla, initialLocSeq);
+  
+  // Create NNUE input parameters
+  MiscNNInputParams nnInputParams;
+  
+  // Create NNUEBoardHistory
+  NNUEBoardHistory nnueHistory(weights, nnInputParams);
+  nnueHistory.clear(board, board.nextPla, rules);
+  
+  cout << "Initial board position:" << endl;
+  Board::printBoard(cout, board, board.firstLoc, NULL);
+  cout << endl;
+  
+  cout << "Move history: " << initialSequence << endl;
+  cout << "Total moves: " << board.movenum << endl;
+  cout << "Next player: " << (board.nextPla == C_BLACK ? "Black" : "White") << endl;
+  cout << endl;
+  
+  // Initialize MCTS cache
+  NNUE_VCF_MCTSsearch::MCTS_CacheTable cachetable(25, 11);
+  
+  // Create MCTS search instance
+  NNUE_VCF_MCTSsearch::MCTSsearch_new mcts(&cachetable ,&nnueHistory, board.nextPla);
+  //NNUE_VCF_MCTSsearch::MCTSsearch_new mcts(nullptr, &nnueHistory, board.nextPla);
+  
+  // Set MCTS parameters
+  mcts.params.puct = 0.5;
+  mcts.params.expandFactor = 0.2;
+  mcts.params.policyTemp = 1.1;
+  
+  // Test different search factors (visits = factor * 1000)
+  vector<int64_t> testFactors = {1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768,65536,131072,262144,524288,1048576,2000000,4000000 ,8000000,16000000 ,32000000 ,64000000 };
+
+
+  
+  for (double factor : testFactors) {
+    cout << "Testing MCTS search with factor " << factor << " (" << (int)(factor) << " visits)..." << endl;
+    
+    auto startTime = chrono::high_resolution_clock::now();
+    Loc bestMove;
+    double result = mcts.fullsearch(board.nextPla, factor, bestMove);
+    auto endTime = chrono::high_resolution_clock::now();
+    
+    auto duration = chrono::duration_cast<chrono::milliseconds>(endTime - startTime);
+    
+    cout << "Search visits: " << factor << endl;
+    cout << "Best move: " << Location::toString(bestMove, board) << endl;
+    cout << "Search result: " << result << endl;
+    cout << "Search time: " << duration.count() << " ms" << endl;
+    cout << "Root visits: " << mcts.getRootVisit() << endl;
+    
+    // Get and display principal variation
+    vector<pair<Loc, uint64_t>> pv = mcts.getPV();
+    cout << "Principal Variation (" << pv.size() << " moves): ";
+    for (size_t i = 0; i < pv.size(); i++) {
+      if (i > 0) cout << " ";
+      cout << Location::toString(pv[i].first, board) << "(" << pv[i].second << ")";
+    }
+    cout << endl;
+    
+    // Check if win/loss is determined
+    if (mcts.rootNode && mcts.rootNode->isWinDetermined) {
+      cout << "Result interpretation: " << (mcts.rootNode->winner == board.nextPla ? "Win" : "Loss")
+           << " determined in " << abs(mcts.rootNode->stepsToWin) << " steps" << endl;
+    } else {
+      cout << "Result interpretation: Uncertain outcome (value: " << result << ")" << endl;
+    }
+    cout << "----------------------------------------" << endl;
+  }
+  
+  cout << "MCTS search test completed." << endl;
 }
