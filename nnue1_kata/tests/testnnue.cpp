@@ -249,13 +249,18 @@ void testMCTSSearch(const ModelWeight* weights) {
   rules.maxMoves = 101;
   
   // Set up the same initial position as AB search test
-  string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9i14g12h13j9l13j7h15h16h12h17f12i16f13j16m12j17g9n13g14g8e11k18f8f7h9h8f10f9f11f5i8h6g7i6k8l7m8m6o13o15n14n15m14n12l12m11n10o11m9d11m10c11l11l10l9n8m13o12m7p10n9o9l6k5m5j4"; //~5 seconds or longer, win in 101 moves
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9i14g12h13j9l13j7h15h16h12h17f12i16f13j16m12j17g9n13g14g8e11k18f8f7h9h8f10f9f11f5i8h6g7i6k8l7m8m6o13o15n14n15m14n12l12m11n10o11m9d11m10c11l11l10l9n8m13o12m7p10n9o9l6k5m5j4"; //~2 seconds or longer, win in 101 moves
   //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9i14g12h13j9l13j7h15h16h12h17f12i16f13j16m12j17g9n13g14g8e11k18f8f7h9h8f10f9f11f5i8h6h7g7";//cannot vcf
   //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9i14g12h13j9l13j7h15h16h12h17f12i16f13j16m12j17g9n13g14g8e11k18f8f7h9h8f10f9f11f5i8h6h7k8";//can vcf
   //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15i14h12i15g15j15f16j16k17g13l18l14i17m13h18j17l17h17m17";//2 moves win
   //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9i14g12h13j9l13j7h15h16h12h17f12i16f13j16m12j17g9n13g14g8e11k18f8f7h9h8f10f9f11f5i8h6h7k8g7i5e9j4";
   //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15k12";
   //string initialSequence = "j10i11h10j9k7g9g11m6m5k8l6m4a1m8l8";//white has a four
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15n12";//even a bit difficult for katago
+  string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9g12l13i14i16f12h16e13d12j14s19";//require 20s (5e5 nodes), even a bit difficult for katago
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9g12l13i14i16f12h16e13d12j14i15g15g17f14f16g9m12j9m14f13m11g13n15n14o13e15d16h12c17g14n12e16f9e9o14g8p13h7p12i8h8f8i7j7g7h9f6g6g5g10g4k6l6k12l8l5o16i6m4k5m5j17j5k17j18k9m15k10k4m9k7n10k3o9k2n9n6n7l4"; //109 moves to win
+  //string initialSequence = "j10c2p5k11l12q15d15";//4 useless white stones
+  //string initialSequence = "j10d4e3k9i11e5g5f2j9a1c3";//first move must be purely defense
   vector<Loc> initialLocSeq = Location::parseSequenceGom(initialSequence, board);
   PlayUtils::playMoveLocSequence(board, board.nextPla, initialLocSeq);
   
@@ -289,7 +294,9 @@ void testMCTSSearch(const ModelWeight* weights) {
   mcts.params.localPolicyBonusStage1 = 0.0;
   
   // Test different search factors (visits = factor * 1000)
-  vector<int64_t> testFactors = {1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768,65536,131072,262144,524288,1048576,2000000,4000000 ,8000000,16000000 ,32000000 ,64000000 };
+  vector<int64_t> testFactors = {1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768,65536};
+  for (int i = 0; i < 10000; i++)
+    testFactors.push_back(65536);
 
 
 

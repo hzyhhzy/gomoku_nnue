@@ -734,17 +734,23 @@ vector<Loc> GameLogic::getAllVCFAttackOrDefenseLocs(const Board& board, Player a
     }
 
     int maybeLegalThreshold = 1;
+    if (board.stage == 0) {
+      maybeLegalThreshold = 0;//maybe there are enough fours
+    }
+
     if(board.stage == 1 && fourCount == 0) {
       maybeLegalThreshold = 2;//must create two fours at once
     }
 
+    if (board.stage == 1 && fourCount >= 2) {
+      maybeLegalThreshold = 0;//maybe there are enough fours
+    }
 
-    
     // 收集可能的合法位置
     for (int y = 0; y < board.y_size; y++) {
       for (int x = 0; x < board.x_size; x++) {
         Loc loc = Location::getLoc(x, y, board.x_size);
-        if (maybeLegalMap[loc] >= maybeLegalThreshold) {
+        if (maybeLegalMap[loc] >= maybeLegalThreshold && board.colors[loc] == C_EMPTY && loc != board.firstLoc) {
           if (board.stage == 0 || (board.getLocationPriority(loc) + Board::PRIOR_EPS >= board.firstLocPriority)) {
             locs.push_back(loc);
           }
