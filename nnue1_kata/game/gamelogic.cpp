@@ -627,10 +627,10 @@ vector<Loc> GameLogic::getAllVCFAttackOrDefenseLocs(const Board& board, Player a
       
       for (int i = 0; i < 6; i++) {
         Loc loc = loc0 + i * adj;
-        if (!board.isOnBoard(loc)) {
-          ASSERT_UNREACHABLE;
-          return; // 无效六元组，跳过
-        }
+        //if (!board.isOnBoard(loc)) {
+        //  ASSERT_UNREACHABLE;
+        //  return; // 无效六元组，跳过
+        //}
         
         Color c = board.colors[loc];
         if (board.stage == 1 && loc == board.firstLoc)
@@ -776,10 +776,10 @@ vector<Loc> GameLogic::getAllVCFAttackOrDefenseLocs(const Board& board, Player a
       
       for (int i = 0; i < 6; i++) {
         Loc loc = loc0 + i * adj;
-        if (!board.isOnBoard(loc)) {
-          ASSERT_UNREACHABLE;
-          return; // 无效六元组，跳过
-        }
+        //if (!board.isOnBoard(loc)) {
+        //  ASSERT_UNREACHABLE;
+        //  return; // 无效六元组，跳过
+        //}
         
         Color c = board.colors[loc];
         if (board.stage == 1 && loc == board.firstLoc)

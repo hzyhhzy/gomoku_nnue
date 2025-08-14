@@ -55,7 +55,8 @@ int MainCmds::testnnue() {
   const bool logTimeDefault = false;
   Logger logger(NULL, logToStdoutDefault, logToStderrDefault, logTimeDefault);
 
-  string modelpath = "H:/gomtrain2024/connectsix/export/v2_64_highwd2.txt";
+  //string modelpath = "H:/gomtrain2024/connectsix/export/v2_64_highwd2.txt"; 
+  string modelpath = "C:/gomtrain2025/connect6nnue/export/v2_c16_vcfonly.txt";
 
   NNUEV2::ModelWeight* nnueWeight = new NNUEV2::ModelWeight();
   nnueWeight->loadParam(modelpath);
@@ -96,7 +97,7 @@ void testAutoPlay(const ModelWeight* weights) {
   MiscNNInputParams nnInputParams;
   
   // Create NNUEBoardHistory
-  NNUEBoardHistory nnueHistory(weights, nnInputParams);
+  NNUEBoardHistory nnueHistory(weights, nnInputParams, false);
   nnueHistory.clear(board, board.nextPla, rules);
   
   
@@ -188,7 +189,7 @@ void testABSearch(const ModelWeight* weights) {
   MiscNNInputParams nnInputParams;
   
   // Create NNUEBoardHistory
-  NNUEBoardHistory nnueHistory(weights, nnInputParams);
+  NNUEBoardHistory nnueHistory(weights, nnInputParams, true);
   nnueHistory.clear(board, board.nextPla, rules);
  // Board::printBoard(cout, board, Board::NULL_LOC, NULL);
  // int p = GameLogic::checkTwoFourThreats(board, C_BLACK);
@@ -268,7 +269,7 @@ void testMCTSSearch(const ModelWeight* weights) {
   MiscNNInputParams nnInputParams;
   
   // Create NNUEBoardHistory
-  NNUEBoardHistory nnueHistory(weights, nnInputParams);
+  NNUEBoardHistory nnueHistory(weights, nnInputParams, true);
   nnueHistory.clear(board, board.nextPla, rules);
   
   cout << "Initial board position:" << endl;
@@ -291,6 +292,9 @@ void testMCTSSearch(const ModelWeight* weights) {
   mcts.params.puct = 0.7;
   mcts.params.expandFactor = 0.2;
   mcts.params.policyTemp = 1.0;
+  mcts.params.puctPow = 0.75;
+  mcts.params.fpuReductionConst = 0.1;
+  mcts.params.fpuReductionPolicy = 0.0;
   mcts.params.localPolicyBonusStage1 = 0.0;
   
   // Test different search factors (visits = factor * 1000)

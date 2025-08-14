@@ -42,8 +42,8 @@ inline double MCTSpuctFactor(double totalVisit, double puct, double puctPow, dou
     return puct * pow((totalVisit + puctBase) / puctBase, puctPow);
 }
 
-inline double MCTSselectionValue(double puctFactor, double value, double childVisit, double childPolicy) {
-    return value + puctFactor * childPolicy / (childVisit + 1);
+inline double MCTSselectionValue(double puctFactor, double winrate, double childVisit, double childPolicy) {
+  return winrate + pow(winrate,3) + pow(winrate,7) + puctFactor * childPolicy / (childVisit + 1);
 }
 
 // MCTS_CacheTable implementation
@@ -473,7 +473,7 @@ int MCTSsearch::selectChildIDToSearch(MCTSnode* node) {
         }
         if (node->nextColor != attackPlayer)
           value = -value;
-        double selectionValue = MCTSselectionValue(puctFactor, value, visit, policy);
+        double selectionValue = MCTSselectionValue(puctFactor, (value+1.0)/2.0, visit, policy);
         if (child->isWinDetermined) {
           if (child->winner == node->nextColor) {
             selectionValue += 10000;
@@ -491,10 +491,11 @@ int MCTSsearch::selectChildIDToSearch(MCTSnode* node) {
     
     // Check new child
     if (childrennum < node->legalChildrennum) {
-        double value = parentValue - sqrt(totalChildPolicy) * params.fpuReduction;
+        double winrate = (parentValue + 1.0) / 2.0;
+        double fpuFactor = 1.0 - sqrt(totalChildPolicy) * params.fpuReductionPolicy - params.fpuReductionConst;
         float policy = float(node->children[childrennum].policy) * policyQuantInv;
         double visit = 0;
-        double selectionValue = MCTSselectionValue(puctFactor, value, visit, policy);
+        double selectionValue = MCTSselectionValue(puctFactor, winrate*fpuFactor, visit, policy);
         if (selectionValue > bestSelectionValue) bestChildID = childrennum;
     }
     
@@ -740,7 +741,8 @@ void MCTSsearch::loadParamFile(std::string filename) {
         else if (key == "puct") params.puct = std::stod(value);
         else if (key == "puctPow") params.puctPow = std::stod(value);
         else if (key == "puctBase") params.puctBase = std::stod(value);
-        else if (key == "fpuReduction") params.fpuReduction = std::stod(value);
+        else if (key == "fpuReductionPolicy") params.fpuReductionPolicy = std::stod(value);
+        else if (key == "fpuReductionConst") params.fpuReductionConst = std::stod(value);
         else if (key == "policyTemp") params.policyTemp = std::stod(value);
         else if (key == "localPolicyBonusStage1") params.localPolicyBonusStage1 = std::stod(value);
     }

@@ -9,8 +9,10 @@ namespace NNUEV2 {
     const int shapeNum = 4 * 1594323; //4*3^13
     static_assert(featureLen == 13, "shapeNum=4*3^featureLen");
     const int globalFeatureNum           = 39 + 3;//39 for katago, 3 for boardsize
-    const int groupSize    = 64;
-    const int mlpChannel = 64;
+    const int groupSize = 16;
+    const int mlpChannel = 32;
+    //const int groupSize = 64;
+    //const int mlpChannel = 64;
 
 
     const int groupBatch = groupSize / 16;

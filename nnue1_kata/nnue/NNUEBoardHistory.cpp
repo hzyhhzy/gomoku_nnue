@@ -8,11 +8,12 @@ using namespace std;
 using namespace NNUE;
 using namespace NNUEV2;
 
-NNUEBoardHistory::NNUEBoardHistory(const ModelWeight* weights, const MiscNNInputParams& nnInputParams)
+NNUEBoardHistory::NNUEBoardHistory(const ModelWeight* weights, const MiscNNInputParams& nnInputParams, bool skipResultsBeforeNN)
     : BoardHistory(),
       blackEvaluator(weights),
       whiteEvaluator(weights),
       nnInputParams(nnInputParams),
+      skipResultsBeforeNN(skipResultsBeforeNN),
       gfInputBuf(),
       illegalMapBuf(),
       historicalBoards(),
@@ -23,11 +24,12 @@ NNUEBoardHistory::NNUEBoardHistory(const ModelWeight* weights, const MiscNNInput
 {
 }
 
-NNUEBoardHistory::NNUEBoardHistory(const Board& board, Player pla, const Rules& rules, const ModelWeight* weights, const MiscNNInputParams& nnInputParams)
+NNUEBoardHistory::NNUEBoardHistory(const Board& board, Player pla, const Rules& rules, const ModelWeight* weights, const MiscNNInputParams& nnInputParams, bool skipResultsBeforeNN)
     : BoardHistory(board, pla, rules),
       blackEvaluator(weights),
       whiteEvaluator(weights),
       nnInputParams(nnInputParams),
+      skipResultsBeforeNN(skipResultsBeforeNN),
       gfInputBuf(),
       illegalMapBuf(),
       historicalBoards(),
@@ -65,6 +67,7 @@ NNUEBoardHistory& NNUEBoardHistory::operator=(const NNUEBoardHistory& other)
         return *this;
     
     BoardHistory::operator=(other);
+    skipResultsBeforeNN = other.skipResultsBeforeNN;
     blackEvaluator = other.blackEvaluator;
     whiteEvaluator = other.whiteEvaluator;
     nnInputParams = other.nnInputParams;
@@ -85,6 +88,7 @@ NNUEBoardHistory::NNUEBoardHistory(NNUEBoardHistory&& other) noexcept
       blackEvaluator(std::move(other.blackEvaluator)),
       whiteEvaluator(std::move(other.whiteEvaluator)),
       nnInputParams(other.nnInputParams),
+      skipResultsBeforeNN(other.skipResultsBeforeNN),
       gfInputBuf(),
       illegalMapBuf(),
       historicalBoards(std::move(other.historicalBoards)),
@@ -107,6 +111,7 @@ NNUEBoardHistory& NNUEBoardHistory::operator=(NNUEBoardHistory&& other) noexcept
     BoardHistory::operator=(std::move(other));
     blackEvaluator = std::move(other.blackEvaluator);
     whiteEvaluator = std::move(other.whiteEvaluator);
+    skipResultsBeforeNN = other.skipResultsBeforeNN;
     nnInputParams = other.nnInputParams;
     historicalBoards = std::move(other.historicalBoards);
     moveCacheBlength = other.moveCacheBlength;
@@ -160,8 +165,15 @@ void NNUEBoardHistory::updateInputBuf(Color nextPlayer)
     assert(pla == currentBoard.nextPla);
     Player opp = getOpp(pla);
     nnInputParams.resultsBeforeNN = GameLogic::ResultsBeforeNN();
-    nnInputParams.resultsBeforeNN.init(currentBoard, *this, nextPlayer);
-    if (nnInputParams.resultsBeforeNN.myOnlyLoc != Board::NULL_LOC && winner != C_WALL)
+    if (!skipResultsBeforeNN)
+    {
+      nnInputParams.resultsBeforeNN.init(currentBoard, *this, nextPlayer);
+    }
+    else
+    {
+    }
+
+    if (!skipResultsBeforeNN && nnInputParams.resultsBeforeNN.myOnlyLoc != Board::NULL_LOC && nnInputParams.resultsBeforeNN.winner != C_WALL)
     {
       //no need to call NN
       return;
@@ -247,7 +259,7 @@ void NNUEBoardHistory::updateInputBuf(Color nextPlayer)
     else
       ASSERT_UNREACHABLE;
     
-    if(true) {
+    if(!skipResultsBeforeNN) {
         if(nnInputParams.resultsBeforeNN.myOnlyLoc == Board::PASS_LOC)
           gfInputBufp3[38] = 1.0;
 
@@ -341,7 +353,7 @@ NNUE::ValueType NNUEBoardHistory::evaluateFull(Color color, NNUE::PolicyType* po
 {
   updateInputBuf(color);
   bool noPolicy = policy == nullptr;
-  if (nnInputParams.resultsBeforeNN.myOnlyLoc != Board::NULL_LOC && nnInputParams.resultsBeforeNN.winner != C_WALL)
+  if (!skipResultsBeforeNN && nnInputParams.resultsBeforeNN.myOnlyLoc != Board::NULL_LOC && nnInputParams.resultsBeforeNN.winner != C_WALL)
   {
     //no need to call NN
     // Set all policies to MIN_POLICY

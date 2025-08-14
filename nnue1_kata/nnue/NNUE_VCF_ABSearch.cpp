@@ -422,7 +422,7 @@ vector<pair<Loc, double>> VCF_ABSearch::getLegalMovesWithPolicy(const std::vecto
 
   const Board& board = boardHistory->getBoard();
   // Update input buffer
-  boardHistory->updateInputBuf(board.nextPla);
+  //boardHistory->updateInputBuf(board.nextPla);
   
   // Get policy
   NNUE::PolicyType policy[MaxBS * MaxBS + 1];
@@ -523,7 +523,7 @@ double VCF_ABSearch::evaluateLeafAssumeNotEnd() {
   //}
   
   // Use NNUE evaluation (neural network returns values in [-1, 1] interval)
-  boardHistory->updateInputBuf(boardHistory->getBoard().nextPla);
+  //boardHistory->updateInputBuf(boardHistory->getBoard().nextPla);
   NNUE::ValueType value = boardHistory->evaluateFull(boardHistory->getBoard().nextPla, nullptr);
   nnevalCount++;
 

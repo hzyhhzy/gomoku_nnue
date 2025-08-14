@@ -14,6 +14,10 @@ using namespace NNUEV2;
 //A BoardHistory that maintains NNUE evaluators and replaces NNUEBoard functionality
 class NNUEBoardHistory : public BoardHistory {
 public:
+
+    //skip "resultsBeforeNN" in nninput. for VCF this can be "true" to reduce cost
+    bool skipResultsBeforeNN = false;
+
     // NNUE evaluators for both players
     Eva_nnuev2 blackEvaluator;
     Eva_nnuev2 whiteEvaluator;
@@ -39,8 +43,8 @@ public:
     int moveCacheBlength, moveCacheWlength;
 
     // Constructors
-    NNUEBoardHistory(const ModelWeight* weights, const MiscNNInputParams& nnInputParams);
-    NNUEBoardHistory(const Board& board, Player pla, const Rules& rules, const ModelWeight* weights, const MiscNNInputParams& nnInputParams);
+    NNUEBoardHistory(const ModelWeight* weights, const MiscNNInputParams& nnInputParams, bool skipResultsBeforeNN);
+    NNUEBoardHistory(const Board& board, Player pla, const Rules& rules, const ModelWeight* weights, const MiscNNInputParams& nnInputParams, bool skipResultsBeforeNN);
     
     // Copy and move constructors
     NNUEBoardHistory(const NNUEBoardHistory& other);
@@ -66,8 +70,6 @@ public:
     
 
     
-    // Update input buffers for neural network evaluation
-    void updateInputBuf(Color nextPlayer);
     
     // Evaluation methods
     NNUE::ValueType evaluateFull(Color color, NNUE::PolicyType* policy);
@@ -78,6 +80,9 @@ public:
     bool checkEvaluatorBoardConsistency();
     
 private:
+    // Update input buffers for neural network evaluation
+    void updateInputBuf(Color nextPlayer);
+
     // Add move to cache for efficient undo
     void addCache(bool isUndo, Color color, Loc loc);
     
