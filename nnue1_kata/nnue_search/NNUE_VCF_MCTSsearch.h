@@ -119,6 +119,9 @@ public:
     void undo();
     void clearBoard();
     
+    // VCF MCTS search with adaptive stopping based on attacker value
+    bool vcfSearchAutoStop(NNUEBoardHistory* hist, Player attackPla, double searchFactor);
+    
     Loc bestRootMove() const;
     float getRootValue() const;
     int64_t getRootVisit() const;

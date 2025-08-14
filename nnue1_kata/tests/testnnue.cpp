@@ -23,6 +23,7 @@ using namespace NNUEV2;
 void testAutoPlay(const ModelWeight* weights);
 void testABSearch(const ModelWeight* weights);
 void testMCTSSearch(const ModelWeight* weights);
+void testMCTSSearch2(const ModelWeight* weights);
 
 int MainCmds::testnnue() {
   Board::initHash();
@@ -77,7 +78,7 @@ int MainCmds::testnnue() {
   //testABSearch(nnueWeight);
   
   // Test MCTS search with same initial position
-  testMCTSSearch(nnueWeight);
+  testMCTSSearch2(nnueWeight);
   
   delete nnueWeight;
   return 0;
@@ -248,7 +249,7 @@ void testMCTSSearch(const ModelWeight* weights) {
   Board board(19, 19);
   Rules rules;
   rules.VCNRule = Rules::VCNRULE_VC4_B;
-  rules.maxMoves = 25;
+  rules.maxMoves = 109;
   
   // Set up the same initial position as AB search test
   //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9i14g12h13j9l13j7h15h16h12h17f12i16f13j16m12j17g9n13g14g8e11k18f8f7h9h8f10f9f11f5i8h6g7i6k8l7m8m6o13o15n14n15m14n12l12m11n10o11m9d11m10c11l11l10l9n8m13o12m7p10n9o9l6k5m5j4"; //~2 seconds or longer, win in 101 moves
@@ -259,12 +260,13 @@ void testMCTSSearch(const ModelWeight* weights) {
   //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15k12";
   //string initialSequence = "j10i11h10j9k7g9g11m6m5k8l6m4a1m8l8";//white has a four
   //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15n12";//even a bit difficult for katago
-  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9g12l13i14i16f12h16e13d12j14s19";//require 20s (5e5 nodes), even a bit difficult for katago
+  string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9g12l13i14i16f12h16e13d12j14s19";//require 20s (5e5 nodes), even a bit difficult for katago
   //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9g12l13i14i16f12h16e13d12j14i15g15g17f14f16g9m12j9m14f13m11g13n15n14o13e15d16h12c17g14n12e16f9e9o14g8p13h7p12i8h8f8i7j7g7h9f6g6g5g10g4k6l6k12l8l5o16i6m4k5m5j17j5k17j18k9m15k10k4m9k7n10k3o9k2n9n6n7l4"; //109 moves to win
-  string initialSequence = "j10c2p5k11l12q15d15";//4 useless white stones
+ // string initialSequence = "j10c2p5k11l12q15d15";//4 useless white stones
   //string initialSequence = "j10c2p5k11j12k12i9";//4 useless white stones
   //string initialSequence = "j10f5d3k11l12d4e4";//4 useless white stones
   //string initialSequence = "j10d4e3k9i11e5g5f2j9a1c3";//first move must be purely defense
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9i14g12h13j9l13j7h15h16h12h17f12i16f13j16m12j17g9n13g14g8e11k18f8f7h9h8f10f9f11f5i8h6h7j8g7i5e9j4i7i6i10i4j6g6k6f6h4g3g5f2";//1 move win
   vector<Loc> initialLocSeq = Location::parseSequenceGom(initialSequence, board);
   PlayUtils::playMoveLocSequence(board, board.nextPla, initialLocSeq);
   
@@ -351,6 +353,141 @@ void testMCTSSearch(const ModelWeight* weights) {
       break; // 检测到必胜/必败时直接退出循环
     } else {
       cout << "Result interpretation: Uncertain outcome (value: " << result << ")" << endl;
+    }
+    cout << "----------------------------------------" << endl;
+  }
+
+  if (mcts.rootNode->winner == board.nextPla)
+  {
+    // Calculate defense dependency map
+    auto mapStartTime = chrono::high_resolution_clock::now();
+    vector<int8_t> dependMap = mcts.calculateDefenseDependencyMap();
+    auto mapEndTime = chrono::high_resolution_clock::now();
+    auto mapDuration = chrono::duration_cast<chrono::microseconds>(mapEndTime - mapStartTime);
+
+    cout << "Defense dependency map calculation time: " << mapDuration.count() << " microseconds" << endl;
+    VCFLogic::printBoardWithDependencyMap(board, dependMap);
+  }
+  cout << "MCTS search test completed." << endl;
+}
+
+void testMCTSSearch2(const ModelWeight* weights) {
+  cout << "Starting MCTS search test with specific initial position..." << endl;
+  
+  // Create board and rules
+  Board board(19, 19);
+  Rules rules;
+  rules.VCNRule = Rules::VCNRULE_VC4_B;
+  rules.maxMoves = 61;
+  
+  // Set up the same initial position as AB search test
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9i14g12h13j9l13j7h15h16h12h17f12i16f13j16m12j17g9n13g14g8e11k18f8f7h9h8f10f9f11f5i8h6g7i6k8l7m8m6o13o15n14n15m14n12l12m11n10o11m9d11m10c11l11l10l9n8m13o12m7p10n9o9l6k5m5j4"; //~2 seconds or longer, win in 101 moves
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9i14g12h13j9l13j7h15h16h12h17f12i16f13j16m12j17g9n13g14g8e11k18f8f7h9h8f10f9f11f5i8h6h7g7";//cannot vcf
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9i14g12h13j9l13j7h15h16h12h17f12i16f13j16m12j17g9n13g14g8e11k18f8f7h9h8f10f9f11f5i8h6h7k8";//can vcf
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15i14h12i15g15j15f16j16k17g13l18l14i17m13h18j17l17h17m17";//2 moves win
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9i14g12h13j9l13j7h15h16h12h17f12i16f13j16m12j17g9n13g14g8e11k18f8f7h9h8f10f9f11f5i8h6h7k8g7i5e9j4";
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15k12";
+  //string initialSequence = "j10i11h10j9k7g9g11m6m5k8l6m4a1m8l8";//white has a four
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15n12";//even a bit difficult for katago
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9g12l13i14i16f12h16e13d12j14s19";//require 20s (5e5 nodes), even a bit difficult for katago
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9g12l13i14i16f12h16e13d12j14i15g15g17f14f16g9m12j9m14f13m11g13n15n14o13e15d16h12c17g14n12e16f9e9o14g8p13h7p12i8h8f8i7j7g7h9f6g6g5g10g4k6l6k12l8l5o16i6m4k5m5j17j5k17j18k9m15k10k4m9k7n10k3o9k2n9n6n7l4"; //109 moves to win
+ // string initialSequence = "j10c2p5k11l12q15d15";//4 useless white stones
+  //string initialSequence = "j10c2p5k11j12k12i9";//4 useless white stones
+  //string initialSequence = "j10f5d3k11l12d4e4";//4 useless white stones
+  //string initialSequence = "j10d4e3k9i11e5g5f2j9a1c3";//first move must be purely defense
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9i14g12h13j9l13j7h15h16h12h17f12i16f13j16m12j17g9n13g14g8e11k18f8f7h9h8f10f9f11f5i8h6h7j8g7i5e9j4i7i6i10i4j6g6k6f6h4g3g5f2";//1 move win
+
+
+
+
+  string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9g12l13i14i16f12h16e13d12j14pass";
+
+
+
+  vector<Loc> initialLocSeq = Location::parseSequenceGom(initialSequence, board);
+  PlayUtils::playMoveLocSequence(board, board.nextPla, initialLocSeq);
+  
+  // Create NNUE input parameters
+  MiscNNInputParams nnInputParams;
+  
+  // Create NNUEBoardHistory
+  NNUEBoardHistory nnueHistory(weights, nnInputParams, true);
+  nnueHistory.clear(board, board.nextPla, rules);
+  
+  cout << "Initial board position:" << endl;
+  Board::printBoard(cout, board, board.firstLoc, NULL);
+  cout << endl;
+  
+  cout << "Move history: " << initialSequence << endl;
+  cout << "Total moves: " << board.movenum << endl;
+  cout << "Next player: " << (board.nextPla == C_BLACK ? "Black" : "White") << endl;
+  cout << endl;
+  
+  // Initialize MCTS cache
+  NNUE_VCF_MCTSsearch::MCTS_CacheTable cachetable(25, 11);
+  
+  // Create MCTS search instance
+  NNUE_VCF_MCTSsearch::MCTSsearch mcts(&cachetable ,&nnueHistory, board.nextPla);
+  //NNUE_VCF_MCTSsearch::MCTSsearch mcts(nullptr, &nnueHistory, board.nextPla);
+  
+  // Set MCTS parameters
+  mcts.params.puct = 0.7;
+  mcts.params.expandFactor = 0.2;
+  mcts.params.policyTemp = 1.0;
+  mcts.params.puctPow = 0.75;
+  mcts.params.fpuReductionConst = 0.1;
+  mcts.params.fpuReductionPolicy = 0.0;
+  mcts.params.localPolicyBonusStage1 = 0.0;
+  
+  // Test different search factors (visits = factor * 1000)
+  vector<double> testFactors = {};
+  for (int i = 0; i < 40; i++)
+    testFactors.push_back(pow(2.0,i));
+
+
+
+  auto startTime = chrono::high_resolution_clock::now();
+  for (double factor : testFactors) {
+    cout << "Testing MCTS search with factor " << factor << " (" << (int)(factor) << " visits)..." << endl;
+    
+    bool result = mcts.vcfSearchAutoStop(&nnueHistory, board.nextPla, factor);
+    auto endTime = chrono::high_resolution_clock::now();
+    
+    auto duration = chrono::duration_cast<chrono::milliseconds>(endTime - startTime);
+    
+    cout << "Search factor: " << factor << endl;
+    cout << "Search result: " << result << endl;
+    cout << "Search time: " << duration.count() << " ms" << endl;
+    cout << "Root visits: " << mcts.getRootVisit() << endl;
+    
+    // Get and display principal variation
+    vector<pair<Loc, uint64_t>> pv = mcts.getPV();
+    cout << "Principal Variation (" << pv.size() << " moves): ";
+    for (size_t i = 0; i < pv.size(); i++) {
+      if (i > 0) cout << " ";
+      cout << Location::toString(pv[i].first, board) << "(" << pv[i].second << ")";
+    }
+    cout << endl;
+    
+    // Check if win/loss is determined
+    if (mcts.rootNode && mcts.rootNode->isWinDetermined) {
+      cout << "Result interpretation: " << (mcts.rootNode->winner == board.nextPla ? "Win" : "Loss")
+           << " determined in " << abs(mcts.rootNode->stepsToWin) << " steps" << endl;
+      
+      // Calculate winning dependency tree size
+      auto calcStartTime = chrono::high_resolution_clock::now();
+      int64_t treeSize = mcts.calculateWinningDependencyTreeSize();
+      auto calcEndTime = chrono::high_resolution_clock::now();
+      auto calcDuration = chrono::duration_cast<chrono::microseconds>(calcEndTime - calcStartTime);
+      
+      cout << "Winning dependency tree size: " << treeSize << " nodes" << endl;
+      cout << "Tree calculation time: " << calcDuration.count() << " microseconds" << endl;
+      
+      cout << "Win/Loss determined, stopping further searches." << endl;
+      cout << "----------------------------------------" << endl;
+      break; // 检测到必胜/必败时直接退出循环
+    } else {
+      cout << "Result interpretation: Uncertain outcome (value: " << mcts.getRootValue() << ")" << endl;
     }
     cout << "----------------------------------------" << endl;
   }

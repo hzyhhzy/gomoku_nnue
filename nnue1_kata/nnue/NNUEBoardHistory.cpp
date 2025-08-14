@@ -306,6 +306,7 @@ void NNUEBoardHistory::updateInputBuf(Color nextPlayer)
         Color VCside = rules.vcSide();
         int VClevel = rules.vcLevel();
         int realVClevel = VClevel + myPassNum + oppPassNum;
+        if (VClevel == 4)realVClevel = 4;//vc5/6 are handled outside
         if (realVClevel == 6)
             realVClevel = 5; // vc6 is the same as vc5
         if (realVClevel >= 1 && realVClevel <= 5) {

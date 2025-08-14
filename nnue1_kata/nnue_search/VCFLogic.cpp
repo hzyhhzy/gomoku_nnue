@@ -637,6 +637,8 @@ void VCFLogic::markAllDefenseDependedLocs(const Board& board, Player attackPla, 
         }
 
         if (attackCount >= 4 && defendCount == 0) {
+            if (board.nextPla == attackPla && attackCount - board.stage >= 4)
+              assert(false);
             for (int i = 0; i < 6; i++) {
                 Loc loc = loc0 + i * adj;
                 if (board.colors[loc] == C_EMPTY) {

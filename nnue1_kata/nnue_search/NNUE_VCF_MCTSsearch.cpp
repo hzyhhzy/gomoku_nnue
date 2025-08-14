@@ -310,6 +310,62 @@ void MCTSsearch::clearBoard() {
     }
 }
 
+bool MCTSsearch::vcfSearchAutoStop(NNUEBoardHistory* hist, Player attackPla, double searchFactor) {
+  // Initialize with new board history and attack player
+  boardHistory = hist;
+  attackPlayer = attackPla;
+  assert(attackPlayer == boardHistory->getBoard().nextPla);
+  assert(boardHistory->getBoard().stage == 0);
+  
+  // Clear any existing search tree
+  if (rootNode != nullptr) {
+    delete rootNode;
+    rootNode = nullptr;
+  }
+  
+  // Get current board state
+  const Board& board = boardHistory->getBoard();
+  Color currentColor = board.nextPla;
+  
+  // Create root node
+  rootNode = new MCTSnode(this, currentColor, params.policyTemp);
+  
+  // Start with initial search visits
+  int64_t totalVisits = 0;
+  
+  while (true) {
+    
+    // Also stop if we have a determined result
+    if (rootNode->isWinDetermined) {
+      break;
+    }
+    
+    // Perform a batch of searches
+    int visitToSearch = 0.5 * totalVisits + 5;
+    SearchResult result = search(rootNode, visitToSearch, true);
+    totalVisits += result.newVisits;
+    
+    // Get current attacker value (win rate from attacker's perspective)
+    double attackerWinrate = (getRootValue() + 1)/2;
+    if(attackerWinrate<0.0001) {
+      attackerWinrate = 0.0001;
+    }
+    
+    // Calculate stopping condition: visits / (attackerValue + 1) > searchFactor
+    double ratio = (double)totalVisits / attackerWinrate;
+    
+    if (ratio > searchFactor) {
+      break;
+    }
+    
+  }
+  if(rootNode->isWinDetermined 
+    && rootNode->winner == attackPlayer) {
+    return true;
+  }
+  return false;
+}
+
 MCTSsearch::SearchResult MCTSsearch::search(MCTSnode* node, uint64_t remainVisits, bool isRoot) {
   if (remainVisits == 0)
     ASSERT_UNREACHABLE;
@@ -435,7 +491,7 @@ std::pair<Color, int64_t> MCTSsearch::checkWinnerDetermined(const MCTSnode* node
     
     if (bestResult != 0) {
         Color winner = bestResult==1 ? node->nextColor : bestResult==-2 ? getOpp(node->nextColor) : C_EMPTY;
-        int stepsToWin = bestResult==1 ? shortestStepsToWin : bestResult==-2 ? -longestStepsToLoss : 0;
+        int stepsToWin = bestResult==1 ? shortestStepsToWin : bestResult==-2 ? longestStepsToLoss : 0;
         return std::make_pair(winner, stepsToWin);
     }
     
