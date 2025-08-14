@@ -598,6 +598,107 @@ vector<Loc> VCFLogic::getAllVCFAttackOrDefenseLocs(const Board& board, Player at
   return locs;
 }
 
+
+void VCFLogic::markAllDefenseDependedLocs(const Board& board, Player attackPla, std::vector<int8_t>& dependMap)
+{
+    assert(dependMap.size()==Board::MAX_ARR_SIZE);
+    Player defendPla = getOpp(attackPla);
+    
+    //mark all existing stones as 2
+    for(int i=0;i<Board::MAX_ARR_SIZE;i++)
+    {
+      if (board.colors[i] != C_EMPTY)
+        dependMap[i] = 2;
+    }
+    dependMap[board.firstLoc]=2;
+
+
+
+    auto checkTuple = [&](Loc loc0, int16_t adj) -> void {
+        int attackCount = 0;
+        int defendCount = 0;
+
+        for (int i = 0; i < 6; i++) {
+            Loc loc = loc0 + i * adj;
+            //if (!board.isOnBoard(loc)) {
+            //  ASSERT_UNREACHABLE;
+            //  return; // 无效六元组，跳过
+            //}
+
+            Color c = board.colors[loc];
+            if (board.stage == 1 && loc == board.firstLoc)
+            c = board.nextPla;
+            if (c == attackPla) {
+            attackCount++;
+            }
+            else if (c == defendPla) {
+            defendCount++;
+            }
+        }
+
+        if (attackCount >= 4 && defendCount == 0) {
+            for (int i = 0; i < 6; i++) {
+                Loc loc = loc0 + i * adj;
+                if (board.colors[loc] == C_EMPTY) {
+                    dependMap[loc] = 2;
+                }
+            }
+        }
+
+        if (attackCount == 0 && defendCount >= 3) {
+            for (int i = 0; i < 6; i++) {
+                Loc loc = loc0 + i * adj;
+                if (board.colors[loc] == C_EMPTY) {
+                    dependMap[loc] = 2;
+                }
+            }
+        }
+        else if (attackCount == 0 && defendCount >= 2) {
+            for (int i = 0; i < 6; i++) {
+                Loc loc = loc0 + i * adj;
+                if (board.colors[loc] == C_EMPTY) {
+                    dependMap[loc] = max(dependMap[loc], int8_t(1));
+                }
+            }
+        }
+        
+    };
+
+    // Traverse all tuples in all directions
+    // +x direction (horizontal)
+    for (int y = 0; y < board.y_size; y++) {
+        for (int x = 0; x < board.x_size - 5; x++) {
+        Loc loc0 = Location::getLoc(x, y, board.x_size);
+        checkTuple(loc0, 1);
+        }
+    }
+
+    // +y direction (vertical)
+    for (int y = 0; y < board.y_size - 5; y++) {
+        for (int x = 0; x < board.x_size; x++) {
+        Loc loc0 = Location::getLoc(x, y, board.x_size);
+        checkTuple(loc0, board.x_size + 1);
+        }
+    }
+
+    // +x+y direction (positive diagonal)
+    for (int y = 0; y < board.y_size - 5; y++) {
+        for (int x = 0; x < board.x_size - 5; x++) {
+        Loc loc0 = Location::getLoc(x, y, board.x_size);
+        checkTuple(loc0, board.x_size + 1 + 1);
+        }
+    }
+
+    // -x+y direction (negative diagonal)
+    for (int y = 0; y < board.y_size - 5; y++) {
+        for (int x = 5; x < board.x_size; x++) {
+        Loc loc0 = Location::getLoc(x, y, board.x_size);
+        checkTuple(loc0, board.x_size + 1 - 1);
+        }
+    }
+
+}
+
 Loc VCFLogic::findImmediateWinInVCFAttack(const Board& board, Player attackPla) {
   // Only search for stage==1 and nextPla==attackPla cases
   if (board.stage != 1 || board.nextPla != attackPla) {
@@ -675,4 +776,80 @@ Loc VCFLogic::findImmediateWinInVCFAttackLayer2(const Board& board, Player attac
 
   // No immediate winning position found
   return Board::NULL_LOC;
+}
+
+
+void VCFLogic::printBoardWithDependencyMap(const Board& board, const std::vector<int8_t>& dependMap) {
+  cout << "Defense dependency map (board format):" << endl;
+
+  // Print board with dependency map values (similar to Board::printBoard)
+  bool showCoords = board.x_size <= 50 && board.y_size <= 50;
+  if (showCoords) {
+    const char* xChar = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
+    cout << "  ";
+    for (int x = 0; x < board.x_size; x++) {
+      if (x <= 24) {
+        cout << " ";
+        cout << xChar[x];
+      }
+      else {
+        cout << "A" << xChar[x - 25];
+      }
+    }
+    cout << endl;
+  }
+
+  // Count dependency values in empty positions
+  int count0 = 0, count1 = 0, count2 = 0, countOther = 0;
+  
+  for (int y = 0; y < board.y_size; y++) {
+    if (showCoords) {
+      char buf[16];
+      sprintf(buf, "%2d", board.y_size - y);
+      cout << buf << ' ';
+    }
+    for (int x = 0; x < board.x_size; x++) {
+      Loc loc = Location::getLoc(x, y, board.x_size);
+      if (board.colors[loc] != C_EMPTY) {
+        // Show existing pieces
+        char s = PlayerIO::colorToChar(board.colors[loc]);
+        cout << s;
+      }
+      else {
+        // Count all dependency values in empty positions
+        if (dependMap[loc] == 0) {
+          count0++;
+          cout << '.';
+        }
+        else if (dependMap[loc] == 1) {
+          count1++;
+          cout << '1';
+        }
+        else if (dependMap[loc] == 2) {
+          count2++;
+          cout << '2';
+        }
+        else {
+          countOther++;
+          cout << (int)dependMap[loc];
+        }
+      }
+
+      if (x < board.x_size - 1)
+        cout << ' ';
+    }
+    cout << endl;
+  }
+  
+  // Display statistics
+  cout << "Dependency statistics (empty positions only):" << endl;
+  cout << "  Positions with value 0: " << count0 << endl;
+  cout << "  Positions with value 1: " << count1 << endl;
+  cout << "  Positions with value 2: " << count2 << endl;
+  if (countOther > 0) {
+    cout << "  Positions with other values: " << countOther << endl;
+  }
+  cout << "  Total empty positions: " << (count0 + count1 + count2 + countOther) << endl;
+  cout << "  Total dependency positions (non-zero): " << (count1 + count2 + countOther) << endl;
+  cout << endl;
 }

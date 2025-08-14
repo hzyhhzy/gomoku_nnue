@@ -125,6 +125,12 @@ public:
     std::vector<std::pair<Loc, uint64_t>> getPV() const;  // Get principal variation with visit counts
     void stop() { terminate.store(true, std::memory_order_relaxed); }
     
+    // Calculate the number of nodes in the winning dependency tree
+    int64_t calculateWinningDependencyTreeSize() const;
+    
+    // Calculate defense dependency map by recursively executing markAllDefenseDependedLocs on search tree
+    std::vector<int8_t> calculateDefenseDependencyMap();
+    
     void setOptions(size_t maxNodes) { option.maxNodes = maxNodes; }
     void loadParamFile(std::string filename);
     
@@ -140,6 +146,12 @@ public:
     std::vector<std::pair<Loc, float>> getLegalMovesAndVCFResultWithPolicy(Color color, Color& maybeWinner, int& gameEndMovenum);
     NNUE::ValueType evaluatePosition(Color color);
     std::pair<Color, int64_t> checkWinnerDetermined(const MCTSnode* node) const;
+    
+    // Helper function for calculating winning dependency tree size
+    int64_t calculateWinningDependencyTreeSizeRecursive(const MCTSnode* node) const;
+    
+    // Helper function for calculating defense dependency map
+    void calculateDefenseDependencyMapRecursive(const MCTSnode* node, std::vector<int8_t>& dependMap);
 };
 
 } // namespace NNUE_VCF_MCTSsearch

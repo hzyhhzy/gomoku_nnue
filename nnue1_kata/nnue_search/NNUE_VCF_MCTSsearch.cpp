@@ -748,3 +748,147 @@ void MCTSsearch::loadParamFile(std::string filename) {
         else if (key == "localPolicyBonusStage1") params.localPolicyBonusStage1 = std::stod(value);
     }
 }
+
+int64_t MCTSsearch::calculateWinningDependencyTreeSize() const {
+    if (rootNode == nullptr) {
+        return 0;
+    }
+    
+    // Check if root node has a determined winning outcome
+    if (!rootNode->isWinDetermined) {
+        // Root node outcome is not determined, return 0
+        return 0;
+    }
+    
+    return calculateWinningDependencyTreeSizeRecursive(rootNode);
+}
+
+int64_t MCTSsearch::calculateWinningDependencyTreeSizeRecursive(const MCTSnode* node) const {
+    if (node == nullptr) {
+        return 0;
+    }
+    
+    int64_t count = 1; // Count current node
+    
+    // If this node has a determined outcome, we need to traverse the dependency tree
+    if (node->isWinDetermined) {
+        // For a winning node, we need to include at least one winning child path
+        // For a losing node, we need to include all children (since opponent can choose any)
+        
+        if (node->winner == node->nextColor) {
+            // This is a winning node for the current player
+            // Find the best winning move and include its dependency tree
+            int bestSteps = INT_MAX;
+            const MCTSnode* bestChild = nullptr;
+            
+            for (int i = 0; i < node->childrennum; i++) {
+                const MCTSnode* child = node->children[i].ptr;
+                if (child != nullptr && child->isWinDetermined && 
+                    child->winner == node->winner && 
+                    child->stepsToWin < bestSteps) {
+                    bestSteps = child->stepsToWin;
+                    bestChild = child;
+                }
+            }
+            
+            if (bestChild != nullptr) {
+                count += calculateWinningDependencyTreeSizeRecursive(bestChild);
+            }
+            else{
+              assert(node->childrennum==0);
+            }
+        } else if (node->winner == getOpp(node->nextColor)) {
+            // This is a losing node for the current player
+            // Include all children in the dependency tree since opponent controls the choice
+            for (int i = 0; i < node->childrennum; i++) {
+                const MCTSnode* child = node->children[i].ptr;
+                if (child != nullptr) {
+                    count += calculateWinningDependencyTreeSizeRecursive(child);
+                }
+            }
+        }
+        // For draw nodes (winner == C_EMPTY), we don't need to traverse further
+    }
+    
+    return count;
+}
+
+std::vector<int8_t> MCTSsearch::calculateDefenseDependencyMap() {
+    static_assert(IMMEDIATE_WIN_SEARCH_LAYERS == 0);
+    Hash128 hash_init = boardHistory->getBoard().pos_hash;
+    std::vector<int8_t> dependMap(Board::MAX_ARR_SIZE, 0);
+    
+    if (rootNode == nullptr || rootNode->winner != attackPlayer) {
+        assert(false);
+    }
+    
+    
+    calculateDefenseDependencyMapRecursive(rootNode, dependMap);
+    Hash128 hash_end = boardHistory->getBoard().pos_hash;
+    assert(hash_init == hash_end);
+    return dependMap;
+}
+
+void MCTSsearch::calculateDefenseDependencyMapRecursive(const MCTSnode* node, std::vector<int8_t>& dependMap) {
+    if (node == nullptr) {
+        return;
+    }
+    
+    // Get current board state by reconstructing from boardHistory
+    // Note: This is a simplified approach - in practice, we'd need to track the board state
+    // through the search tree path. For now, we'll use the current board state.
+    const Board& board = boardHistory->getBoard();
+    
+    // Execute markAllDefenseDependedLocs for current node
+    VCFLogic::markAllDefenseDependedLocs(board, attackPlayer, dependMap);
+    
+    // If this node has a determined outcome, recursively process relevant children
+    if (node->isWinDetermined) {
+        if (node->winner == node->nextColor) {
+            // This is a winning node - find the best winning child
+            int bestSteps = INT_MAX;
+            const MCTSnode* bestChild = nullptr;
+            Loc bestMove = Board::NULL_LOC;
+            
+            for (int i = 0; i < node->childrennum; i++) {
+                const MCTSnode* child = node->children[i].ptr;
+                if (child != nullptr && child->isWinDetermined && 
+                    child->winner == node->winner && 
+                    child->stepsToWin < bestSteps) {
+                    bestSteps = child->stepsToWin;
+                    bestChild = child;
+                    bestMove = node->children[i].loc;
+                }
+            }
+            
+            if (bestChild != nullptr && bestMove != Board::NULL_LOC) {
+                // Play the move to update board state
+                boardHistory->play(node->nextColor, bestMove);
+                
+                // Recursively process the child
+                calculateDefenseDependencyMapRecursive(bestChild, dependMap);
+                
+                // Undo the move to restore board state
+                boardHistory->undo();
+            }
+        } else if (node->winner == getOpp(node->nextColor)) {
+            // This is a losing node - process all children
+            for (int i = 0; i < node->childrennum; i++) {
+                const MCTSnode* child = node->children[i].ptr;
+                if (child != nullptr) {
+                    Loc move = node->children[i].loc;
+                    if (move != Board::NULL_LOC) {
+                        // Play the move to update board state
+                        boardHistory->play(node->nextColor, move);
+                        
+                        // Recursively process the child
+                        calculateDefenseDependencyMapRecursive(child, dependMap);
+                        
+                        // Undo the move to restore board state
+                        boardHistory->undo();
+                    }
+                }
+            }
+        }
+    }
+}
