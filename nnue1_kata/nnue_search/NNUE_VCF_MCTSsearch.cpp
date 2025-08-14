@@ -1,4 +1,5 @@
 #include "NNUE_VCF_MCTSsearch.h"
+#include "VCFLogic.h"
 #include <algorithm>
 #include <numeric>
 #include <cmath>
@@ -152,7 +153,7 @@ MCTSnode::MCTSnode(MCTSsearch* search, Color nextColor, double policyTemp) : nex
 
     if (MCTSsearch::IMMEDIATE_WIN_SEARCH_LAYERS >= 2 && maybeWinner == C_WALL && board.nextPla == search->attackPlayer && board.stage == 0)//check one move win from stage 0
     {
-      Loc winloc = GameLogic::findImmediateWinInVCFAttackLayer2(board, search->attackPlayer);
+      Loc winloc = VCFLogic::findImmediateWinInVCFAttackLayer2(board, search->attackPlayer);
       if (winloc != Board::NULL_LOC)
       {
         maybeWinner = search->attackPlayer;
@@ -162,7 +163,7 @@ MCTSnode::MCTSnode(MCTSsearch* search, Color nextColor, double policyTemp) : nex
 
     if (MCTSsearch::IMMEDIATE_WIN_SEARCH_LAYERS >= 1 && maybeWinner == C_WALL && board.nextPla == search->attackPlayer && board.stage == 1)//check one move win from stage 1
     {
-      Loc winloc = GameLogic::findImmediateWinInVCFAttack(board, search->attackPlayer);
+      Loc winloc = VCFLogic::findImmediateWinInVCFAttack(board, search->attackPlayer);
       if (winloc != Board::NULL_LOC)
       {
         maybeWinner = search->attackPlayer;
@@ -517,7 +518,7 @@ std::vector<std::pair<Loc, float>> MCTSsearch::getLegalMovesAndVCFResultWithPoli
     }
     
     // Calculate legal moves with policy
-    std::vector<Loc> legalLocs = GameLogic::getAllVCFAttackOrDefenseLocs(board, attackPlayer, maybeWinner, gameEndMovenum);
+    std::vector<Loc> legalLocs = VCFLogic::getAllVCFAttackOrDefenseLocs(board, attackPlayer, maybeWinner, gameEndMovenum);
     if (legalLocs.empty())
       assert(maybeWinner != C_WALL);
     

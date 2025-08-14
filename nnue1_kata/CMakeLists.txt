@@ -67,6 +67,8 @@ add_executable(katago
   nnue/NNUEglobal.cpp
   nnue/NNUEBoardHistory.cpp
   nnue/NNUE_VCF_ABSearch.cpp
+  nnue_search/NNUE_VCF_MCTSsearch.cpp
+  nnue_search/VCFLogic.cpp
   main.cpp
   )
 

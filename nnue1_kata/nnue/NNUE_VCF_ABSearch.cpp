@@ -1,4 +1,5 @@
 #include "NNUE_VCF_ABSearch.h"
+#include "../nnue_search/VCFLogic.h"
 #include "../game/gamelogic.h"
 #include "Eva_nnuev2.h"
 #include <algorithm>
@@ -139,7 +140,7 @@ double VCF_ABSearch::alphaBeta(
   // Check game state
   Color maybeWinner=C_WALL;
   int gameEndMovenum=0;
-  std::vector<Loc> allLegalLocs = GameLogic::getAllVCFAttackOrDefenseLocs(boardHistory->getBoard(), attackPlayer, maybeWinner, gameEndMovenum);
+  std::vector<Loc> allLegalLocs = VCFLogic::getAllVCFAttackOrDefenseLocs(boardHistory->getBoard(), attackPlayer, maybeWinner, gameEndMovenum);
 
 
   //int gameState = checkGameState();
@@ -363,8 +364,8 @@ int VCF_ABSearch::checkGameState() {
   
   if (board.stage == 0 && board.nextPla == defendPlayer) {
     // Attacker just finished placing two pieces
-    int twoFourThreats = GameLogic::checkTwoFourThreats(board, attackPlayer);
-    int oppMaxLen = GameLogic::checkMaxConnectLen(board, defendPlayer);
+    int twoFourThreats = VCFLogic::checkTwoFourThreats(board, attackPlayer);
+    int oppMaxLen = VCFLogic::checkMaxConnectLen(board, defendPlayer);
 
     //Board::printBoard(cout, board, board.firstLoc, NULL);
     //cout.flush();
@@ -386,7 +387,7 @@ int VCF_ABSearch::checkGameState() {
   
   if (board.stage == 1 && board.nextPla == defendPlayer) {
     // Defender placed one piece
-    int twoFourThreats = GameLogic::checkTwoFourThreats(board, attackPlayer);
+    int twoFourThreats = VCFLogic::checkTwoFourThreats(board, attackPlayer);
     if (twoFourThreats == 1) {
       return 0; // Continue
     }
@@ -402,11 +403,11 @@ int VCF_ABSearch::checkGameState() {
   
   if (board.stage == 0 && board.nextPla == attackPlayer) {
     // Attacker's turn to place two pieces
-    int oppMaxLen = GameLogic::checkMaxConnectLen(board, defendPlayer);
+    int oppMaxLen = VCFLogic::checkMaxConnectLen(board, defendPlayer);
     if (oppMaxLen >= 6) {
       return -1; // Defender wins
     }
-    int plaMaxLen = GameLogic::checkMaxConnectLen(board, attackPlayer);
+    int plaMaxLen = VCFLogic::checkMaxConnectLen(board, attackPlayer);
     if (plaMaxLen >= 4) {
       return 1; // Attacker wins
     }
