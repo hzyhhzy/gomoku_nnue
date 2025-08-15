@@ -160,6 +160,9 @@ void NNUEBoardHistory::clear(const Board& board, Player pla, const Rules& rules)
 
 void NNUEBoardHistory::updateInputBuf(Color nextPlayer)
 {
+    if (historicalBoards.empty()) {
+        ASSERT_UNREACHABLE;
+    }
     const Board& currentBoard = historicalBoards.back();
     Player pla = nextPlayer;
     assert(pla == currentBoard.nextPla);
@@ -184,9 +187,6 @@ void NNUEBoardHistory::updateInputBuf(Color nextPlayer)
     std::fill(gfInputBuf, gfInputBuf + NNUEV2::globalFeatureNum, 0.0f);
     std::fill(illegalMapBuf, illegalMapBuf + MaxBS * MaxBS, false);
     float* gfInputBufp3 = gfInputBuf + 3;
-    if (historicalBoards.empty()) {
-        ASSERT_UNREACHABLE;
-    }
     
     
 

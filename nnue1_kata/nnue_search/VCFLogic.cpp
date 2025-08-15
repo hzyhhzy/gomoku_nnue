@@ -1,5 +1,7 @@
 #include "VCFLogic.h"
+#include "VCFCalculator.h"
 #include <vector>
+#include <map>
 
 // VCF Logic implementation
 using namespace std;
@@ -155,8 +157,8 @@ int VCFLogic::checkTwoFourThreats(const Board& board, Player pla) {
 }
 
 int VCFLogic::checkMaxConnectLen(const Board& board, Player pla) {
-  if (board.stage != 0)
-    ASSERT_UNREACHABLE;
+  //if (board.stage != 0)
+  //  ASSERT_UNREACHABLE;
   int maxLen = 0;
   
   auto checkDirection = [&](Loc startLoc, int16_t adj) -> int {
@@ -320,13 +322,13 @@ vector<Loc> VCFLogic::getAllVCFAttackOrDefenseLocs(const Board& board, Player at
     if (board.stage == 0) {
       if (maxAttackCount >= 4) {
         winner = attackPla;
-        gameEndMovenum = board.movenum + 6 - maxAttackCount;
+        gameEndMovenum = board.movenum + 2;
         return locs;
       }
     } else { // stage == 1
       if (maxAttackCount >= 5) {
         winner = attackPla;
-        gameEndMovenum = board.movenum + 6 - maxAttackCount;
+        gameEndMovenum = board.movenum + 1;
         return locs;
       }
     }
@@ -478,7 +480,7 @@ vector<Loc> VCFLogic::getAllVCFAttackOrDefenseLocs(const Board& board, Player at
       }
       if (maxDefendCount >= 4) {
         winner = defendPla;
-        gameEndMovenum = board.movenum + 6 - maxDefendCount;
+        gameEndMovenum = board.movenum + 2;
         return locs;
       }
     } else { // stage == 1
@@ -487,7 +489,7 @@ vector<Loc> VCFLogic::getAllVCFAttackOrDefenseLocs(const Board& board, Player at
       }
       if (maxDefendCount >= 5) {
         winner = defendPla;
-        gameEndMovenum = board.movenum + 6 - maxDefendCount;
+        gameEndMovenum = board.movenum + 1;
         return locs;
       }
     }
@@ -598,6 +600,84 @@ vector<Loc> VCFLogic::getAllVCFAttackOrDefenseLocs(const Board& board, Player at
   return locs;
 }
 
+vector<Loc> VCFLogic::getAllDefenseFourLocs(const Board& board, Player attackPla) {
+    Player defendPla = getOpp(attackPla);
+    assert(board.stage==0);
+    assert(board.nextPla==attackPla);
+    vector<Loc> locs;
+  
+    
+    auto checkTuple = [&](Loc loc0, int16_t adj) -> void {
+        int attackCount = 0;
+        int defendCount = 0;
+        
+        for (int i = 0; i < 6; i++) {
+            Loc loc = loc0 + i * adj;
+            //if (!board.isOnBoard(loc)) {
+            //  ASSERT_UNREACHABLE;
+            //  return; // 无效六元组，跳过
+            //}
+            
+            Color c = board.colors[loc];
+            if (board.stage == 1 && loc == board.firstLoc)
+                c = board.nextPla;
+            if (c == attackPla) {
+                attackCount++;
+            } else if (c == defendPla) {
+                defendCount++;
+            }
+        }
+        
+        assert(!(defendCount-board.stage>=4&&attackCount==0));//defender can directly win
+        assert(attackCount<=5);
+
+        // Record empty positions in tuples with 4-5 attackPla pieces and no defendPla pieces
+        if (attackCount >= 4 && attackCount <= 5 && defendCount == 0) {
+            for (int i = 0; i < 6; i++) {
+                Loc loc = loc0 + i * adj;
+                if (board.colors[loc] == C_EMPTY) {
+                    locs.push_back(loc);
+                }
+            }
+        }
+        
+    };
+    
+    // 遍历所有方向的六元组
+    // +x direction (横向)
+    for (int y = 0; y < board.y_size; y++) {
+      for (int x = 0; x < board.x_size - 5; x++) {
+        Loc loc0 = Location::getLoc(x, y, board.x_size);
+        checkTuple(loc0, 1);
+      }
+    }
+    
+    // +y direction (竖向)
+    for (int y = 0; y < board.y_size - 5; y++) {
+      for (int x = 0; x < board.x_size; x++) {
+        Loc loc0 = Location::getLoc(x, y, board.x_size);
+        checkTuple(loc0, board.x_size + 1);
+      }
+    }
+    
+    // +x+y direction (正斜向)
+    for (int y = 0; y < board.y_size - 5; y++) {
+      for (int x = 0; x < board.x_size - 5; x++) {
+        Loc loc0 = Location::getLoc(x, y, board.x_size);
+        checkTuple(loc0, board.x_size + 1 + 1);
+      }
+    }
+    
+    // -x+y direction (反斜向)
+    for (int y = 0; y < board.y_size - 5; y++) {
+      for (int x = 5; x < board.x_size; x++) {
+        Loc loc0 = Location::getLoc(x, y, board.x_size);
+        checkTuple(loc0, board.x_size + 1 - 1);
+      }
+    }
+    
+    return locs;
+}
 
 void VCFLogic::markAllDefenseDependedLocs(const Board& board, Player attackPla, std::vector<int8_t>& dependMap)
 {
@@ -782,76 +862,165 @@ Loc VCFLogic::findImmediateWinInVCFAttackLayer2(const Board& board, Player attac
 
 
 void VCFLogic::printBoardWithDependencyMap(const Board& board, const std::vector<int8_t>& dependMap) {
-  cout << "Defense dependency map (board format):" << endl;
-
-  // Print board with dependency map values (similar to Board::printBoard)
-  bool showCoords = board.x_size <= 50 && board.y_size <= 50;
-  if (showCoords) {
-    const char* xChar = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
-    cout << "  ";
-    for (int x = 0; x < board.x_size; x++) {
-      if (x <= 24) {
-        cout << " ";
-        cout << xChar[x];
-      }
-      else {
-        cout << "A" << xChar[x - 25];
-      }
+    if (dependMap.empty())
+    {
+        cout << "Board has no VCF:" << endl;
+        Board::printBoard(cout, board, Board::NULL_LOC, nullptr);
+        return;
     }
-    cout << endl;
-  }
+    else
+        assert(dependMap.size() == Board::MAX_ARR_SIZE);
+    cout << "Defense dependency map (board format):" << endl;
 
-  // Count dependency values in empty positions
-  int count0 = 0, count1 = 0, count2 = 0, countOther = 0;
-  
-  for (int y = 0; y < board.y_size; y++) {
+    // Print board with dependency map values (similar to Board::printBoard)
+    bool showCoords = board.x_size <= 50 && board.y_size <= 50;
     if (showCoords) {
-      char buf[16];
-      sprintf(buf, "%2d", board.y_size - y);
-      cout << buf << ' ';
+        const char* xChar = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
+        cout << "  ";
+        for (int x = 0; x < board.x_size; x++) {
+            if (x <= 24) {
+                cout << " ";
+                cout << xChar[x];
+            }
+            else {
+                cout << "A" << xChar[x - 25];
+            }
+        }
+        cout << endl;
     }
-    for (int x = 0; x < board.x_size; x++) {
-      Loc loc = Location::getLoc(x, y, board.x_size);
-      if (board.colors[loc] != C_EMPTY) {
-        // Show existing pieces
-        char s = PlayerIO::colorToChar(board.colors[loc]);
-        cout << s;
-      }
-      else {
-        // Count all dependency values in empty positions
-        if (dependMap[loc] == 0) {
-          count0++;
-          cout << '.';
-        }
-        else if (dependMap[loc] == 1) {
-          count1++;
-          cout << '1';
-        }
-        else if (dependMap[loc] == 2) {
-          count2++;
-          cout << '2';
-        }
-        else {
-          countOther++;
-          cout << (int)dependMap[loc];
-        }
-      }
 
-      if (x < board.x_size - 1)
-        cout << ' ';
+    // Count dependency values in empty positions
+    int count0 = 0, count1 = 0, count2 = 0, countOther = 0;
+  
+    for (int y = 0; y < board.y_size; y++) {
+        if (showCoords) {
+            char buf[16];
+            sprintf(buf, "%2d", board.y_size - y);
+            cout << buf << ' ';
+        }
+        for (int x = 0; x < board.x_size; x++) {
+            Loc loc = Location::getLoc(x, y, board.x_size);
+            if (board.colors[loc] != C_EMPTY) {
+                // Show existing pieces
+                char s = PlayerIO::colorToChar(board.colors[loc]);
+                cout << s;
+            }
+            else {
+                // Count all dependency values in empty positions
+                if (dependMap[loc] == 0) {
+                    count0++;
+                    cout << '.';
+                }
+                else if (dependMap[loc] == 1) {
+                    count1++;
+                    cout << '1';
+                }
+                else if (dependMap[loc] == 2) {
+                    count2++;
+                    cout << '2';
+                }
+                else {
+                    countOther++;
+                    cout << (int)dependMap[loc];
+                }
+            }
+
+            if (x < board.x_size - 1)
+                cout << ' ';
+        }
+        cout << endl;
+    }
+  
+    // Display statistics
+    cout << "Dependency statistics (empty positions only):" << endl;
+    cout << "  Positions with value 0: " << count0 << endl;
+    cout << "  Positions with value 1: " << count1 << endl;
+    cout << "  Positions with value 2: " << count2 << endl;
+    if (countOther > 0) {
+        assert(false);
+    }
+    cout << "  Total empty positions: " << (count0 + count1 + count2 + countOther) << endl;
+    cout << "  Total dependency positions: " << (count1 + count2 + countOther) << endl;
+  cout << endl;
+}
+
+void VCFLogic::printBoardWithPruneInfo(const Board& board, const std::vector<VCFPrunedInfo>& pruneInfo) {
+    cout << "VCF Prune Information (board format):" << endl;
+
+    // Create a map for quick lookup of prune info by location
+    std::map<Loc, const VCFPrunedInfo*> pruneMap;
+    for (const auto& info : pruneInfo) {
+        pruneMap[info.loc] = &info;
+    }
+
+    // Print board with prune info (4 characters per cell)
+    bool showCoords = board.x_size <= 50 && board.y_size <= 50;
+    if (showCoords) {
+        const char* xChar = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
+        cout << "    "; // 4 spaces for row numbers
+        for (int x = 0; x < board.x_size; x++) {
+            if (x <= 24) {
+                cout << " " << xChar[x] << "  ";
+            }
+            else {
+                cout << "A" << xChar[x - 25] << " ";
+            }
+        }
+        cout << endl;
+    }
+
+    for (int y = 0; y < board.y_size; y++) {
+        if (showCoords) {
+            char buf[16];
+            sprintf(buf, "%2d ", board.y_size - y);
+            cout << buf << " ";
+        }
+
+        for (int x = 0; x < board.x_size; x++) {
+            Loc loc = Location::getLoc(x, y, board.x_size);
+
+            if (board.colors[loc] != C_EMPTY) {
+                // Show existing pieces
+                char s = PlayerIO::colorToChar(board.colors[loc]);
+                cout << " " << s << "  ";
+            }
+            else {
+                // Check if this location has prune info
+                auto it = pruneMap.find(loc);
+                if (it != pruneMap.end()) {
+                    const VCFPrunedInfo* info = it->second;
+                    if (info->isPruned) {
+                        if (info->moveNum < 10)
+                            cout << " L" << info->moveNum << " ";
+                        else if (info->moveNum < 100)
+                            cout << "L" << info->moveNum << " ";
+                        else
+                            cout << "L" << info->moveNum;
+                    }
+                    else {
+                        cout << " .  ";
+                    }
+                }
+                else {
+                    // Check if position is illegal due to move priority
+                    if (board.isLegal(loc, board.nextPla)) {
+                        if (board.getLocationPriority(x, y) + Board::PRIOR_EPS < board.firstLocPriority) {
+                            cout << " L0 ";
+                        }
+                        else {
+                            cout << " .  ";
+                        }
+                    }
+                    else {
+                        if (board.firstLoc == loc)
+                            cout << " @  ";
+                        else
+                            cout << " .  ";
+                    }
+                }
+            }
+        }
+        cout << endl;
     }
     cout << endl;
-  }
-  
-  // Display statistics
-  cout << "Dependency statistics (empty positions only):" << endl;
-  cout << "  Positions with value 0: " << count0 << endl;
-  cout << "  Positions with value 1: " << count1 << endl;
-  cout << "  Positions with value 2: " << count2 << endl;
-  if (countOther > 0) {
-    cout << "  Positions with other values: " << countOther << endl;
-  }
-  cout << "  Total empty positions: " << (count0 + count1 + count2 + countOther) << endl;
-  cout << "  Total dependency positions (non-zero): " << (count1 + count2 + countOther) << endl;
-  cout << endl;
 }

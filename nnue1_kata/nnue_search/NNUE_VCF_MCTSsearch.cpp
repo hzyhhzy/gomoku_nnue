@@ -324,8 +324,7 @@ bool MCTSsearch::vcfSearchAutoStop(NNUEBoardHistory* hist, Player attackPla, dou
   }
   
   // Get current board state
-  const Board& board = boardHistory->getBoard();
-  Color currentColor = board.nextPla;
+  Color currentColor = boardHistory->getBoard().nextPla;
   
   // Create root node
   rootNode = new MCTSnode(this, currentColor, params.policyTemp);
@@ -560,13 +559,13 @@ int MCTSsearch::selectChildIDToSearch(MCTSnode* node) {
 }
 
 std::vector<std::pair<Loc, float>> MCTSsearch::getLegalMovesAndVCFResultWithPolicy(Color color, Color& maybeWinner, int& gameEndMovenum) {
-    const Board& board = boardHistory->getBoard();
-    Hash128 posHash = board.pos_hash;
+    const Board& board0 = boardHistory->getBoard();
+    Hash128 sitHash = BoardHistory::getSituationRulesHash(board0, *boardHistory, color);
     
     // Try to get from cache first
     if (cacheTable != nullptr) {
         MCTS_CacheTable::Entry entry;
-        if (cacheTable->get(posHash, entry)) {
+        if (cacheTable->get(sitHash, entry)) {
             if (!entry.legalMovesWithPolicy.empty()) {
                 return entry.legalMovesWithPolicy;
             }
@@ -574,7 +573,7 @@ std::vector<std::pair<Loc, float>> MCTSsearch::getLegalMovesAndVCFResultWithPoli
     }
     
     // Calculate legal moves with policy
-    std::vector<Loc> legalLocs = VCFLogic::getAllVCFAttackOrDefenseLocs(board, attackPlayer, maybeWinner, gameEndMovenum);
+    std::vector<Loc> legalLocs = VCFLogic::getAllVCFAttackOrDefenseLocs(board0, attackPlayer, maybeWinner, gameEndMovenum);
     if (legalLocs.empty())
       assert(maybeWinner != C_WALL);
     
@@ -586,7 +585,7 @@ std::vector<std::pair<Loc, float>> MCTSsearch::getLegalMovesAndVCFResultWithPoli
       {
         if (cacheTable != nullptr) {
           MCTS_CacheTable::Entry entry;
-          entry.hash = posHash;
+          entry.hash = sitHash;
           entry.maybeWinner = maybeWinner;
           entry.gameEndMovenum = gameEndMovenum;
           entry.legalMovesWithPolicy = moves;
@@ -601,21 +600,22 @@ std::vector<std::pair<Loc, float>> MCTSsearch::getLegalMovesAndVCFResultWithPoli
     NNUE::ValueType value = boardHistory->evaluateFull(color, policy);
     
     // Collect moves with policy values
+    const Board& board1 = boardHistory->getBoard();
     for (const Loc& loc : legalLocs) {
-        if (board.isLegal(loc, color)) {
-            int nu_loc = Location::getX(loc, board.x_size) + Location::getY(loc, board.x_size) * MaxBS;
+        if (board1.isLegal(loc, color)) {
+            int nu_loc = Location::getX(loc, board1.x_size) + Location::getY(loc, board1.x_size) * MaxBS;
             moves.push_back(std::make_pair(loc, (float)policy[nu_loc]));
         }
     }
     
     // Apply local policy bonus for stage 1 if conditions are met
-    if (color == attackPlayer && board.stage == 1 && params.localPolicyBonusStage1 != 0.0f && board.isOnBoard(board.firstLoc)) {
+    if (color == attackPlayer && board1.stage == 1 && params.localPolicyBonusStage1 != 0.0f && board1.isOnBoard(board1.firstLoc)) {
         // Check if current player is the attacking player (first player to move)
         
         for (size_t i = 0; i < moves.size(); i++) {
             Loc move = moves[i].first;
-            if (board.isOnBoard(move)) {
-                int d2 = Location::euclideanDistanceSquared(move, board.firstLoc, board.x_size);
+            if (board1.isOnBoard(move)) {
+                int d2 = Location::euclideanDistanceSquared(move, board1.firstLoc, board1.x_size);
                 float bonus = policyQuantFactor * params.localPolicyBonusStage1 * (-log(d2+36.0));
                 moves[i].second += bonus;
             }
@@ -651,7 +651,7 @@ std::vector<std::pair<Loc, float>> MCTSsearch::getLegalMovesAndVCFResultWithPoli
     // Cache the result
     if (cacheTable != nullptr) {
         MCTS_CacheTable::Entry entry;
-        entry.hash = posHash;
+        entry.hash = sitHash;
         entry.maybeWinner = maybeWinner;
         entry.gameEndMovenum = gameEndMovenum;
         entry.nnueValue = value;
@@ -662,13 +662,12 @@ std::vector<std::pair<Loc, float>> MCTSsearch::getLegalMovesAndVCFResultWithPoli
 }
 
 NNUE::ValueType MCTSsearch::evaluatePosition(Color color) {
-    const Board& board = boardHistory->getBoard();
-    Hash128 posHash = board.pos_hash;
+    Hash128 sitHash = BoardHistory::getSituationRulesHash(boardHistory->getBoard(), *boardHistory, color);
     
     // Try to get from cache first
     if (cacheTable != nullptr) {
         MCTS_CacheTable::Entry entry;
-        if (cacheTable->get(posHash, entry)) {
+        if (cacheTable->get(sitHash, entry)) {
             return entry.nnueValue;
         }
     }
@@ -679,7 +678,7 @@ NNUE::ValueType MCTSsearch::evaluatePosition(Color color) {
     // Cache the result
     if (cacheTable != nullptr) {
         MCTS_CacheTable::Entry entry;
-        entry.hash = posHash;
+        entry.hash = sitHash;
         entry.nnueValue = value;
         cacheTable->set(entry);
     }
@@ -893,10 +892,9 @@ void MCTSsearch::calculateDefenseDependencyMapRecursive(const MCTSnode* node, st
     // Get current board state by reconstructing from boardHistory
     // Note: This is a simplified approach - in practice, we'd need to track the board state
     // through the search tree path. For now, we'll use the current board state.
-    const Board& board = boardHistory->getBoard();
     
     // Execute markAllDefenseDependedLocs for current node
-    VCFLogic::markAllDefenseDependedLocs(board, attackPlayer, dependMap);
+    VCFLogic::markAllDefenseDependedLocs(boardHistory->getBoard(), attackPlayer, dependMap);
     
     // If this node has a determined outcome, recursively process relevant children
     if (node->isWinDetermined) {

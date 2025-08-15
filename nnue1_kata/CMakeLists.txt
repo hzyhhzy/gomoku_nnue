@@ -69,6 +69,7 @@ add_executable(katago
   nnue/NNUE_VCF_ABSearch.cpp
   nnue_search/NNUE_VCF_MCTSsearch.cpp
   nnue_search/VCFLogic.cpp
+  nnue_search/VCFCalculator.cpp
   main.cpp
   )
 

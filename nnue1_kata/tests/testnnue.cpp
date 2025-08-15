@@ -10,6 +10,8 @@
 #include "../game/gamelogic.h"
 #include "../neuralnet/nninputs.h"
 #include "../nnue_search/VCFLogic.h"
+#include "../nnue_search/VCFCalculator.h"
+
 //------------------------
 #include "../core/using.h"
 //------------------------
@@ -24,6 +26,9 @@ void testAutoPlay(const ModelWeight* weights);
 void testABSearch(const ModelWeight* weights);
 void testMCTSSearch(const ModelWeight* weights);
 void testMCTSSearch2(const ModelWeight* weights);
+void testMCTSSearch3(const ModelWeight* weights);
+void testVCFPrune1(const ModelWeight* weights);
+
 
 int MainCmds::testnnue() {
   Board::initHash();
@@ -78,8 +83,11 @@ int MainCmds::testnnue() {
   //testABSearch(nnueWeight);
   
   // Test MCTS search with same initial position
-  testMCTSSearch2(nnueWeight);
+  //testMCTSSearch3(nnueWeight);
   
+
+  testVCFPrune1(nnueWeight);
+
   delete nnueWeight;
   return 0;
 }
@@ -504,4 +512,144 @@ void testMCTSSearch2(const ModelWeight* weights) {
     VCFLogic::printBoardWithDependencyMap(board, dependMap);
   }
   cout << "MCTS search test completed." << endl;
+}
+
+
+
+void testMCTSSearch3(const ModelWeight* weights) {
+  cout << "Starting MCTS search test with specific initial position..." << endl;
+  
+  // Create board and rules
+  Board board(19, 19);
+  
+  // Set up the same initial position as AB search test
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9i14g12h13j9l13j7h15h16h12h17f12i16f13j16m12j17g9n13g14g8e11k18f8f7h9h8f10f9f11f5i8h6g7i6k8l7m8m6o13o15n14n15m14n12l12m11n10o11m9d11m10c11l11l10l9n8m13o12m7p10n9o9l6k5m5j4"; //~2 seconds or longer, win in 101 moves
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9i14g12h13j9l13j7h15h16h12h17f12i16f13j16m12j17g9n13g14g8e11k18f8f7h9h8f10f9f11f5i8h6h7g7";//cannot vcf
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9i14g12h13j9l13j7h15h16h12h17f12i16f13j16m12j17g9n13g14g8e11k18f8f7h9h8f10f9f11f5i8h6h7k8";//can vcf
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15i14h12i15g15j15f16j16k17g13l18l14i17m13h18j17l17h17m17";//2 moves win
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9i14g12h13j9l13j7h15h16h12h17f12i16f13j16m12j17g9n13g14g8e11k18f8f7h9h8f10f9f11f5i8h6h7k8g7i5e9j4";
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15k12";
+  //string initialSequence = "j10i11h10j9k7g9g11m6m5k8l6m4a1m8l8";//white has a four
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15n12";//even a bit difficult for katago
+  string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9g12l13i14i16f12h16e13d12j14s19";//require 20s (5e5 nodes), even a bit difficult for katago
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9g12l13i14i16f12h16e13d12j14i15g15g17f14f16g9m12j9m14f13m11g13n15n14o13e15d16h12c17g14n12e16f9e9o14g8p13h7p12i8h8f8i7j7g7h9f6g6g5g10g4k6l6k12l8l5o16i6m4k5m5j17j5k17j18k9m15k10k4m9k7n10k3o9k2n9n6n7l4"; //109 moves to win
+ // string initialSequence = "j10c2p5k11l12q15d15";//4 useless white stones
+  //string initialSequence = "j10c2p5k11j12k12i9";//4 useless white stones
+  //string initialSequence = "j10f5d3k11l12d4e4";//4 useless white stones
+  //string initialSequence = "j10d4e3k9i11e5g5f2j9a1c3";//first move must be purely defense
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9i14g12h13j9l13j7h15h16h12h17f12i16f13j16m12j17g9n13g14g8e11k18f8f7h9h8f10f9f11f5i8h6h7j8g7i5e9j4i7i6i10i4j6g6k6f6";//1 move win
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9i14g12h13j9l13j7h15h16h12h17f12i16f13j16m12j17g9n13g14g8e11k18f8f7h9h8f10f9f11f5i8h6h7j8g7i5e9j4i7i6i10i4j6g6k6f6h4g3g5f2";//0 move win
+
+
+
+
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9g12l13i14i16f12h16e13d12j14pass";
+
+
+
+  vector<Loc> initialLocSeq = Location::parseSequenceGom(initialSequence, board);
+  PlayUtils::playMoveLocSequence(board, board.nextPla, initialLocSeq);
+  
+  // Initialize MCTS cache
+  NNUE_VCF_MCTSsearch::MCTS_CacheTable cachetable(25, 11);
+  VCFCalculator vcfCalculator(&cachetable, weights);
+
+
+  
+  cout << "Initial board position:" << endl;
+  Board::printBoard(cout, board, board.firstLoc, NULL);
+  cout << endl;
+  
+  cout << "Move history: " << initialSequence << endl;
+  cout << "Total moves: " << board.movenum << endl;
+  cout << "Next player: " << (board.nextPla == C_BLACK ? "Black" : "White") << endl;
+  cout << endl;
+  
+  
+  
+  
+  // Test different search factors (visits = factor * 1000)
+  double searchFactor=1e6;
+
+
+
+  auto startTime = chrono::high_resolution_clock::now();
+
+  std::vector<int8_t> dependMap;
+  int vcfmovenum = vcfCalculator.calculateShortestVCFAndDependMap(board, board.nextPla, 109, searchFactor, dependMap, false);
+
+
+  auto endTime = chrono::high_resolution_clock::now();
+  
+  auto duration = chrono::duration_cast<chrono::milliseconds>(endTime - startTime);
+  
+  cout << "Search factor: " << searchFactor << endl;
+  cout << "Search time: " << duration.count() << " ms" << endl;
+  VCFLogic::printBoardWithDependencyMap(board,dependMap);
+  cout<<"vcfmove:"<<vcfmovenum<<endl;
+
+}
+
+void testVCFPrune1(const ModelWeight* weights) {
+  cout << "Starting VCF Prune test..." << endl;
+  
+  // Create board and rules
+  Board board(19, 19);
+  
+  // Set up a test position for stage 1 (defender's turn)
+  string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9g12l13i14i16f12h16e13d12j14";
+  
+  vector<Loc> initialLocSeq = Location::parseSequenceGom(initialSequence, board);
+  PlayUtils::playMoveLocSequence(board, board.nextPla, initialLocSeq);
+  
+  // Initialize VCF calculator
+  NNUE_VCF_MCTSsearch::MCTS_CacheTable cachetable(25, 11);
+  VCFCalculator vcfCalculator(&cachetable, weights);
+  
+  cout << "Initial board position:" << endl;
+  Board::printBoard(cout, board, board.firstLoc, NULL);
+  cout << endl;
+  
+  cout << "Move history: " << initialSequence << endl;
+  cout << "Total moves: " << board.movenum << endl;
+  cout << "Next player: " << (board.nextPla == C_BLACK ? "Black" : "White") << endl;
+  cout << "Board stage: " << board.stage << endl;
+  cout << endl;
+  
+  // Calculate VCF prune results for stage 1
+  auto startTime = chrono::high_resolution_clock::now();
+  
+  Color attackPlayer = getOpp(board.nextPla); // Attack player is opposite of current player
+  int maxMove = 109;
+  double searchFactor = 1e6;
+  
+  std::vector<VCFPrunedInfo> pruneResults = vcfCalculator.CalculateAllVCFDefendResults(
+    board, attackPlayer, maxMove, searchFactor);
+  
+  auto endTime = chrono::high_resolution_clock::now();
+  auto duration = chrono::duration_cast<chrono::milliseconds>(endTime - startTime);
+  
+  cout << "VCF Prune calculation time: " << duration.count() << " ms" << endl;
+  cout << "Found " << pruneResults.size() << " prune results" << endl;
+  cout << endl;
+  
+  // Display the prune information on the board
+  VCFLogic::printBoardWithPruneInfo(board, pruneResults);
+  
+  // Print detailed prune information
+  cout << "Detailed prune information:" << endl;
+  for (const auto& info : pruneResults) {
+    string locStr = Location::toString(info.loc, board);
+    cout << "  " << locStr << ": ";
+    if (info.isPruned) {
+      cout << "PRUNED (opponent wins in " << info.moveNum << " moves)";
+    } else if (info.notPruned) {
+      cout << "SAFE (opponent cannot VCF)";
+    } else {
+      cout << "UNKNOWN";
+    }
+    cout << endl;
+  }
+  
+  cout << "VCF Prune test completed." << endl;
 }
