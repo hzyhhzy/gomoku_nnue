@@ -3,6 +3,7 @@
 #include "../neuralnet/nninputs.h"
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 
 using namespace std;
 using namespace NNUE;
@@ -22,6 +23,9 @@ NNUEBoardHistory::NNUEBoardHistory(const ModelWeight* weights, const MiscNNInput
       moveCacheBlength(0),
       moveCacheWlength(0)
 {
+    // Initialize stoneTupleCountCache
+    memset(stoneTupleCountCache, 0, sizeof(stoneTupleCountCache));
+    //computeStoneTupleCountCache(board);
 }
 
 NNUEBoardHistory::NNUEBoardHistory(const Board& board, Player pla, const Rules& rules, const ModelWeight* weights, const MiscNNInputParams& nnInputParams, bool skipResultsBeforeNN)
@@ -40,6 +44,9 @@ NNUEBoardHistory::NNUEBoardHistory(const Board& board, Player pla, const Rules& 
 {
     historicalBoards.push_back(board);
     syncNNUEWithBoard(board);
+    // Initialize and compute stoneTupleCountCache
+    memset(stoneTupleCountCache, 0, sizeof(stoneTupleCountCache));
+    computeStoneTupleCountCache(board);
 }
 
 NNUEBoardHistory::NNUEBoardHistory(const NNUEBoardHistory& other)
@@ -59,6 +66,7 @@ NNUEBoardHistory::NNUEBoardHistory(const NNUEBoardHistory& other)
     std::copy(other.illegalMapBuf, other.illegalMapBuf + MaxBS * MaxBS, illegalMapBuf);
     std::copy(other.moveCacheB, other.moveCacheB + MaxBS * MaxBS, moveCacheB);
     std::copy(other.moveCacheW, other.moveCacheW + MaxBS * MaxBS, moveCacheW);
+    memcpy(stoneTupleCountCache, other.stoneTupleCountCache, sizeof(stoneTupleCountCache));
 }
 
 NNUEBoardHistory& NNUEBoardHistory::operator=(const NNUEBoardHistory& other)
@@ -79,6 +87,7 @@ NNUEBoardHistory& NNUEBoardHistory::operator=(const NNUEBoardHistory& other)
     std::copy(other.illegalMapBuf, other.illegalMapBuf + MaxBS * MaxBS, illegalMapBuf);
     std::copy(other.moveCacheB, other.moveCacheB + MaxBS * MaxBS, moveCacheB);
     std::copy(other.moveCacheW, other.moveCacheW + MaxBS * MaxBS, moveCacheW);
+    memcpy(stoneTupleCountCache, other.stoneTupleCountCache, sizeof(stoneTupleCountCache));
     
     return *this;
 }
@@ -101,6 +110,7 @@ NNUEBoardHistory::NNUEBoardHistory(NNUEBoardHistory&& other) noexcept
     std::copy(other.illegalMapBuf, other.illegalMapBuf + MaxBS * MaxBS, illegalMapBuf);
     std::copy(other.moveCacheB, other.moveCacheB + MaxBS * MaxBS, moveCacheB);
     std::copy(other.moveCacheW, other.moveCacheW + MaxBS * MaxBS, moveCacheW);
+    memcpy(stoneTupleCountCache, other.stoneTupleCountCache, sizeof(stoneTupleCountCache));
 }
 
 NNUEBoardHistory& NNUEBoardHistory::operator=(NNUEBoardHistory&& other) noexcept
@@ -121,6 +131,7 @@ NNUEBoardHistory& NNUEBoardHistory::operator=(NNUEBoardHistory&& other) noexcept
     std::copy(other.illegalMapBuf, other.illegalMapBuf + MaxBS * MaxBS, illegalMapBuf);
     std::copy(other.moveCacheB, other.moveCacheB + MaxBS * MaxBS, moveCacheB);
     std::copy(other.moveCacheW, other.moveCacheW + MaxBS * MaxBS, moveCacheW);
+    memcpy(stoneTupleCountCache, other.stoneTupleCountCache, sizeof(stoneTupleCountCache));
     
     return *this;
 }
@@ -155,6 +166,10 @@ void NNUEBoardHistory::clear(const Board& board, Player pla, const Rules& rules)
     
     // Sync NNUE state with the board
     syncNNUEWithBoard(board);
+    
+    // Initialize and compute stoneTupleCountCache
+    memset(stoneTupleCountCache, 0, sizeof(stoneTupleCountCache));
+    computeStoneTupleCountCache(board);
 }
 
 
@@ -236,8 +251,8 @@ void NNUEBoardHistory::updateInputBuf(Color nextPlayer)
               Loc loc = Location::getLoc(x, y, currentBoard.x_size);
               double priority = currentBoard.getLocationPriority(x, y);
               if(
-                currentBoard.isLegal(loc, nextPlayer) &&
-                currentBoard.getLocationPriority(x, y) + Board::PRIOR_EPS >= currentBoard.firstLocPriority)  // legal
+                  currentBoard.colors[loc] == C_EMPTY && currentBoard.firstLoc != loc &&
+                  priority + Board::PRIOR_EPS >= currentBoard.firstLocPriority)  // legal
               {
               }
               else
@@ -489,6 +504,11 @@ void NNUEBoardHistory::play(Color color, Loc loc)
     
     // Update BoardHistory state
     BoardHistory::makeBoardMoveAssumeLegal(currentBoard, loc, color);
+    
+    // Update stoneTupleCountCache incrementally
+    updateStoneTupleCountCache(loc, color, false);
+
+    //assert(checkStoneTupleCountCacheConsistency(currentBoard));
 
     //assert(checkEvaluatorBoardConsistency());
 }
@@ -506,8 +526,14 @@ void NNUEBoardHistory::undo()
 
     // Update BoardHistory state for undo
     if (!moveHistory.empty()) {
+        // Get the move to undo
+        Move lastMove = moveHistory[moveHistory.size()-1];
+        
+        // Update stoneTupleCountCache incrementally for undo
+        updateStoneTupleCountCache(lastMove.loc, lastMove.pla, true);
+        
         // Add undo to cache
-        addCache(true, historicalBoards.back().nextPla, moveHistory[moveHistory.size()-1].loc);
+        addCache(true, historicalBoards.back().nextPla, lastMove.loc);
         moveHistory.pop_back();
         //assert(checkEvaluatorBoardConsistency());
     }
@@ -622,6 +648,200 @@ bool NNUEBoardHistory::checkEvaluatorBoardConsistency()
       }
     }
   }
+  
+  // Check stoneTupleCountCache consistency
+  if (!checkStoneTupleCountCacheConsistency(currentBoard)) {
+    return false;
+  }
     
   return true;
+}
+
+void NNUEBoardHistory::computeStoneTupleCountCache(const Board& board)
+{
+    // Clear the cache
+    memset(stoneTupleCountCache, 0, sizeof(stoneTupleCountCache));
+    
+    // Direction offsets: [0] +x, [1] +y, [2] +x+y, [3] -x+y
+    int16_t directions[4] = {1, board.x_size + 1, board.x_size + 1 + 1, board.x_size + 1 - 1};
+    
+    for (int dir = 0; dir < 4; dir++) {
+        int16_t adj = directions[dir];
+        
+        // Iterate through all possible 6-tuples in this direction
+        for (int y = 0; y < board.y_size; y++) {
+            for (int x = 0; x < board.x_size; x++) {
+                Loc startLoc = Location::getLoc(x, y, board.x_size);
+                
+                // Check if this 6-tuple is valid (all positions on board)
+                bool validTuple = true;
+                for (int i = 0; i < 6; i++) {
+                    Loc loc = startLoc + i * adj;
+                    if (!board.isOnBoard(loc)) {
+                        validTuple = false;
+                        break;
+                    }
+                }
+                
+                if (!validTuple) {
+                    // Mark as out of board
+                    stoneTupleCountCache[dir][startLoc] |= 0x80;
+                    continue;
+                }
+                
+                // Count black and white stones in this 6-tuple
+                int blackCount = 0;
+                int whiteCount = 0;
+                
+                for (int i = 0; i < 6; i++) {
+                    Loc loc = startLoc + i * adj;
+                    Color c = board.colors[loc];
+                    
+                    // Handle stage 1 special case
+                    if (board.stage == 1 && loc == board.firstLoc) {
+                        c = board.nextPla;
+                    }
+                    
+                    if (c == C_BLACK) {
+                        blackCount++;
+                    } else if (c == C_WHITE) {
+                        whiteCount++;
+                    }
+                }
+                
+                // Store counts: bits 0-2 for black, bits 3-5 for white
+                stoneTupleCountCache[dir][startLoc] = (blackCount & 0x07) | ((whiteCount & 0x07) << 3);
+             }
+         }
+     }
+ }
+
+void NNUEBoardHistory::updateStoneTupleCountCache(Loc loc, Color color, bool isUndo)
+{
+    if (loc == Board::PASS_LOC || loc == Board::NULL_LOC) {
+        return;
+    }
+    
+    const Board& board = historicalBoards.back();
+    
+    // Direction offsets: [0] +x, [1] +y, [2] +x+y, [3] -x+y
+    int16_t directions[4] = {1, board.x_size + 1, board.x_size + 1 + 1, board.x_size + 1 - 1};
+    
+    for (int dir = 0; dir < 4; dir++) {
+        int16_t adj = directions[dir];
+        
+        // Update all 6-tuples that contain this location
+        for (int offset = 0; offset < 6; offset++) {
+            Loc tupleStart = loc - offset * adj;
+            
+            // Check if this tuple start is valid
+            if (!board.isOnBoard(tupleStart)) {
+                break;
+            }
+            
+            // Check if the entire 6-tuple is on board
+            //bool validTuple = true;
+            //for (int i = 0; i < 6; i++) {
+            //    Loc tupleLoc = tupleStart + i * adj;
+            //    if (!board.isOnBoard(tupleLoc)) {
+            //        validTuple = false;
+            //        break;
+            //    }
+            //}
+            
+            //if (!validTuple) {
+            //    assert(stoneTupleCountCache[dir][tupleStart] & 0x80);
+            //    continue;
+            //}
+            
+            // Extract current counts
+            uint8_t& cache = stoneTupleCountCache[dir][tupleStart];
+            if (cache & 0x80) { // Skip if marked as out of board
+                continue;
+            }
+
+            int8_t delta=color==C_BLACK?1:8;
+            if (isUndo) {
+                delta = -delta;
+            }
+
+            
+            // Store updated counts
+            cache += delta;
+
+         }
+     }
+ }
+
+bool NNUEBoardHistory::checkStoneTupleCountCacheConsistency(const Board& board)
+{
+    // Direction offsets: [0] +x, [1] +y, [2] +x+y, [3] -x+y
+    int16_t directions[4] = {1, board.x_size + 1, board.x_size + 1 + 1, board.x_size + 1 - 1};
+    
+    for (int dir = 0; dir < 4; dir++) {
+        int16_t adj = directions[dir];
+        
+        // Check all possible 6-tuples in this direction
+        for (int y = 0; y < board.y_size; y++) {
+            for (int x = 0; x < board.x_size; x++) {
+                Loc startLoc = Location::getLoc(x, y, board.x_size);
+                
+                // Check if this 6-tuple is valid (all positions on board)
+                bool validTuple = true;
+                for (int i = 0; i < 6; i++) {
+                    Loc loc = startLoc + i * adj;
+                    if (!board.isOnBoard(loc)) {
+                        validTuple = false;
+                        break;
+                    }
+                }
+                
+                uint8_t cachedValue = stoneTupleCountCache[dir][startLoc];
+                
+                if (!validTuple) {
+                    // Should be marked as out of board
+                    if (!(cachedValue & 0x80)) {
+                        return false;
+                    }
+                    continue;
+                }
+                
+                // Should not be marked as out of board
+                if (cachedValue & 0x80) {
+                    return false;
+                }
+                
+                // Count actual black and white stones in this 6-tuple
+                int actualBlackCount = 0;
+                int actualWhiteCount = 0;
+                
+                for (int i = 0; i < 6; i++) {
+                    Loc loc = startLoc + i * adj;
+                    Color c = board.colors[loc];
+                    
+                    // Handle stage 1 special case
+                    if (board.stage == 1 && loc == board.firstLoc) {
+                        c = board.nextPla;
+                    }
+                    
+                    if (c == C_BLACK) {
+                        actualBlackCount++;
+                    } else if (c == C_WHITE) {
+                        actualWhiteCount++;
+                    }
+                }
+                
+                // Extract cached counts
+                int cachedBlackCount = cachedValue & 0x07;
+                int cachedWhiteCount = (cachedValue >> 3) & 0x07;
+                
+                // Compare with actual counts
+                if (cachedBlackCount != actualBlackCount || cachedWhiteCount != actualWhiteCount) {
+                    return false;
+                }
+            }
+        }
+    }
+    
+    return true;
 }

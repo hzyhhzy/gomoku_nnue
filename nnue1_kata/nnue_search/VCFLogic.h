@@ -18,6 +18,9 @@ namespace VCFLogic {
   //else return all defense locations
   
   std::vector<Loc> getAllVCFAttackOrDefenseLocs(const Board& board, Player attackPla, Color& winner, int& gameEndMovenum);
+  std::vector<Loc> getAllVCFAttackOrDefenseLocsWithCache(const Board& board, Player attackPla, Color& winner, int& gameEndMovenum, uint8_t (&stoneTupleCache)[4][Board::MAX_ARR_SIZE]);
+
+
 
   //Get all possible defense locations of attackPla's four, empty if no four
   std::vector<Loc> getAllDefenseFourLocs(const Board& board, Player attackPla);

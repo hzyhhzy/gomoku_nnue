@@ -621,7 +621,7 @@ void testVCFPrune1(const ModelWeight* weights) {
   
   Color attackPlayer = getOpp(board.nextPla); // Attack player is opposite of current player
   int maxMove = 109;
-  double searchFactor = 1e6;
+  double searchFactor = 1e5;
   
   std::vector<VCFPrunedInfo> pruneResults = vcfCalculator.CalculateAllVCFDefendResults(
     board, attackPlayer, maxMove, searchFactor);

@@ -573,7 +573,8 @@ std::vector<std::pair<Loc, float>> MCTSsearch::getLegalMovesAndVCFResultWithPoli
     }
     
     // Calculate legal moves with policy
-    std::vector<Loc> legalLocs = VCFLogic::getAllVCFAttackOrDefenseLocs(board0, attackPlayer, maybeWinner, gameEndMovenum);
+    //std::vector<Loc> legalLocs = VCFLogic::getAllVCFAttackOrDefenseLocs(board0, attackPlayer, maybeWinner, gameEndMovenum);
+    std::vector<Loc> legalLocs = VCFLogic::getAllVCFAttackOrDefenseLocsWithCache(board0, attackPlayer, maybeWinner, gameEndMovenum, boardHistory->stoneTupleCountCache);
     if (legalLocs.empty())
       assert(maybeWinner != C_WALL);
     
