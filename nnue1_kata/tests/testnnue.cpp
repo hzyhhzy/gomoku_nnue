@@ -28,6 +28,7 @@ void testMCTSSearch(const ModelWeight* weights);
 void testMCTSSearch2(const ModelWeight* weights);
 void testMCTSSearch3(const ModelWeight* weights);
 void testVCFPrune1(const ModelWeight* weights);
+void testVCFPrune2(const ModelWeight* weights);
 
 
 int MainCmds::testnnue() {
@@ -84,9 +85,11 @@ int MainCmds::testnnue() {
   
   // Test MCTS search with same initial position
   //testMCTSSearch3(nnueWeight);
-  
 
-  testVCFPrune1(nnueWeight);
+
+  //testVCFPrune1(nnueWeight);
+
+  testVCFPrune2(nnueWeight);
 
   delete nnueWeight;
   return 0;
@@ -576,7 +579,7 @@ void testMCTSSearch3(const ModelWeight* weights) {
   auto startTime = chrono::high_resolution_clock::now();
 
   std::vector<int8_t> dependMap;
-  int vcfmovenum = vcfCalculator.calculateShortestVCFAndDependMap(board, board.nextPla, 109, searchFactor, dependMap, false);
+  int vcfmovenum = vcfCalculator.calculateShortestVCFAndDependMap(board, board.nextPla, 109, 0, 0, searchFactor, dependMap, false);
 
 
   auto endTime = chrono::high_resolution_clock::now();
@@ -597,7 +600,8 @@ void testVCFPrune1(const ModelWeight* weights) {
   Board board(19, 19);
   
   // Set up a test position for stage 1 (defender's turn)
-  string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9g12l13i14i16f12h16e13d12j14";
+  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9g12l13i14i16f12h16e13d12j14"; 
+  string initialSequence = "j10c2p5k11k9k10";//2 useless white stones
   
   vector<Loc> initialLocSeq = Location::parseSequenceGom(initialSequence, board);
   PlayUtils::playMoveLocSequence(board, board.nextPla, initialLocSeq);
@@ -652,4 +656,73 @@ void testVCFPrune1(const ModelWeight* weights) {
   }
   
   cout << "VCF Prune test completed." << endl;
+}
+
+void testVCFPrune2(const ModelWeight* weights) {
+    cout << "Starting VCF Prune test..." << endl;
+
+    // Create board and rules
+    Board board(19, 19);
+
+    // Set up a test position for stage 1 (defender's turn)
+    //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9g12l13i14i16f12h16e13d12j14"; 
+    //string initialSequence = "j10c2p5k11k9";//2 useless white stones
+    //string initialSequence = "j10k11i11j11i13";//normal 5 moves
+    string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9";//normal moves
+
+    vector<Loc> initialLocSeq = Location::parseSequenceGom(initialSequence, board);
+    PlayUtils::playMoveLocSequence(board, board.nextPla, initialLocSeq);
+
+    // Initialize VCF calculator
+    NNUE_VCF_MCTSsearch::MCTS_CacheTable cachetable(20, 5);
+    VCFCalculator vcfCalculator(&cachetable, weights);
+
+    cout << "Initial board position:" << endl;
+    Board::printBoard(cout, board, board.firstLoc, NULL);
+    cout << endl;
+
+    cout << "Move history: " << initialSequence << endl;
+    cout << "Total moves: " << board.movenum << endl;
+    cout << "Next player: " << (board.nextPla == C_BLACK ? "Black" : "White") << endl;
+    cout << "Board stage: " << board.stage << endl;
+    cout << endl;
+
+    // Calculate VCF prune results for stage 1
+    auto startTime = chrono::high_resolution_clock::now();
+
+    Color attackPlayer = getOpp(board.nextPla); // Attack player is opposite of current player
+    int maxMove = 109;
+    double searchFactor = 1e5;
+
+    std::vector<VCFPrunedInfo> pruneResults = vcfCalculator.CalculateAllVCFDefendResults(
+        board, attackPlayer, maxMove, searchFactor);
+
+    auto endTime = chrono::high_resolution_clock::now();
+    auto duration = chrono::duration_cast<chrono::milliseconds>(endTime - startTime);
+
+    cout << "VCF Prune calculation time: " << duration.count() << " ms" << endl;
+    cout << "Found " << pruneResults.size() << " prune results" << endl;
+    cout << endl;
+
+    // Display the prune information on the board
+    VCFLogic::printBoardWithPruneInfo(board, pruneResults);
+
+    // Print detailed prune information
+    cout << "Detailed prune information:" << endl;
+    for (const auto& info : pruneResults) {
+        string locStr = Location::toString(info.loc, board);
+        cout << "  " << locStr << ": ";
+        if (info.isPruned) {
+            cout << "PRUNED (opponent wins in " << info.moveNum << " moves)";
+        }
+        else if (info.notPruned) {
+            cout << "SAFE (opponent cannot VCF)";
+        }
+        else {
+            cout << "UNKNOWN";
+        }
+        cout << endl;
+    }
+
+    cout << "VCF Prune test completed." << endl;
 }

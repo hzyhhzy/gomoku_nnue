@@ -43,6 +43,8 @@ public:
         const Board& board,
         Color attackPlayer,
         int initialMaxMove,
+        int minMaxMove,
+        int recommendedMaxMove,
         double searchFactor,
         std::vector<int8_t>& dependMap,
         bool noOptimize //if true, return immediately when find a vcf, not optimize the VCF steps
