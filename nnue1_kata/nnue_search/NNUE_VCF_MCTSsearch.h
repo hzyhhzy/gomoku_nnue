@@ -105,8 +105,8 @@ public:
         double puct = 0.7;
         double puctPow = 0.75;
         double puctBase = 10;
-        double fpuReductionPolicy = 0.0;
-        double fpuReductionConst = 0.1;
+        double fpuReductionPolicy = 0.1;
+        double fpuReductionConst = 0.0;
         double policyTemp = 1.1;
         double localPolicyBonusStage1 = 0.0;
     } params;

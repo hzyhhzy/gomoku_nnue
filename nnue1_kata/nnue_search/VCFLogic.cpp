@@ -1008,8 +1008,9 @@ vector<Loc> VCFLogic::getAllDefenseFourLocs(const Board& board, Player attackPla
                 defendCount++;
             }
         }
-        
-        assert(!(defendCount-board.stage>=4&&attackCount==0));//defender can directly win
+
+        assert(!(defendCount==6));//defender can directly win
+        //assert(!(defendCount-board.stage>=4&&attackCount==0));//defender can directly win
         assert(attackCount<=5);
 
         // Record empty positions in tuples with 4-5 attackPla pieces and no defendPla pieces

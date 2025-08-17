@@ -37,6 +37,15 @@ public:
         int maxMove, 
         double searchFactor
     );
+
+    // Calculate all VCF defend results
+    // Version 2: Prune locations during calculating other defenses
+    std::vector<VCFPrunedInfo> CalculateAllVCFDefendResultsV2(
+        const Board& board,
+        Color attackPlayer,
+        int maxMove,
+        double searchFactor
+    );
     
     // Calculate shortest VCF steps and return dependency map
     int calculateShortestVCFAndDependMap(
@@ -69,6 +78,21 @@ private:
         const Board& board, 
         Color attackPlayer, 
         int maxMove, 
+        double searchFactor
+    );
+    // Calculate all VCF defend results
+    std::vector<VCFPrunedInfo> CalculateAllVCFDefendResultsV2_stage0(
+        const Board& board,
+        Color attackPlayer,
+        int maxMove,
+        double searchFactor
+    );
+
+    // Calculate all VCF defend results
+    std::vector<VCFPrunedInfo> CalculateAllVCFDefendResultsV2_stage1(
+        const Board& board,
+        Color attackPlayer,
+        int maxMove,
         double searchFactor
     );
 };
