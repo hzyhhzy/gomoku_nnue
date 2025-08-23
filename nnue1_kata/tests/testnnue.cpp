@@ -64,7 +64,7 @@ int MainCmds::testnnue() {
   Logger logger(NULL, logToStdoutDefault, logToStderrDefault, logTimeDefault);
 
   //string modelpath = "H:/gomtrain2024/connectsix/export/v2_64_highwd2.txt"; 
-  string modelpath = "C:/gomtrain2025/connect6nnue/export/v2_c16_vcfonly.txt";
+  string modelpath = "C:/gomtrain2025/connect6nnue/export/v2_c16_vcfonly_3.txt";
 
   NNUEV2::ModelWeight* nnueWeight = new NNUEV2::ModelWeight();
   nnueWeight->loadParam(modelpath);
@@ -85,7 +85,7 @@ int MainCmds::testnnue() {
   
   // Test MCTS search with same initial position
   //testMCTSSearch2(nnueWeight);
-
+  //
 
   //testVCFPrune1(nnueWeight);
 
@@ -442,12 +442,12 @@ void testMCTSSearch2(const ModelWeight* weights) {
   //NNUE_VCF_MCTSsearch::MCTSsearch mcts(nullptr, &nnueHistory, board.nextPla);
   
   // Set MCTS parameters
-  mcts.params.puct = 0.7;
+  mcts.params.puct = 0.3;
   mcts.params.expandFactor = 0.2;
   mcts.params.policyTemp = 1.1;
   mcts.params.puctPow = 0.75;
-  mcts.params.fpuReductionConst = 0.05;
-  mcts.params.fpuReductionPolicy = 0.05;
+  mcts.params.fpuReductionConst = 0.0;
+  mcts.params.fpuReductionPolicy = 0.2;
   mcts.params.localPolicyBonusStage1 = 0.0;
   
   // Test different search factors (visits = factor * 1000)
@@ -534,9 +534,9 @@ void testMCTSSearch3(const ModelWeight* weights) {
   //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15k12";
   //string initialSequence = "j10i11h10j9k7g9g11m6m5k8l6m4a1m8l8";//white has a four
   //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15n12";//even a bit difficult for katago
-  //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9g12l13i14i16f12h16e13d12j14s19";//require 20s (5e5 nodes), even a bit difficult for katago
+  string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9g12l13i14i16f12h16e13d12j14s19";//require 20s (5e5 nodes), even a bit difficult for katago
   //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9g12l13i14i16f12h16e13d12j14i15g15g17f14f16g9m12j9m14f13m11g13n15n14o13e15d16h12c17g14n12e16f9e9o14g8p13h7p12i8h8f8i7j7g7h9f6g6g5g10g4k6l6k12l8l5o16i6m4k5m5j17j5k17j18k9m15k10k4m9k7n10k3o9k2n9n6n7l4"; //109 moves to win
-  string initialSequence = "j10c2p5k11l12q15d15";//4 useless white stones
+  //string initialSequence = "j10c2p5k11l12q15d15";//4 useless white stones
   //string initialSequence = "j10c2p5k11j12k12i9";//4 useless white stones
   //string initialSequence = "j10f5d3k11l12d4e4";//4 useless white stones
   //string initialSequence = "j10d4e3k9i11e5g5f2j9a1c3";//first move must be purely defense
@@ -670,14 +670,16 @@ void testVCFPrune2(const ModelWeight* weights) {
     //string initialSequence = "j10k11i11j11i13";//stage0,normal 5 moves
     //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9";//stage0, normal moves
     //string initialSequence = "j10a1s1k11k9j6";//stage1, 2 useless white stones
-    string initialSequence = "j10c2d18k11k9";//stage0, 2 useless white stones
-    //string initialSequence = "j10h8l8j9k10";//stage0,2 weak 2nd moves
+    //string initialSequence = "j10c2d18k11k9";//stage0, 2 useless white stones
+    string initialSequence = "j10h8l8j9k10";//stage0,2 weak 2nd moves
     //string initialSequence = "j10n15o14i9h8o16m16g7g9";//stage0, black has a four now
     //string initialSequence = "j10n15o14i9h8o16m16g7g9l10";//stage1, black has a four now
     //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9g12l13i14i16f12h16e13d12j14i15g15g17f14f16g9m12g13k9f13m11e15d16h12c17g14";//stage1, black have a long vcf if white pass
     //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9g12l13i14i16f12h16e13d12j14i15g15g17f14f16g9m12g13k9f13m11e15d16h12c17g14m10e16c14c13j7k10g7l11";//stage1, long vcf if white play at l9
     //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9g12l13i14i16f12h16e13d12j14i15g15g17f14f16g9m12g13k9f13m11e15d16h12c17g14m10e16c14c13j7k10g7l11h8l9n9i8b12h9d14g8f8k8e8f9j17j16n7";//stage0
     //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9g12l13i14i16f12h16e13d12j14i15g15g17f14f16g9m12g13k9f13m11e15d16h12c17g14m10e16c14c13j7k10g7l11h8l9n9i8b12h9d14g8f8k8e8f9j17j16n7f7m8f11d13f10e12d10f5d11";//stage1
+    //string initialSequence = "j10k11i11j11i13j13h10j12h14i12p3g15g14";//stage0, the strongest 9 moves and then white play 3 useless moves
+    //string initialSequence = "j10k11i11j11i13j13h10j12h14i12k14k15l15j15g11h11i9g12l13i14i16f12h16e13d12j14i15g15g17f14f16g9m12g14j9f15m11m13n14o13o15o14p13m14p14m16n15l17q12n12n16n13j17k16n17e14n18e15d13g16o9o12d16g13n11h17o16l16p9n10n9f10o8o10c17e11b18h8c13p10n7";//stage0
     vector<Loc> initialLocSeq = Location::parseSequenceGom(initialSequence, board);
     PlayUtils::playMoveLocSequence(board, board.nextPla, initialLocSeq);
 
@@ -715,22 +717,6 @@ void testVCFPrune2(const ModelWeight* weights) {
     // Display the prune information on the board
     VCFLogic::printBoardWithPruneInfo(board, pruneResults);
 
-    // Print detailed prune information
-    cout << "Detailed prune information:" << endl;
-    for (const auto& info : pruneResults) {
-        string locStr = Location::toString(info.loc, board);
-        cout << "  " << locStr << ": ";
-        if (info.isPruned) {
-            cout << "PRUNED (opponent wins in " << info.moveNum << " moves)";
-        }
-        else if (info.notPruned) {
-            cout << "SAFE (opponent cannot VCF)";
-        }
-        else {
-            cout << "UNKNOWN";
-        }
-        cout << endl;
-    }
 
     cout << "VCF Prune test completed." << endl;
 }

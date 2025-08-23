@@ -12,9 +12,7 @@
 #include <cassert>
 #include <cstring>
 #include <iostream>
-#include <set>
 #include <vector>
-
 
 using namespace std;
 
@@ -283,7 +281,7 @@ Color GameLogic::checkWinnerAfterPlayed(
         {
           return C_EMPTY;
         } 
-        else  // ï¿½Ô·ï¿½ï¿½ï¿½pass
+        else  // ¶Ô·½ÏÈpass
         {
           return opp;
         }
@@ -293,11 +291,11 @@ Color GameLogic::checkWinnerAfterPlayed(
       Color VCside = hist.rules.vcSide();
       int VClevel = hist.rules.vcLevel();
 
-      if(VCside == pla)  // VCNï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½pass
+      if(VCside == pla)  // VCN²»ÔÊÐí¼º·½pass
       {
         return opp;
       } 
-      else  // passï¿½ï¿½ï¿½ï¿½ï¿½ã¹»ï¿½ï¿½ï¿½ï¿½Ê¤
+      else  // pass´ÎÊý×ã¹»ÔòÅÐÊ¤
       {
         if(myPassNum >= 7 - VClevel) {
           return pla;
@@ -308,11 +306,11 @@ Color GameLogic::checkWinnerAfterPlayed(
 
 
 
-  // maxmovesï¿½Ð¶ï¿½
+  // maxmovesÅÐ¶¨
   if(hist.rules.maxMoves != 0 && board.movenum >= hist.rules.maxMoves) {
     if(hist.rules.VCNRule == Rules::VCNRULE_NOVC) {
       return C_EMPTY;
-    } else  // ï¿½ï¿½ï¿½ï¿½ï¿½Ð½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    } else  // ºÍÆåÅÐ½ø¹¥·½¸º
     {
       static_assert(Rules::VCNRULE_VC1_W == Rules::VCNRULE_VC1_B + 10, "Ensure VCNRule%10==N, VCNRule/10+1==color");
       Color VCside = hist.rules.vcSide();

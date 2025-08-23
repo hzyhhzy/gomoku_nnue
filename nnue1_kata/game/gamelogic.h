@@ -38,7 +38,6 @@ namespace GameLogic {
     ResultsBeforeNN();
     void init(const Board& board, const BoardHistory& hist, Color nextPlayer);
   };
-
 }
 
 
